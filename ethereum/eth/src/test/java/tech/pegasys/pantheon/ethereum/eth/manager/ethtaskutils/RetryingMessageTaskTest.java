@@ -2,6 +2,7 @@ package tech.pegasys.pantheon.ethereum.eth.manager.ethtaskutils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManagerTestUtil;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthTask;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer;
@@ -20,7 +21,13 @@ import org.junit.Test;
  *
  * @param <T>
  */
-public abstract class RetryingMessageTaskTest<T, R> extends AbstractMessageTaskTest<T, R> {
+public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest<T, T> {
+
+  @Override
+  protected void assertResultMatchesExpectation(
+      final T requestedData, final T response, final EthPeer respondingPeer) {
+    assertThat(response).isEqualTo(requestedData);
+  }
 
   @Test
   public void doesNotCompleteWhenPeerReturnsPartialResult()
@@ -35,8 +42,8 @@ public abstract class RetryingMessageTaskTest<T, R> extends AbstractMessageTaskT
     // Execute task and wait for response
     final AtomicBoolean done = new AtomicBoolean(false);
     final T requestedData = generateDataToBeRequested();
-    final EthTask<R> task = createTask(requestedData);
-    final CompletableFuture<R> future = task.run();
+    final EthTask<T> task = createTask(requestedData);
+    final CompletableFuture<T> future = task.run();
     respondingPeer.respondTimes(responder, 20);
     future.whenComplete(
         (result, error) -> {
@@ -54,8 +61,8 @@ public abstract class RetryingMessageTaskTest<T, R> extends AbstractMessageTaskT
 
     // Execute task and wait for response
     final AtomicBoolean done = new AtomicBoolean(false);
-    final EthTask<R> task = createTask(requestedData);
-    final CompletableFuture<R> future = task.run();
+    final EthTask<T> task = createTask(requestedData);
+    final CompletableFuture<T> future = task.run();
     future.whenComplete(
         (result, error) -> {
           done.compareAndSet(false, true);
@@ -72,9 +79,9 @@ public abstract class RetryingMessageTaskTest<T, R> extends AbstractMessageTaskT
 
     // Execute task and wait for response
     final AtomicBoolean done = new AtomicBoolean(false);
-    final AtomicReference<R> actualResult = new AtomicReference<>();
-    final EthTask<R> task = createTask(requestedData);
-    final CompletableFuture<R> future = task.run();
+    final AtomicReference<T> actualResult = new AtomicReference<>();
+    final EthTask<T> task = createTask(requestedData);
+    final CompletableFuture<T> future = task.run();
     future.whenComplete(
         (result, error) -> {
           actualResult.set(result);
@@ -103,9 +110,9 @@ public abstract class RetryingMessageTaskTest<T, R> extends AbstractMessageTaskT
 
     // Execute task and wait for response
     final AtomicBoolean done = new AtomicBoolean(false);
-    final AtomicReference<R> actualResult = new AtomicReference<>();
-    final EthTask<R> task = createTask(requestedData);
-    final CompletableFuture<R> future = task.run();
+    final AtomicReference<T> actualResult = new AtomicReference<>();
+    final EthTask<T> task = createTask(requestedData);
+    final CompletableFuture<T> future = task.run();
     future.whenComplete(
         (result, error) -> {
           actualResult.set(result);
@@ -131,8 +138,8 @@ public abstract class RetryingMessageTaskTest<T, R> extends AbstractMessageTaskT
 
     // Execute task and wait for response
     final AtomicBoolean done = new AtomicBoolean(false);
-    final EthTask<R> task = createTask(requestedData);
-    final CompletableFuture<R> future = task.run();
+    final EthTask<T> task = createTask(requestedData);
+    final CompletableFuture<T> future = task.run();
     respondingPeer.respondTimes(responder, 20);
     future.whenComplete(
         (response, error) -> {

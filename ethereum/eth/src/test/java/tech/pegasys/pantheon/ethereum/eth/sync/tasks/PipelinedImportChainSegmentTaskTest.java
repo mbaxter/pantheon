@@ -9,7 +9,6 @@ import tech.pegasys.pantheon.ethereum.core.BlockBody;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.TransactionReceipt;
 import tech.pegasys.pantheon.ethereum.db.DefaultMutableBlockchain;
-import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManagerTestUtil;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthTask;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer;
@@ -37,8 +36,7 @@ import java.util.stream.LongStream;
 
 import org.junit.Test;
 
-public class PipelinedImportChainSegmentTaskTest
-    extends RetryingMessageTaskTest<List<Block>, List<Block>> {
+public class PipelinedImportChainSegmentTaskTest extends RetryingMessageTaskTest<List<Block>> {
 
   @Override
   protected List<Block> generateDataToBeRequested() {
@@ -77,11 +75,12 @@ public class PipelinedImportChainSegmentTaskTest
         new BlockHeader[] {previousBlock.getHeader(), lastBlock.getHeader()});
   }
 
-  @Override
-  protected void assertResultMatchesExpectation(
-      final List<Block> requestedData, final List<Block> response, final EthPeer respondingPeer) {
-    assertThat(response).isEqualTo(requestedData);
-  }
+  //  @Override
+  //  protected void assertResultMatchesExpectation(
+  //      final List<Block> requestedData, final List<Block> response, final EthPeer respondingPeer)
+  // {
+  //    assertThat(response).isEqualTo(requestedData);
+  //  }
 
   @Test
   public void betweenContiguousHeadersSucceeds() {
