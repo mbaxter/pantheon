@@ -25,6 +25,11 @@ public class DownloadHeaderSequenceTaskTest extends RetryingMessageTaskTest<List
     final BlockHeader lastHeader = requestedData.get(requestedData.size() - 1);
     final BlockHeader referenceHeader = blockchain.getBlockHeader(lastHeader.getNumber() + 1).get();
     return DownloadHeaderSequenceTask.endingAtHeader(
-        protocolSchedule, protocolContext, ethContext, referenceHeader, requestedData.size());
+        protocolSchedule,
+        protocolContext,
+        ethContext,
+        referenceHeader,
+        requestedData.size(),
+        maxRetries);
   }
 }

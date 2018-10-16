@@ -28,6 +28,7 @@ public class CompleteBlocksTaskTest extends RetryingMessageTaskTest<List<Block>>
   protected EthTask<List<Block>> createTask(final List<Block> requestedData) {
     final List<BlockHeader> headersToComplete =
         requestedData.stream().map(Block::getHeader).collect(Collectors.toList());
-    return CompleteBlocksTask.forHeaders(protocolSchedule, ethContext, headersToComplete);
+    return CompleteBlocksTask.forHeaders(
+        protocolSchedule, ethContext, headersToComplete, maxRetries);
   }
 }

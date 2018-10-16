@@ -9,11 +9,12 @@ import tech.pegasys.pantheon.ethereum.core.BlockBody;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.TransactionReceipt;
 import tech.pegasys.pantheon.ethereum.db.DefaultMutableBlockchain;
+import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManagerTestUtil;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthTask;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer.Responder;
-import tech.pegasys.pantheon.ethereum.eth.manager.ethtaskutils.RetryingMessageTaskTest;
+import tech.pegasys.pantheon.ethereum.eth.manager.ethtaskutils.AbstractMessageTaskTest;
 import tech.pegasys.pantheon.ethereum.eth.messages.EthPV62;
 import tech.pegasys.pantheon.ethereum.eth.messages.EthPV63;
 import tech.pegasys.pantheon.ethereum.eth.sync.tasks.exceptions.InvalidBlockException;
@@ -36,7 +37,8 @@ import java.util.stream.LongStream;
 
 import org.junit.Test;
 
-public class PipelinedImportChainSegmentTaskTest extends RetryingMessageTaskTest<List<Block>> {
+public class PipelinedImportChainSegmentTaskTest
+    extends AbstractMessageTaskTest<List<Block>, List<Block>> {
 
   @Override
   protected List<Block> generateDataToBeRequested() {
@@ -75,12 +77,11 @@ public class PipelinedImportChainSegmentTaskTest extends RetryingMessageTaskTest
         new BlockHeader[] {previousBlock.getHeader(), lastBlock.getHeader()});
   }
 
-  //  @Override
-  //  protected void assertResultMatchesExpectation(
-  //      final List<Block> requestedData, final List<Block> response, final EthPeer respondingPeer)
-  // {
-  //    assertThat(response).isEqualTo(requestedData);
-  //  }
+  @Override
+  protected void assertResultMatchesExpectation(
+      final List<Block> requestedData, final List<Block> response, final EthPeer respondingPeer) {
+    assertThat(response).isEqualTo(requestedData);
+  }
 
   @Test
   public void betweenContiguousHeadersSucceeds() {

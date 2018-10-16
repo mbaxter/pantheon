@@ -1,18 +1,18 @@
 package tech.pegasys.pantheon.ethereum.eth.manager.ethtaskutils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManagerTestUtil;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthTask;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer.Responder;
+import tech.pegasys.pantheon.ethereum.eth.manager.exceptions.MaxRetriesReachedException;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Test;
 
@@ -23,6 +23,12 @@ import org.junit.Test;
  */
 public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest<T, T> {
 
+  protected final int maxRetries;
+
+  public RetryingMessageTaskTest() {
+    this.maxRetries = 3;
+  }
+
   @Override
   protected void assertResultMatchesExpectation(
       final T requestedData, final T response, final EthPeer respondingPeer) {
@@ -30,7 +36,7 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
   }
 
   @Test
-  public void doesNotCompleteWhenPeerReturnsPartialResult()
+  public void failsWhenPeerRepeatedlyReturnsPartialResult()
       throws ExecutionException, InterruptedException {
     // Setup data to be requested and expected response
 
@@ -40,17 +46,19 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager);
 
     // Execute task and wait for response
-    final AtomicBoolean done = new AtomicBoolean(false);
     final T requestedData = generateDataToBeRequested();
     final EthTask<T> task = createTask(requestedData);
     final CompletableFuture<T> future = task.run();
-    respondingPeer.respondTimes(responder, 20);
-    future.whenComplete(
-        (result, error) -> {
-          done.compareAndSet(false, true);
-        });
 
-    assertThat(done).isFalse();
+    // Respond max times
+    respondingPeer.respondTimes(responder, maxRetries);
+    assertThat(future.isDone()).isFalse();
+
+    // Next retry should fail
+    respondingPeer.respond(responder);
+    assertThat(future.isDone()).isTrue();
+    assertThat(future.isCompletedExceptionally()).isTrue();
+    assertThatThrownBy(future::get).hasCauseInstanceOf(MaxRetriesReachedException.class);
   }
 
   @Test
@@ -59,16 +67,10 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
     // Setup data to be requested
     final T requestedData = generateDataToBeRequested();
 
-    // Execute task and wait for response
-    final AtomicBoolean done = new AtomicBoolean(false);
     final EthTask<T> task = createTask(requestedData);
     final CompletableFuture<T> future = task.run();
-    future.whenComplete(
-        (result, error) -> {
-          done.compareAndSet(false, true);
-        });
 
-    assertThat(done).isFalse();
+    assertThat(future.isDone()).isFalse();
   }
 
   @Test
@@ -78,17 +80,10 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
     final T requestedData = generateDataToBeRequested();
 
     // Execute task and wait for response
-    final AtomicBoolean done = new AtomicBoolean(false);
-    final AtomicReference<T> actualResult = new AtomicReference<>();
     final EthTask<T> task = createTask(requestedData);
     final CompletableFuture<T> future = task.run();
-    future.whenComplete(
-        (result, error) -> {
-          actualResult.set(result);
-          done.compareAndSet(false, true);
-        });
 
-    assertThat(done).isFalse();
+    assertThat(future.isDone()).isFalse();
 
     // Setup a peer
     final Responder responder = RespondingEthPeer.blockchainResponder(blockchain);
@@ -96,7 +91,7 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager);
     respondingPeer.respondWhile(responder, () -> !future.isDone());
 
-    assertResultMatchesExpectation(requestedData, actualResult.get(), respondingPeer.getEthPeer());
+    assertResultMatchesExpectation(requestedData, future.get(), respondingPeer.getEthPeer());
   }
 
   @Test
@@ -108,26 +103,17 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager);
     final T requestedData = generateDataToBeRequested();
 
-    // Execute task and wait for response
-    final AtomicBoolean done = new AtomicBoolean(false);
-    final AtomicReference<T> actualResult = new AtomicReference<>();
     final EthTask<T> task = createTask(requestedData);
     final CompletableFuture<T> future = task.run();
-    future.whenComplete(
-        (result, error) -> {
-          actualResult.set(result);
-          done.compareAndSet(false, true);
-        });
 
-    assertThat(done).isFalse();
+    assertThat(future.isDone()).isFalse();
     respondingPeer.respondWhile(responder, () -> !future.isDone());
 
-    assertResultMatchesExpectation(requestedData, actualResult.get(), respondingPeer.getEthPeer());
+    assertResultMatchesExpectation(requestedData, future.get(), respondingPeer.getEthPeer());
   }
 
   @Test
-  public void doesNotCompleteWhenPeersSendEmptyResponses()
-      throws ExecutionException, InterruptedException {
+  public void failsWhenPeersSendEmptyResponses() throws ExecutionException, InterruptedException {
     // Setup a unresponsive peer
     final Responder responder = RespondingEthPeer.emptyResponder();
     final RespondingEthPeer respondingPeer =
@@ -136,15 +122,20 @@ public abstract class RetryingMessageTaskTest<T> extends AbstractMessageTaskTest
     // Setup data to be requested
     final T requestedData = generateDataToBeRequested();
 
-    // Execute task and wait for response
-    final AtomicBoolean done = new AtomicBoolean(false);
+    // Setup and run task
     final EthTask<T> task = createTask(requestedData);
     final CompletableFuture<T> future = task.run();
-    respondingPeer.respondTimes(responder, 20);
-    future.whenComplete(
-        (response, error) -> {
-          done.compareAndSet(false, true);
-        });
+
     assertThat(future.isDone()).isFalse();
+
+    // Respond max times
+    respondingPeer.respondTimes(responder, maxRetries);
+    assertThat(future.isDone()).isFalse();
+
+    // Next retry should fail
+    respondingPeer.respond(responder);
+    assertThat(future.isDone()).isTrue();
+    assertThat(future.isCompletedExceptionally()).isTrue();
+    assertThatThrownBy(future::get).hasCauseInstanceOf(MaxRetriesReachedException.class);
   }
 }
