@@ -51,7 +51,7 @@ public class BlockHeaderBuilder {
     return new BlockHeaderBuilder();
   }
 
-  public static BlockHeaderBuilder fromHeader(BlockHeader header) {
+  public static BlockHeaderBuilder fromHeader(final BlockHeader header) {
     return create()
         .parentHash(header.getParentHash())
         .ommersHash(header.getOmmersHash())

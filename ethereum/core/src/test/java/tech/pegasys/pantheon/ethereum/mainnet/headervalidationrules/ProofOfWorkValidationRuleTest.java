@@ -29,7 +29,8 @@ public class ProofOfWorkValidationRuleTest {
   private final BlockHeader parentHeader;
   private final ProofOfWorkValidationRule validationRule;
 
-  public ProofOfWorkValidationRuleTest(long parentBlockNum, long blockNum) throws IOException {
+  public ProofOfWorkValidationRuleTest(final long parentBlockNum, final long blockNum)
+      throws IOException {
     blockHeader = ValidationTestUtils.readHeader(parentBlockNum);
     parentHeader = ValidationTestUtils.readHeader(blockNum);
     validationRule = new ProofOfWorkValidationRule();

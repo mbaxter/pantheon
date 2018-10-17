@@ -81,7 +81,7 @@ public final class ProofOfWorkValidationRule implements DetachedBlockHeaderValid
     return true;
   }
 
-  private Hash hashHeader(BlockHeader header) {
+  private Hash hashHeader(final BlockHeader header) {
     final BytesValueRLPOutput out = new BytesValueRLPOutput();
 
     // Encode header without nonce and mixhash
