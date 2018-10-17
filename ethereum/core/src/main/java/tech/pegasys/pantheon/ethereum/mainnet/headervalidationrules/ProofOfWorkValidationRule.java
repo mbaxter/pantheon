@@ -1,6 +1,5 @@
 package tech.pegasys.pantheon.ethereum.mainnet.headervalidationrules;
 
-import tech.pegasys.pantheon.crypto.BouncyCastleMessageDigestFactory;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.mainnet.DetachedBlockHeaderValidationRule;
@@ -12,34 +11,17 @@ import tech.pegasys.pantheon.util.bytes.BytesValues;
 import tech.pegasys.pantheon.util.uint.UInt256;
 
 import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public final class ProofOfWorkValidationRule implements DetachedBlockHeaderValidationRule {
 
-  private static final Logger LOG = LogManager.getLogger(ProofOfWorkValidationRule.class);
-
-  private static final int SERIALIZED_HASH_SIZE = 33;
-
-  private static final int SERIALIZED_NONCE_SIZE = 9;
+  private static final Logger LOG = LogManager.getLogger();
 
   private static final BigInteger ETHHASH_TARGET_UPPER_BOUND = BigInteger.valueOf(2).pow(256);
 
   private static final EthHasher HASHER = new EthHasher.Light();
-
-  private static final ThreadLocal<MessageDigest> KECCAK_256 =
-      ThreadLocal.withInitial(
-          () -> {
-            try {
-              return BouncyCastleMessageDigestFactory.create(
-                  tech.pegasys.pantheon.crypto.Hash.KECCAK256_ALG);
-            } catch (final NoSuchAlgorithmException ex) {
-              throw new IllegalStateException(ex);
-            }
-          });
 
   @Override
   public boolean validate(final BlockHeader header, final BlockHeader parent) {
@@ -107,16 +89,5 @@ public final class ProofOfWorkValidationRule implements DetachedBlockHeaderValid
   @Override
   public boolean includeInLightValidation() {
     return false;
-  }
-
-  private static int writeListPrefix(final int size, final byte[] target) {
-    final int sizeLength = 4 - Integer.numberOfLeadingZeros(size) / 8;
-    target[0] = (byte) (0xf7 + sizeLength);
-    int shift = 0;
-    for (int i = 0; i < sizeLength; i++) {
-      target[sizeLength - i] = (byte) (size >> shift);
-      shift += 8;
-    }
-    return 1 + sizeLength;
   }
 }
