@@ -5,8 +5,7 @@ import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.mainnet.DetachedBlockHeaderValidationRule;
 import tech.pegasys.pantheon.ethereum.mainnet.EthHasher;
-import tech.pegasys.pantheon.ethereum.rlp.RLP;
-import tech.pegasys.pantheon.ethereum.rlp.RlpUtils;
+import tech.pegasys.pantheon.ethereum.rlp.BytesValueRLPOutput;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.bytes.BytesValues;
@@ -44,20 +43,9 @@ public final class ProofOfWorkValidationRule implements DetachedBlockHeaderValid
 
   @Override
   public boolean validate(final BlockHeader header, final BlockHeader parent) {
-    final MessageDigest keccak256 = KECCAK_256.get();
-
-    final byte[] bytes = RLP.encode(header::writeTo).extractArray();
-    final int listOffset = RlpUtils.decodeOffset(bytes, 0);
-    final int length = RlpUtils.decodeLength(bytes, 0);
-
-    final byte[] listHeadBuff = new byte[10];
-    final int newLength = length - SERIALIZED_HASH_SIZE - SERIALIZED_NONCE_SIZE;
-    final int sizeLen = writeListPrefix(newLength - listOffset, listHeadBuff);
-
-    keccak256.update(listHeadBuff, 0, sizeLen);
-    keccak256.update(bytes, listOffset, newLength - sizeLen);
     final byte[] hashBuffer = new byte[64];
-    HASHER.hash(hashBuffer, header.getNonce(), header.getNumber(), keccak256.digest());
+    final Hash headerHash = hashHeader(header);
+    HASHER.hash(hashBuffer, header.getNonce(), header.getNumber(), headerHash.extractArray());
 
     if (header.getDifficulty().isZero()) {
       LOG.trace("Rejecting header because difficulty is 0");
@@ -91,6 +79,29 @@ public final class ProofOfWorkValidationRule implements DetachedBlockHeaderValid
     }
 
     return true;
+  }
+
+  private Hash hashHeader(BlockHeader header) {
+    final BytesValueRLPOutput out = new BytesValueRLPOutput();
+
+    // Encode header without nonce and mixhash
+    out.startList();
+    out.writeBytesValue(header.getParentHash());
+    out.writeBytesValue(header.getOmmersHash());
+    out.writeBytesValue(header.getCoinbase());
+    out.writeBytesValue(header.getStateRoot());
+    out.writeBytesValue(header.getTransactionsRoot());
+    out.writeBytesValue(header.getReceiptsRoot());
+    out.writeBytesValue(header.getLogsBloom().getBytes());
+    out.writeUInt256Scalar(header.getDifficulty());
+    out.writeLongScalar(header.getNumber());
+    out.writeLongScalar(header.getGasLimit());
+    out.writeLongScalar(header.getGasUsed());
+    out.writeLongScalar(header.getTimestamp());
+    out.writeBytesValue(header.getExtraData());
+    out.endList();
+
+    return Hash.hash(out.encoded());
   }
 
   @Override
