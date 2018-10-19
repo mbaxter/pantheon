@@ -32,6 +32,7 @@ import java.util.NoSuchElementException;
 import java.util.function.Function;
 
 public final class RawBlockIterator implements Iterator<Block>, Closeable {
+  private static final int DEFAULT_INIT_BUFFER_CAPACITY = 2 << 15;
 
   private final FileChannel fileChannel;
   private final Function<RLPInput, BlockHeader> headerReader;
@@ -40,11 +41,20 @@ public final class RawBlockIterator implements Iterator<Block>, Closeable {
 
   private Block next;
 
-  public RawBlockIterator(final Path file, final Function<RLPInput, BlockHeader> headerReader)
+  RawBlockIterator(
+      final Path file,
+      final Function<RLPInput, BlockHeader> headerReader,
+      final int initialCapacity)
       throws IOException {
     fileChannel = FileChannel.open(file);
     this.headerReader = headerReader;
+    readBuffer = ByteBuffer.allocate(initialCapacity);
     nextBlock();
+  }
+
+  public RawBlockIterator(final Path file, final Function<RLPInput, BlockHeader> headerReader)
+      throws IOException {
+    this(file, headerReader, DEFAULT_INIT_BUFFER_CAPACITY);
   }
 
   @Override
