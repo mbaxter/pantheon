@@ -17,8 +17,8 @@ import tech.pegasys.pantheon.ethereum.core.BlockBody;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.Transaction;
 import tech.pegasys.pantheon.ethereum.rlp.BytesValueRLPInput;
+import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
-import tech.pegasys.pantheon.ethereum.rlp.RlpUtils;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.io.Closeable;
@@ -85,7 +85,7 @@ public final class RawBlockIterator implements Iterator<Block>, Closeable {
     fillReadBuffer();
     int initial = readBuffer.position();
     if (initial > 0) {
-      final int length = RlpUtils.decodeLength(readBuffer, 0);
+      final int length = RLP.calculateSize(BytesValue.wrapBuffer(readBuffer));
       if (length > readBuffer.capacity()) {
         readBuffer.flip();
         final ByteBuffer newBuffer = ByteBuffer.allocate(2 * length);
