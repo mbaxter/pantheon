@@ -94,8 +94,8 @@ public final class RawBlockIterator implements Iterator<Block>, Closeable {
         initial = readBuffer.position();
       }
 
-      final RLPInput rlp =
-          new BytesValueRLPInput(BytesValue.wrapBuffer(readBuffer, 0, length), false);
+      BytesValue rlpBytes = BytesValue.wrapBuffer(readBuffer, 0, length).copy();
+      final RLPInput rlp = new BytesValueRLPInput(rlpBytes, false);
       rlp.enterList();
       final BlockHeader header = headerReader.apply(rlp);
       final BlockBody body =
