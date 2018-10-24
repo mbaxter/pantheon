@@ -18,45 +18,52 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.nio.ByteBuffer;
 
-public class ByteBufferWrappingBytesValue extends AbstractBytesValue {
+public class MutableByteBufferWrappingBytesValue extends AbstractBytesValue
+    implements MutableBytesValue {
 
   protected final ByteBuffer bytes;
   protected final int offset;
-  protected final int length;
+  protected final int size;
 
   /**
    * Wraps a ByteBuffer given absolute values for offset.
    *
    * @param bytes the source byte buffer
    * @param offset the absolute offset where this value should begin
-   * @param length the number of bytes to include in this value
+   * @param size the number of bytes to include in this value
    */
-  ByteBufferWrappingBytesValue(final ByteBuffer bytes, final int offset, final int length) {
+  MutableByteBufferWrappingBytesValue(final ByteBuffer bytes, final int offset, final int size) {
     int bytesSize = bytes.capacity();
     checkNotNull(bytes, "Invalid 'null' byte buffer provided");
-    checkArgument(length >= 0, "Invalid negative length provided");
-    checkElementIndex(offset, bytesSize);
+    checkArgument(size >= 0, "Invalid negative length provided");
+    if (size > 0) {
+      checkElementIndex(offset, bytesSize);
+    }
     checkArgument(
-        offset + length <= bytesSize,
+        offset + size <= bytesSize,
         "Provided length %s is too big: the value has only %s bytes from offset %s",
-        length,
+        size,
         bytesSize - offset,
         offset);
 
     this.bytes = bytes;
     this.offset = offset;
-    this.length = length;
+    this.size = size;
+  }
+
+  MutableByteBufferWrappingBytesValue(final ByteBuffer bytes) {
+    this(bytes, 0, bytes.capacity());
   }
 
   @Override
   public int size() {
-    return length;
+    return size;
   }
 
   @Override
   public byte get(final int i) {
     checkElementIndex(i, size());
-    return bytes.get(i);
+    return bytes.get(offset + i);
   }
 
   @Override
@@ -77,6 +84,42 @@ public class ByteBufferWrappingBytesValue extends AbstractBytesValue {
         size() - index,
         index);
 
-    return new ByteBufferWrappingBytesValue(bytes, offset + index, length);
+    return new MutableByteBufferWrappingBytesValue(bytes, offset + index, length);
+  }
+
+  @Override
+  public void set(int i, byte b) {
+    checkElementIndex(i, size());
+    bytes.put(offset + i, b);
+  }
+
+  @Override
+  public MutableBytesValue mutableSlice(int index, int length) {
+    if (index == 0 && length == size()) {
+      return this;
+    }
+    if (length == 0) {
+      return MutableBytesValue.EMPTY;
+    }
+
+    checkElementIndex(index, size());
+    checkArgument(
+        index + length <= size(),
+        "Provided length %s is too big: the value has size %s and has only %s bytes from %s",
+        length,
+        size(),
+        size() - index,
+        index);
+
+    return new MutableByteBufferWrappingBytesValue(bytes, offset + index, length);
+  }
+
+  @Override
+  public byte[] getArrayUnsafe() {
+    if (bytes.hasArray() && offset == 0 && size == bytes.capacity()) {
+      return bytes.array();
+    }
+
+    return super.getArrayUnsafe();
   }
 }

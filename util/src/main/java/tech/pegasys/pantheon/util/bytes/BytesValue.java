@@ -191,7 +191,7 @@ public interface BytesValue extends Comparable<BytesValue> {
    * @return A {@link BytesValue} that exposes the bytes of {@code buffer}.
    */
   static BytesValue wrapBuffer(final ByteBuffer buffer) {
-    return wrapBuffer(buffer, 0, buffer.capacity());
+    return MutableBytesValue.wrapBuffer(buffer, 0, buffer.capacity());
   }
 
   /**
@@ -208,7 +208,7 @@ public interface BytesValue extends Comparable<BytesValue> {
    *     offset + size)} (but without copying said bytes).
    */
   static BytesValue wrapBuffer(final ByteBuffer buffer, final int offset, final int size) {
-    return new ByteBufferWrappingBytesValue(buffer, offset, size);
+    return MutableBytesValue.wrapBuffer(buffer, offset, size);
   }
 
   /**
