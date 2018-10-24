@@ -45,7 +45,9 @@ public class BytesValueImplementationsTest {
   private final BytesValueSliceCreator sliceCreator;
 
   public BytesValueImplementationsTest(
-      String name, BytesValueCreator creator, BytesValueSliceCreator sliceCreator) {
+      final String name,
+      final BytesValueCreator creator,
+      final BytesValueSliceCreator sliceCreator) {
     this.creator = creator;
     this.sliceCreator = sliceCreator;
   }
@@ -137,15 +139,15 @@ public class BytesValueImplementationsTest {
         });
   }
 
-  private static ByteBuffer byteBuffer(byte[] bytes) {
+  private static ByteBuffer byteBuffer(final byte[] bytes) {
     return ByteBuffer.wrap(bytes);
   }
 
-  private static ByteBuf byteBuf(byte[] bytes) {
+  private static ByteBuf byteBuf(final byte[] bytes) {
     return Unpooled.copiedBuffer(bytes);
   }
 
-  private static Buffer buffer(byte[] bytes) {
+  private static Buffer buffer(final byte[] bytes) {
     return Buffer.buffer(bytes);
   }
 

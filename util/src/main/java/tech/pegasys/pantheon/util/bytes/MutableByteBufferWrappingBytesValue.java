@@ -88,13 +88,13 @@ public class MutableByteBufferWrappingBytesValue extends AbstractBytesValue
   }
 
   @Override
-  public void set(int i, byte b) {
+  public void set(final int i, final byte b) {
     checkElementIndex(i, size());
     bytes.put(offset + i, b);
   }
 
   @Override
-  public MutableBytesValue mutableSlice(int index, int length) {
+  public MutableBytesValue mutableSlice(final int index, final int length) {
     if (index == 0 && length == size()) {
       return this;
     }
@@ -116,7 +116,7 @@ public class MutableByteBufferWrappingBytesValue extends AbstractBytesValue
 
   @Override
   public byte[] getArrayUnsafe() {
-    if (bytes.hasArray() && offset == 0 && size == bytes.capacity()) {
+    if (bytes.hasArray() && offset == 0 && size == bytes.capacity() && bytes.arrayOffset() == 0) {
       return bytes.array();
     }
 
