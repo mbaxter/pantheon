@@ -163,6 +163,9 @@ public final class GetBlockHeadersMessage extends AbstractMessageData {
       int maxHeaders = input.readIntScalar();
       int skip = input.readIntScalar();
       boolean reverse = input.readIntScalar() != 0;
+
+      input.leaveList();
+
       return new GetBlockHeadersData(blockHash, blockNumber, maxHeaders, skip, reverse);
     }
 
@@ -194,7 +197,7 @@ public final class GetBlockHeadersMessage extends AbstractMessageData {
       out.writeIntScalar(maxHeaders);
       out.writeIntScalar(skip);
       out.writeIntScalar(reverse ? 1 : 0);
-      
+
       out.endList();
     }
   }
