@@ -14,6 +14,7 @@ package tech.pegasys.pantheon.ethereum.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.Transaction;
@@ -59,21 +60,25 @@ public class RawBlockIteratorTest {
 
   public void readsBlocksWithInitialCapacity(
       final Function<Integer, Integer> initialCapacityFromBlockSize) throws IOException {
-    int blockCount = 2;
-    final Block block = gen.block();
+    final int blockCount = 3;
+    final List<Block> blocks = gen.blockSequence(blockCount);
 
     // Write a few blocks to a tmp file
-    byte[] serializedBlock = serializeBlock(block);
+    byte[] firstSerializedBlock = null;
     final File blocksFile = tmp.newFolder().toPath().resolve("blocks").toFile();
-    DataOutputStream writer = new DataOutputStream(new FileOutputStream(blocksFile));
-    for (int i = 0; i < blockCount; i++) {
+    final DataOutputStream writer = new DataOutputStream(new FileOutputStream(blocksFile));
+    for (Block block : blocks) {
+      final byte[] serializedBlock = serializeBlock(block);
       writer.write(serializedBlock);
+      if (firstSerializedBlock == null) {
+        firstSerializedBlock = serializedBlock;
+      }
     }
     writer.close();
 
     // Read blocks
-    int initialCapacity = initialCapacityFromBlockSize.apply(serializedBlock.length);
-    RawBlockIterator iterator =
+    final int initialCapacity = initialCapacityFromBlockSize.apply(firstSerializedBlock.length);
+    final RawBlockIterator iterator =
         new RawBlockIterator(
             blocksFile.toPath(),
             rlp -> BlockHeader.readFrom(rlp, MainnetBlockHashFunction::createHash),
@@ -82,8 +87,9 @@ public class RawBlockIteratorTest {
     // Read blocks and check that they match
     for (int i = 0; i < blockCount; i++) {
       assertThat(iterator.hasNext()).isTrue();
-      Block readBlock = iterator.next();
-      assertThat(readBlock).isEqualTo(block);
+      final Block readBlock = iterator.next();
+      final Block expectedBlock = blocks.get(i);
+      assertThat(readBlock).isEqualTo(expectedBlock);
     }
 
     assertThat(iterator.hasNext()).isFalse();
