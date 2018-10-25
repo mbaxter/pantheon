@@ -31,12 +31,12 @@ import java.util.NoSuchElementException;
 import java.util.function.Function;
 
 public final class RawBlockIterator implements Iterator<Block>, Closeable {
-  private static final int DEFAULT_INIT_BUFFER_CAPACITY = 2 << 15;
+  private static final int DEFAULT_INIT_BUFFER_CAPACITY = 1 << 16;
 
   private final FileChannel fileChannel;
   private final Function<RLPInput, BlockHeader> headerReader;
 
-  private ByteBuffer readBuffer = ByteBuffer.allocate(2 << 15);
+  private ByteBuffer readBuffer;
 
   private Block next;
 
