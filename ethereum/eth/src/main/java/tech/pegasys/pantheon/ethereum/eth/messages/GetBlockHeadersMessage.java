@@ -194,8 +194,7 @@ public final class GetBlockHeadersMessage extends AbstractMessageData {
       out.writeIntScalar(maxHeaders);
       out.writeIntScalar(skip);
       out.writeIntScalar(reverse ? 1 : 0);
-      out.endList();
-
+      
       out.endList();
     }
   }
