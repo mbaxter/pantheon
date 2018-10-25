@@ -49,7 +49,7 @@ public final class GetBlockHeadersMessage extends AbstractMessageData {
   }
 
   public static GetBlockHeadersMessage create(
-      final long blockNum, final int maxHeaders, final boolean reverse, final int skip) {
+      final long blockNum, final int maxHeaders, final int skip, final boolean reverse) {
     final GetBlockHeadersData getBlockHeadersData =
         GetBlockHeadersData.create(blockNum, maxHeaders, skip, reverse);
     final BytesValueRLPOutput tmp = new BytesValueRLPOutput();
@@ -60,7 +60,7 @@ public final class GetBlockHeadersMessage extends AbstractMessageData {
   }
 
   public static GetBlockHeadersMessage create(
-      final Hash hash, final int maxHeaders, final boolean reverse, final int skip) {
+      final Hash hash, final int maxHeaders, final int skip, final boolean reverse) {
     final GetBlockHeadersData getBlockHeadersData =
         GetBlockHeadersData.create(hash, maxHeaders, skip, reverse);
     final BytesValueRLPOutput tmp = new BytesValueRLPOutput();
