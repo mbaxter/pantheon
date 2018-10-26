@@ -44,7 +44,16 @@ public final class BlockchainImporterTest {
   BlockchainImporter blockImporter = new BlockchainImporter();
 
   @Test
-  public void blockImport() throws Exception {
+  public void importBlocksWithoutValidation() throws Exception {
+    blockImportTest(true);
+  }
+
+  @Test
+  public void importBlocksWithValidation() throws Exception {
+    blockImportTest(false);
+  }
+
+  private void blockImportTest(boolean skipValidation) throws Exception {
     final URL importFileURL =
         getClass()
             .getClassLoader()
@@ -73,7 +82,7 @@ public final class BlockchainImporterTest {
             miningParams,
             keyPair);
     final BlockchainImporter.ImportResult result =
-        blockImporter.importBlockchain(source, ctrl, true, 1, 1, false, false, null);
+        blockImporter.importBlockchain(source, ctrl, skipValidation, 1, 1, false, false, null);
     System.out.println(source);
     System.out.println(target);
 
