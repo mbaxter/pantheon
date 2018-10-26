@@ -53,7 +53,7 @@ public final class BlockchainImporterTest {
     blockImportTest(false);
   }
 
-  private void blockImportTest(boolean skipValidation) throws Exception {
+  private void blockImportTest(final boolean skipValidation) throws Exception {
     final URL importFileURL =
         getClass().getClassLoader().getResource("tech/pegasys/pantheon/util/blockchain-import.bin");
     assertThat(importFileURL).isNotNull();
