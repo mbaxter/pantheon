@@ -44,7 +44,6 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -143,7 +142,7 @@ public class PantheonCommand implements Runnable {
   @Option(
     names = {"--datadir"},
     paramLabel = MANDATORY_PATH_FORMAT_HELP,
-    description = "the path to Pantheon data directory (default: ${DEFAULT-VALUE})"
+    description = "the path to Pantheon data directory"
   )
   private final Path dataDir = getDefaultPantheonDataDir();
 
@@ -276,10 +275,10 @@ public class PantheonCommand implements Runnable {
     split = ",",
     arity = "1..*",
     converter = RpcApisConverter.class,
-    description = "Comma separated APIs to enable on JSON-RPC channel. default: ${DEFAULT-VALUE}"
+    description = "Comma separated APIs to enable on JSON-RPC channel. default: ${DEFAULT-VALUE}",
+    defaultValue = "ETH,NET,WEB3,CLIQUE,IBFT"
   )
-  private final Collection<RpcApi> rpcApis =
-      Arrays.asList(RpcApis.ETH, RpcApis.NET, RpcApis.WEB3, CliqueRpcApis.CLIQUE, IbftRpcApis.IBFT);
+  private final Collection<RpcApi> rpcApis = null;
 
   @Option(
     names = {"--ws-enabled"},
@@ -303,10 +302,10 @@ public class PantheonCommand implements Runnable {
     split = ",",
     arity = "1..*",
     converter = RpcApisConverter.class,
-    description = "Comma separated APIs to enable on WebSocket channel. default: ${DEFAULT-VALUE}"
+    description = "Comma separated APIs to enable on WebSocket channel. default: ${DEFAULT-VALUE}",
+    defaultValue = "ETH,NET,WEB3,CLIQUE,IBFT"
   )
-  private final Collection<RpcApi> wsApis =
-      Arrays.asList(RpcApis.ETH, RpcApis.NET, RpcApis.WEB3, CliqueRpcApis.CLIQUE, IbftRpcApis.IBFT);
+  private final Collection<RpcApi> wsApis = null;
 
   @Option(
     names = {"--dev-mode"},
@@ -422,7 +421,7 @@ public class PantheonCommand implements Runnable {
         webSocketConfiguration());
   }
 
-  PantheonController<?, ?> buildController() {
+  PantheonController<?> buildController() {
     try {
       return controllerBuilder.build(
           buildSyncConfig(syncMode),
@@ -453,7 +452,7 @@ public class PantheonCommand implements Runnable {
     webSocketConfiguration.setEnabled(isWsRpcEnabled);
     webSocketConfiguration.setHost(wsHostAndPort.getHost());
     webSocketConfiguration.setPort(wsHostAndPort.getPort());
-    webSocketConfiguration.setRpcApis(rpcApis);
+    webSocketConfiguration.setRpcApis(wsApis);
     return webSocketConfiguration;
   }
 
@@ -466,7 +465,7 @@ public class PantheonCommand implements Runnable {
 
   // Blockchain synchronisation from peers.
   private void synchronize(
-      final PantheonController<?, ?> controller,
+      final PantheonController<?> controller,
       final boolean noPeerDiscovery,
       final Collection<?> bootstrapNodes,
       final int maxPeers,
