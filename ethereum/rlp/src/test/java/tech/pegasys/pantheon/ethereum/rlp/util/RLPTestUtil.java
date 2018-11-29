@@ -24,6 +24,7 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class RLPTestUtil {
 
@@ -83,7 +84,7 @@ public class RLPTestUtil {
   }
 
   /**
-   * Generate a random rlp-encoded value containing a list of randomly constructed elements.
+   * Generate a random rlp-encoded value.
    *
    * @param randomSeed Seed to use for random generation.
    * @return a random rlp-encoded value
@@ -91,35 +92,70 @@ public class RLPTestUtil {
   public static BytesValueRLPOutput randomRLPValue(int randomSeed) {
     Random random = new Random(randomSeed);
     final BytesValueRLPOutput out = new BytesValueRLPOutput();
-    out.startList();
-    int listDepth = 1;
-    while (listDepth > 1 || (listDepth == 1 && random.nextInt(5) > 0)) {
-      switch (random.nextInt(6)) {
-        case 0:
-          out.writeByte((byte) random.nextInt(256));
-          break;
-        case 1:
-          out.writeShort((short) random.nextInt(0xFFFF));
-          break;
-        case 2:
-          out.writeInt(random.nextInt());
-          break;
-        case 3:
-          out.writeLong(random.nextLong());
-          break;
-        case 4:
-          out.startList();
-          listDepth += 1;
-          break;
-        case 5:
-          if (listDepth > 1) {
-            out.endList();
-            listDepth -= 1;
-          }
-          break;
+    AtomicInteger listDepth = new AtomicInteger(0);
+    int iterations = 0;
+    do {
+      if (iterations > 1000) {
+        out.endList();
+        listDepth.decrementAndGet();
+        continue;
       }
-    }
-    out.endList();
+      iterations += 1;
+
+      writeRandomRLPData(out, random, listDepth);
+    } while (listDepth.get() > 0);
+
     return out;
+  }
+
+  private static void writeRandomRLPData(RLPOutput out, Random random, AtomicInteger listDepth) {
+    switch (random.nextInt(12)) {
+      case 0:
+        // Write empty byte string
+        out.writeBytesValue(BytesValue.EMPTY);
+        break;
+      case 1:
+        // Small single byte
+        out.writeByte((byte) random.nextInt(128));
+        break;
+      case 2:
+        // Large single byte
+        byte value = (byte) (random.nextInt(128) + 128);
+        out.writeByte(value);
+        break;
+      case 3:
+        // Small byte string
+        int smallBytesSize = random.nextInt(54) + 2;
+        out.writeBytesValue(randomBytesValue(random, smallBytesSize));
+        break;
+      case 4:
+        // Large byte string
+        int largeBytesSize = random.nextInt(500) + 56;
+        out.writeBytesValue(randomBytesValue(random, largeBytesSize));
+        break;
+      case 5:
+        // Close list
+        if (listDepth.get() == 0) {
+          // If we're outside of a list try again
+          writeRandomRLPData(out, random, listDepth);
+          return;
+        }
+        out.endList();
+        listDepth.decrementAndGet();
+        break;
+      default:
+        // Start list
+        out.startList();
+        listDepth.incrementAndGet();
+        break;
+    }
+  }
+
+  private static BytesValue randomBytesValue(Random random, int size) {
+    byte[] bytes = new byte[size];
+    for (int i = 0; i < bytes.length; i++) {
+      bytes[i] = (byte) random.nextInt(256);
+    }
+    return BytesValue.wrap(bytes);
   }
 }

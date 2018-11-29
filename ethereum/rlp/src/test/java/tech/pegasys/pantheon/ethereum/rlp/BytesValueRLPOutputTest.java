@@ -33,7 +33,18 @@ public class BytesValueRLPOutputTest {
   @Test
   public void empty() {
     final BytesValueRLPOutput out = new BytesValueRLPOutput();
+
     assertThat(out.encoded()).isEqualTo(BytesValue.EMPTY);
+    assertThat(out.encoded().toString()).isEqualTo("0x");
+  }
+
+  @Test
+  public void emptyBytesString() {
+    final BytesValueRLPOutput out = new BytesValueRLPOutput();
+    out.writeBytesValue(BytesValue.EMPTY);
+
+    assertThat(out.encoded()).isEqualTo(RLP.NULL);
+    assertThat(out.encoded().toString()).isEqualTo("0x80");
   }
 
   @Test
