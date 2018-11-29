@@ -21,8 +21,11 @@ import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
 import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
+import java.util.Random;
 
 public class RLPTestUtil {
 
@@ -79,5 +82,60 @@ public class RLPTestUtil {
       throw new IllegalArgumentException(
           format("Invalid input type %s for RLP encoding", obj.getClass()));
     }
+  }
+
+  /**
+   * Generate a random rlp-encoded value containing a list of randomly constructed elements.
+   *
+   * @param randomSeed Seed to use for random generation.
+   * @return a random rlp-encoded value
+   */
+  public static BytesValueRLPOutput randomRLPValue(int randomSeed) {
+    Random random = new Random(randomSeed);
+    final BytesValueRLPOutput out = new BytesValueRLPOutput();
+    final Deque<Integer> listSizes = new ArrayDeque<>();
+    out.startList();
+    // Track the size of each list and sublist
+    listSizes.push(0);
+    while (!listSizes.isEmpty() && (listSizes.size() > 1 || random.nextInt(3) > 0)) {
+      if (listSizes.peek() >= Integer.MAX_VALUE) {
+        if (listSizes.size() > 1) {
+          out.endList();
+        }
+        listSizes.pop();
+        continue;
+      }
+      switch (random.nextInt(6)) {
+        case 0:
+          out.writeByte((byte) random.nextInt(256));
+          listSizes.push(listSizes.pop() + 1);
+          break;
+        case 1:
+          out.writeShort((short) random.nextInt(0xFFFF));
+          listSizes.push(listSizes.pop() + 2);
+          break;
+        case 2:
+          out.writeInt(random.nextInt());
+          listSizes.push(listSizes.pop() + 4);
+          break;
+        case 3:
+          out.writeLong(random.nextLong());
+          listSizes.push(listSizes.pop() + 8);
+          break;
+        case 4:
+          out.startList();
+          listSizes.push(0);
+          break;
+        case 5:
+          if (listSizes.size() > 1) {
+            out.endList();
+            int listSize = listSizes.pop();
+            listSizes.push(listSizes.pop() + listSize);
+          }
+          break;
+      }
+    }
+    out.endList();
+    return out;
   }
 }
