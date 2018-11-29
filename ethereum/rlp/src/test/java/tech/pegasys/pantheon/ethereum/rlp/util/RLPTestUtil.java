@@ -93,44 +93,30 @@ public class RLPTestUtil {
   public static BytesValueRLPOutput randomRLPValue(int randomSeed) {
     Random random = new Random(randomSeed);
     final BytesValueRLPOutput out = new BytesValueRLPOutput();
-    final Deque<Integer> listSizes = new ArrayDeque<>();
     out.startList();
-    // Track the size of each list and sublist
-    listSizes.push(0);
-    while (!listSizes.isEmpty() && (listSizes.size() > 1 || random.nextInt(3) > 0)) {
-      if (listSizes.peek() >= Integer.MAX_VALUE) {
-        if (listSizes.size() > 1) {
-          out.endList();
-        }
-        listSizes.pop();
-        continue;
-      }
+    int listDepth = 1;
+    while (listDepth > 1 || (listDepth == 1 && random.nextInt(5) > 0)) {
       switch (random.nextInt(6)) {
         case 0:
           out.writeByte((byte) random.nextInt(256));
-          listSizes.push(listSizes.pop() + 1);
           break;
         case 1:
           out.writeShort((short) random.nextInt(0xFFFF));
-          listSizes.push(listSizes.pop() + 2);
           break;
         case 2:
           out.writeInt(random.nextInt());
-          listSizes.push(listSizes.pop() + 4);
           break;
         case 3:
           out.writeLong(random.nextLong());
-          listSizes.push(listSizes.pop() + 8);
           break;
         case 4:
           out.startList();
-          listSizes.push(0);
+          listDepth += 1;
           break;
         case 5:
-          if (listSizes.size() > 1) {
+          if (listDepth > 1) {
             out.endList();
-            int listSize = listSizes.pop();
-            listSizes.push(listSizes.pop() + listSize);
+            listDepth -= 1;
           }
           break;
       }
