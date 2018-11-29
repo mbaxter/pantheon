@@ -166,7 +166,7 @@ public class RLPTest {
         .hasMessageContaining("RLP item exceeds max supported size of 2147483647: 2147483648");
   }
 
-  private static BytesValue h(String hex) {
+  private static BytesValue h(final String hex) {
     return BytesValue.fromHexString(hex);
   }
 }

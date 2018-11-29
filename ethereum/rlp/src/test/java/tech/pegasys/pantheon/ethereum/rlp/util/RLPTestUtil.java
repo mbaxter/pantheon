@@ -89,10 +89,10 @@ public class RLPTestUtil {
    * @param randomSeed Seed to use for random generation.
    * @return a random rlp-encoded value
    */
-  public static BytesValueRLPOutput randomRLPValue(int randomSeed) {
-    Random random = new Random(randomSeed);
+  public static BytesValueRLPOutput randomRLPValue(final int randomSeed) {
+    final Random random = new Random(randomSeed);
     final BytesValueRLPOutput out = new BytesValueRLPOutput();
-    AtomicInteger listDepth = new AtomicInteger(0);
+    final AtomicInteger listDepth = new AtomicInteger(0);
     int iterations = 0;
     do {
       if (iterations > 1000) {
@@ -108,7 +108,8 @@ public class RLPTestUtil {
     return out;
   }
 
-  private static void writeRandomRLPData(RLPOutput out, Random random, AtomicInteger listDepth) {
+  private static void writeRandomRLPData(
+      final RLPOutput out, final Random random, final AtomicInteger listDepth) {
     switch (random.nextInt(12)) {
       case 0:
         // Write empty byte string
@@ -151,8 +152,8 @@ public class RLPTestUtil {
     }
   }
 
-  private static BytesValue randomBytesValue(Random random, int size) {
-    byte[] bytes = new byte[size];
+  private static BytesValue randomBytesValue(final Random random, final int size) {
+    final byte[] bytes = new byte[size];
     for (int i = 0; i < bytes.length; i++) {
       bytes[i] = (byte) random.nextInt(256);
     }
