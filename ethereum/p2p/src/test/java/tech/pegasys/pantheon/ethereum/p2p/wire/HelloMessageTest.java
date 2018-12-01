@@ -21,7 +21,7 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import org.junit.Test;
 
-public class WireMessagesSedesTest {
+public class HelloMessageTest {
 
   @Test
   public void deserializeHello() {

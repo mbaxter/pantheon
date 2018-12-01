@@ -41,6 +41,14 @@ public final class DisconnectMessage extends AbstractMessageData {
     return new DisconnectMessage(out.encoded());
   }
 
+  public static DisconnectMessage create() {
+    final Data data = new Data();
+    final BytesValueRLPOutput out = new BytesValueRLPOutput();
+    data.writeTo(out);
+
+    return new DisconnectMessage(out.encoded());
+  }
+
   public static DisconnectMessage readFrom(final MessageData message) {
     if (message instanceof DisconnectMessage) {
       return (DisconnectMessage) message;
@@ -72,6 +80,10 @@ public final class DisconnectMessage extends AbstractMessageData {
 
     public Data(final DisconnectReason reason) {
       this.reason = Optional.ofNullable(reason);
+    }
+
+    public Data() {
+      this.reason = Optional.empty();
     }
 
     public void writeTo(final RLPOutput out) {
