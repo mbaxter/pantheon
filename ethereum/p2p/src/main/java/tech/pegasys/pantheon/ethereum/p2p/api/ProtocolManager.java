@@ -17,6 +17,7 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 
 import java.util.List;
+import java.util.Optional;
 
 /** Represents an object responsible for managing a wire subprotocol. */
 public interface ProtocolManager extends AutoCloseable, PeerRequirement {
@@ -61,10 +62,11 @@ public interface ProtocolManager extends AutoCloseable, PeerRequirement {
    * @param peerConnection the connection that is being closed
    * @param disconnectReason the reason given for closing the connection
    * @param initiatedByPeer true if the peer requested to disconnect, false if this node requested
-   *     the disconnect
    */
   void handleDisconnect(
-      PeerConnection peerConnection, DisconnectReason disconnectReason, boolean initiatedByPeer);
+      PeerConnection peerConnection,
+      Optional<DisconnectReason> disconnectReason,
+      boolean initiatedByPeer);
 
   @Override
   default void close() {

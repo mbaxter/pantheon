@@ -24,6 +24,7 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -72,7 +73,7 @@ public class PeerConnectionRegistry implements DisconnectCallback {
   @Override
   public void onDisconnect(
       final PeerConnection connection,
-      final DisconnectReason reason,
+      final Optional<DisconnectReason> reason,
       final boolean initiatedByPeer) {
     connections.remove(connection.getPeer().getNodeId());
     disconnectCounter.labels(initiatedByPeer ? "remote" : "local", reason.name()).inc();

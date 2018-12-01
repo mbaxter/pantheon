@@ -41,6 +41,7 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.net.InetAddress;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -237,7 +238,7 @@ public final class NettyP2PNetworkTest {
 
       // Setup second connection and check that connection is not accepted
       final CompletableFuture<PeerConnection> peerFuture = new CompletableFuture<>();
-      final CompletableFuture<DisconnectReason> reasonFuture = new CompletableFuture<>();
+      final CompletableFuture<Optional<DisconnectReason>> reasonFuture = new CompletableFuture<>();
       connector2.subscribeDisconnect(
           (peerConnection, reason, initiatedByPeer) -> {
             peerFuture.complete(peerConnection);
@@ -247,7 +248,7 @@ public final class NettyP2PNetworkTest {
       assertThat(connector2.connect(listeningPeer).get(30L, TimeUnit.SECONDS).getPeer().getNodeId())
           .isEqualTo(listenId);
       assertThat(peerFuture.get(30L, TimeUnit.SECONDS).getPeer().getNodeId()).isEqualTo(listenId);
-      assertThat(reasonFuture.get(30L, TimeUnit.SECONDS))
+      assertThat(reasonFuture.get(30L, TimeUnit.SECONDS).get())
           .isEqualByComparingTo(DisconnectReason.TOO_MANY_PEERS);
     }
   }
@@ -364,7 +365,7 @@ public final class NettyP2PNetworkTest {
 
       // Setup disconnect listener
       final CompletableFuture<PeerConnection> peerFuture = new CompletableFuture<>();
-      final CompletableFuture<DisconnectReason> reasonFuture = new CompletableFuture<>();
+      final CompletableFuture<Optional<DisconnectReason>> reasonFuture = new CompletableFuture<>();
       remoteNetwork.subscribeDisconnect(
           (peerConnection, reason, initiatedByPeer) -> {
             peerFuture.complete(peerConnection);
@@ -377,7 +378,7 @@ public final class NettyP2PNetworkTest {
       // Check connection is made, and then a disconnect is registered at remote
       assertThat(connectFuture.get(5L, TimeUnit.SECONDS).getPeer().getNodeId()).isEqualTo(localId);
       assertThat(peerFuture.get(5L, TimeUnit.SECONDS).getPeer().getNodeId()).isEqualTo(localId);
-      assertThat(reasonFuture.get(5L, TimeUnit.SECONDS))
+      assertThat(reasonFuture.get(5L, TimeUnit.SECONDS).get())
           .isEqualByComparingTo(DisconnectReason.USELESS_PEER);
     }
   }

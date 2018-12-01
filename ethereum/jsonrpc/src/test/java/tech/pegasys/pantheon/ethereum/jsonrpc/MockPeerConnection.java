@@ -20,6 +20,7 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.Discon
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Optional;
 import java.util.Set;
 
 public class MockPeerConnection implements PeerConnection {
@@ -57,7 +58,8 @@ public class MockPeerConnection implements PeerConnection {
   }
 
   @Override
-  public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {
+  public void terminateConnection(
+      final Optional<DisconnectReason> reason, final boolean peerInitiated) {
     throw new UnsupportedOperationException();
   }
 

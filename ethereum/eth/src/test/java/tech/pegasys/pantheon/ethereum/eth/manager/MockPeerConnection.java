@@ -21,6 +21,7 @@ import tech.pegasys.pantheon.util.bytes.Bytes32;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -70,8 +71,9 @@ class MockPeerConnection implements PeerConnection {
   }
 
   @Override
-  public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {
-    disconnect(reason);
+  public void terminateConnection(
+      final Optional<DisconnectReason> reason, final boolean peerInitiated) {
+    disconnect(reason.orElse(null));
   }
 
   @Override

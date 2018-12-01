@@ -19,8 +19,8 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.PongMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.WireMessageCodes;
-import tech.pegasys.pantheon.ethereum.rlp.RLPException;
 
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -74,23 +74,11 @@ final class ApiHandler extends SimpleChannelInboundHandler<MessageData> {
           break;
         case WireMessageCodes.DISCONNECT:
           final DisconnectMessage disconnect = DisconnectMessage.readFrom(message);
-          DisconnectReason reason = null;
-          try {
-            reason = disconnect.getReason();
-            LOG.debug(
-                "Received Wire DISCONNECT ({}) from peer: {}",
-                reason.name(),
-                connection.getPeer().getClientId());
-          } catch (final RLPException e) {
-            LOG.debug(
-                "Received Wire DISCONNECT with invalid RLP. Peer: {}",
-                connection.getPeer().getClientId());
-          } catch (final Exception e) {
-            LOG.error(
-                "Received Wire DISCONNECT, but unable to parse reason. Peer: {}",
-                connection.getPeer().getClientId(),
-                e);
-          }
+          Optional<DisconnectReason> reason = disconnect.getReason();
+          LOG.debug(
+              "Received Wire DISCONNECT (reason: {}) from peer: {}",
+              reason.map(DisconnectReason::toString).orElse("none"),
+              connection.getPeer().getClientId());
           connection.terminateConnection(reason, true);
       }
       return;

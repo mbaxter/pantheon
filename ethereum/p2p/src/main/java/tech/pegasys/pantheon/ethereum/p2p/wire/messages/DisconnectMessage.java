@@ -24,6 +24,7 @@ import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
 import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public final class DisconnectMessage extends AbstractMessageData {
@@ -57,7 +58,7 @@ public final class DisconnectMessage extends AbstractMessageData {
     return WireMessageCodes.DISCONNECT;
   }
 
-  public DisconnectReason getReason() {
+  public Optional<DisconnectReason> getReason() {
     return Data.readFrom(RLP.input(data)).getReason();
   }
 
@@ -67,28 +68,39 @@ public final class DisconnectMessage extends AbstractMessageData {
   }
 
   public static class Data {
-    private final DisconnectReason reason;
+    private final Optional<DisconnectReason> reason;
 
     public Data(final DisconnectReason reason) {
-      this.reason = reason;
+      this.reason = Optional.ofNullable(reason);
     }
 
     public void writeTo(final RLPOutput out) {
+      BytesValue reasonBytes =
+          reason.map(DisconnectReason::getValue).map(BytesValue::of).orElse(BytesValue.EMPTY);
+
       out.startList();
-      out.writeByte(reason.getValue());
+      out.writeBytesValue(reasonBytes);
       out.endList();
     }
 
     public static Data readFrom(final RLPInput in) {
       final int size = in.enterList();
       checkGuard(size == 1, WireProtocolException::new, "Expected list size 1, got: %s", size);
-      final DisconnectReason reason = DisconnectReason.forCode(in.readByte());
+      BytesValue reasonData = in.readBytesValue();
       in.leaveList();
+
+      checkGuard(
+          reasonData.size() <= 1,
+          WireProtocolException::new,
+          "Expected disconnect reason consuming at most 1 byte, but got %d bytes",
+          reasonData.size());
+      final DisconnectReason reason =
+          reasonData.size() == 0 ? null : DisconnectReason.forCode(reasonData.get(0));
 
       return new Data(reason);
     }
 
-    public DisconnectReason getReason() {
+    public Optional<DisconnectReason> getReason() {
       return reason;
     }
   }
@@ -124,8 +136,7 @@ public final class DisconnectMessage extends AbstractMessageData {
       Stream.of(DisconnectReason.values()).forEach(dr -> BY_ID[dr.getValue()] = dr);
     }
 
-    public static DisconnectReason forCode(final byte taintedCode) {
-      final byte code = (byte) (taintedCode & 0xff);
+    public static DisconnectReason forCode(final byte code) {
       checkArgument(code < BY_ID.length, "unrecognized disconnect reason");
       final DisconnectReason reason = BY_ID[code];
       checkArgument(reason != null, "unrecognized disconnect reason");
@@ -138,6 +149,11 @@ public final class DisconnectMessage extends AbstractMessageData {
 
     public byte getValue() {
       return code;
+    }
+
+    @Override
+    public String toString() {
+      return name() + " ( " + code + ")";
     }
   }
 }

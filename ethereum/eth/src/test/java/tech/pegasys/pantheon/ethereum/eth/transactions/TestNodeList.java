@@ -32,6 +32,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -218,7 +219,7 @@ public class TestNodeList implements Closeable {
     int errCnt = 0;
     final StringBuilder sb = new StringBuilder();
     for (final TestNode node : nodes) {
-      for (final Map.Entry<PeerConnection, DisconnectReason> entry :
+      for (final Map.Entry<PeerConnection, Optional<DisconnectReason>> entry :
           node.disconnections.entrySet()) {
         final PeerConnection peer = entry.getKey();
         final String peerString = peer.getPeer().getNodeId() + "@" + peer.getRemoteAddress();

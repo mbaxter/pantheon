@@ -26,6 +26,7 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.Discon
 import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -104,7 +105,8 @@ final class NettyPeerConnection implements PeerConnection {
   }
 
   @Override
-  public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {
+  public void terminateConnection(
+      final Optional<DisconnectReason> reason, final boolean peerInitiated) {
     if (disconnectDispatched.compareAndSet(false, true)) {
       LOG.debug("Disconnected ({}) from {}", reason, peerInfo);
       callbacks.invokeDisconnect(this, reason, peerInitiated);

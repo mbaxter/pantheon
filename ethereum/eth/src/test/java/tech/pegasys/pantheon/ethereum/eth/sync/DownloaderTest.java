@@ -530,7 +530,7 @@ public class DownloaderTest {
 
     // Disconnect peer
     ethProtocolManager.handleDisconnect(
-        bestPeer.getPeerConnection(), DisconnectReason.TOO_MANY_PEERS, true);
+        bestPeer.getPeerConnection(), Optional.of(DisconnectReason.TOO_MANY_PEERS), true);
 
     // Downloader should recover and sync to next best peer
     await()

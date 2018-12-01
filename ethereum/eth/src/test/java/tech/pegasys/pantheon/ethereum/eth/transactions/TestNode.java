@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 
@@ -67,7 +68,7 @@ public class TestNode implements Closeable {
   protected final SECP256K1.KeyPair kp;
   protected final P2PNetwork network;
   protected final Peer selfPeer;
-  protected final Map<PeerConnection, DisconnectReason> disconnections = new HashMap<>();
+  protected final Map<PeerConnection, Optional<DisconnectReason>> disconnections = new HashMap<>();
   private final TransactionPool transactionPool;
 
   public TestNode(

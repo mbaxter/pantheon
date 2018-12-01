@@ -22,6 +22,7 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.Discon
 import tech.pegasys.pantheon.util.Subscribers;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.apache.logging.log4j.LogManager;
@@ -44,10 +45,18 @@ public class Callbacks {
 
   public void invokeDisconnect(
       final PeerConnection connection,
-      final DisconnectReason reason,
+      final Optional<DisconnectReason> reason,
       final boolean initatedByPeer) {
     disconnectCallbacks.forEach(
         consumer -> consumer.onDisconnect(connection, reason, initatedByPeer));
+  }
+
+  public void invokeDisconnect(
+      final PeerConnection connection,
+      final DisconnectReason reason,
+      final boolean initatedByPeer) {
+    disconnectCallbacks.forEach(
+        consumer -> consumer.onDisconnect(connection, Optional.ofNullable(reason), initatedByPeer));
   }
 
   public void invokeSubProtocol(

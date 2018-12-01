@@ -24,6 +24,7 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.Discon
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -90,7 +91,7 @@ public class IbftProtocolManager implements ProtocolManager {
   @Override
   public void handleDisconnect(
       final PeerConnection peerConnection,
-      final DisconnectReason disconnectReason,
+      final Optional<DisconnectReason> disconnectReason,
       final boolean initiatedByPeer) {
     peers.peerRemoved(peerConnection);
   }

@@ -18,6 +18,7 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.Discon
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Optional;
 import java.util.Set;
 
 /** A P2P connection to another node. */
@@ -76,7 +77,11 @@ public interface PeerConnection {
    * @param reason the reason for disconnection
    * @param peerInitiated <code>true</code> if and only if the remote peer requested disconnection
    */
-  void terminateConnection(DisconnectReason reason, boolean peerInitiated);
+  void terminateConnection(Optional<DisconnectReason> reason, boolean peerInitiated);
+
+  default void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {
+    terminateConnection(Optional.ofNullable(reason), peerInitiated);
+  }
 
   /**
    * Disconnect from this Peer.
@@ -84,6 +89,10 @@ public interface PeerConnection {
    * @param reason Reason for disconnecting
    */
   void disconnect(DisconnectReason reason);
+
+  default void disconnect() {
+    disconnect(null);
+  }
 
   SocketAddress getLocalAddress();
 

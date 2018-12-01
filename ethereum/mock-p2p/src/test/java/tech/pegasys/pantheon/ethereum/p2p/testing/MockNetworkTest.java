@@ -84,15 +84,18 @@ public final class MockNetworkTest {
       Assertions.assertThat(receivedMessageData.getCode()).isEqualTo(code);
 
       // Validate Disconnect Behaviour
-      final CompletableFuture<DisconnectReason> peer1DisconnectFuture = new CompletableFuture<>();
-      final CompletableFuture<DisconnectReason> peer2DisconnectFuture = new CompletableFuture<>();
+      final CompletableFuture<Optional<DisconnectReason>> peer1DisconnectFuture =
+          new CompletableFuture<>();
+      final CompletableFuture<Optional<DisconnectReason>> peer2DisconnectFuture =
+          new CompletableFuture<>();
       network2.subscribeDisconnect(
           (peer, reason, initiatedByPeer) -> peer1DisconnectFuture.complete(reason));
       network1.subscribeDisconnect(
           (peer, reason, initiatedByPeer) -> peer2DisconnectFuture.complete(reason));
       connection.disconnect(DisconnectReason.CLIENT_QUITTING);
-      Assertions.assertThat(peer1DisconnectFuture.get()).isEqualTo(DisconnectReason.REQUESTED);
-      Assertions.assertThat(peer2DisconnectFuture.get())
+      Assertions.assertThat(peer1DisconnectFuture.get().get())
+          .isEqualTo(DisconnectReason.REQUESTED);
+      Assertions.assertThat(peer2DisconnectFuture.get().get())
           .isEqualTo(DisconnectReason.CLIENT_QUITTING);
       Assertions.assertThat(network1.getPeers().stream().filter(isPeerTwo).findFirst())
           .isNotPresent();

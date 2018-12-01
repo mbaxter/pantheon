@@ -33,7 +33,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PingPacketData;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeerId;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
+import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.util.NetworkUtility;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
@@ -44,6 +44,7 @@ import java.net.SocketException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -401,7 +402,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
   @Override
   public void onDisconnect(
       final PeerConnection connection,
-      final DisconnectMessage.DisconnectReason reason,
+      final Optional<DisconnectReason> reason,
       final boolean initiatedByPeer) {
     final BytesValue nodeId = connection.getPeer().getNodeId();
     peerTable.evict(new DefaultPeerId(nodeId));

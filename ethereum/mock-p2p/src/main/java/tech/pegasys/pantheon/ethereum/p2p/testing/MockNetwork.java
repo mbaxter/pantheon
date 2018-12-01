@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -83,7 +84,7 @@ public final class MockNetwork {
   }
 
   private void disconnect(
-      final MockNetwork.MockPeerConnection connection, final DisconnectReason reason) {
+      final MockNetwork.MockPeerConnection connection, final Optional<DisconnectReason> reason) {
     synchronized (this) {
       final MockP2PNetwork sourceNode = nodes.get(connection.from);
       final MockP2PNetwork targetNode = nodes.get(connection.to);
@@ -94,7 +95,7 @@ public final class MockNetwork {
       }
       targetNode.disconnectCallbacks.forEach(c -> c.onDisconnect(connection, reason, true));
       sourceNode.disconnectCallbacks.forEach(
-          c -> c.onDisconnect(connection, DisconnectReason.REQUESTED, false));
+          c -> c.onDisconnect(connection, Optional.of(DisconnectReason.REQUESTED), false));
     }
   }
 
@@ -246,13 +247,14 @@ public final class MockNetwork {
     }
 
     @Override
-    public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {
+    public void terminateConnection(
+        final Optional<DisconnectReason> reason, final boolean peerInitiated) {
       network.disconnect(this, reason);
     }
 
     @Override
     public void disconnect(final DisconnectReason reason) {
-      network.disconnect(this, reason);
+      network.disconnect(this, Optional.ofNullable(reason));
     }
 
     @Override

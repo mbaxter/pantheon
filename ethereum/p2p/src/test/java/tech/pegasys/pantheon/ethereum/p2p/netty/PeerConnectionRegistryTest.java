@@ -23,6 +23,8 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.Discon
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.Optional;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -57,7 +59,7 @@ public class PeerConnectionRegistryTest {
   public void shouldUnregisterConnections() {
     registry.registerConnection(connection1);
     registry.registerConnection(connection2);
-    registry.onDisconnect(connection1, DisconnectReason.TCP_SUBSYSTEM_ERROR, false);
+    registry.onDisconnect(connection1, Optional.of(DisconnectReason.TCP_SUBSYSTEM_ERROR), false);
     assertThat(registry.getPeerConnections()).containsOnly(connection2);
     assertThat(registry.size()).isEqualTo(1);
   }

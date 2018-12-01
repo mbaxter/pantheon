@@ -14,7 +14,10 @@ package tech.pegasys.pantheon.ethereum.p2p.api;
 
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 
+import java.util.Optional;
+
 @FunctionalInterface
 public interface DisconnectCallback {
-  void onDisconnect(PeerConnection connection, DisconnectReason reason, boolean initiatedByPeer);
+  void onDisconnect(
+      PeerConnection connection, Optional<DisconnectReason> reason, boolean initiatedByPeer);
 }

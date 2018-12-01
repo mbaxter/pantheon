@@ -200,19 +200,20 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
   @Override
   public void handleDisconnect(
       final PeerConnection connection,
-      final DisconnectReason reason,
+      final Optional<DisconnectReason> reason,
       final boolean initiatedByPeer) {
     ethPeers.registerDisconnect(connection);
+    String reasonDescription = reason.map(DisconnectReason::toString).orElse("none");
     if (initiatedByPeer) {
       LOG.debug(
-          "Peer requested to be disconnected ({}), {} peers left: {}",
-          reason,
+          "Peer requested to be disconnected (reason: {}), {} peers left: {}",
+          reasonDescription,
           ethPeers.peerCount(),
           ethPeers);
     } else {
       LOG.debug(
-          "Disconnecting from peer ({}), {} peers left: {}",
-          reason,
+          "Disconnecting from peer (reason: {}), {} peers left: {}",
+          reasonDescription,
           ethPeers.peerCount(),
           ethPeers);
     }

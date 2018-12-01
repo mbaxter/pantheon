@@ -35,6 +35,7 @@ import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -157,7 +158,7 @@ public class PeerDiscoveryAgentTest extends AbstractPeerDiscoveryTest {
     assertThat(peerDiscoveryAgent2.getPeers().size()).isEqualTo(1);
 
     final PeerConnection peerConnection = createAnonymousPeerConnection(peer.getId());
-    peerDiscoveryAgent2.onDisconnect(peerConnection, DisconnectReason.REQUESTED, true);
+    peerDiscoveryAgent2.onDisconnect(peerConnection, Optional.of(DisconnectReason.REQUESTED), true);
 
     assertThat(peerDiscoveryAgent2.getPeers().size()).isEqualTo(0);
   }
@@ -176,8 +177,8 @@ public class PeerDiscoveryAgentTest extends AbstractPeerDiscoveryTest {
     assertThat(agent.getPeers()).hasSize(1);
 
     // Disconnect with innocuous reason
-    blacklist.onDisconnect(wirePeer, DisconnectReason.TOO_MANY_PEERS, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.TOO_MANY_PEERS, false);
+    blacklist.onDisconnect(wirePeer, Optional.of(DisconnectReason.TOO_MANY_PEERS), false);
+    agent.onDisconnect(wirePeer, Optional.of(DisconnectReason.TOO_MANY_PEERS), false);
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -202,8 +203,8 @@ public class PeerDiscoveryAgentTest extends AbstractPeerDiscoveryTest {
     assertThat(agent.getPeers()).hasSize(1);
 
     // Disconnect with problematic reason
-    blacklist.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, false);
+    blacklist.onDisconnect(wirePeer, Optional.of(DisconnectReason.BREACH_OF_PROTOCOL), false);
+    agent.onDisconnect(wirePeer, Optional.of(DisconnectReason.BREACH_OF_PROTOCOL), false);
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -228,8 +229,8 @@ public class PeerDiscoveryAgentTest extends AbstractPeerDiscoveryTest {
     assertThat(agent.getPeers()).hasSize(1);
 
     // Disconnect with problematic reason
-    blacklist.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, true);
-    agent.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, true);
+    blacklist.onDisconnect(wirePeer, Optional.of(DisconnectReason.BREACH_OF_PROTOCOL), true);
+    agent.onDisconnect(wirePeer, Optional.of(DisconnectReason.BREACH_OF_PROTOCOL), true);
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -254,8 +255,10 @@ public class PeerDiscoveryAgentTest extends AbstractPeerDiscoveryTest {
     assertThat(agent.getPeers()).hasSize(1);
 
     // Disconnect
-    blacklist.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, false);
+    blacklist.onDisconnect(
+        wirePeer, Optional.of(DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION), false);
+    agent.onDisconnect(
+        wirePeer, Optional.of(DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION), false);
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -280,8 +283,10 @@ public class PeerDiscoveryAgentTest extends AbstractPeerDiscoveryTest {
     assertThat(agent.getPeers()).hasSize(1);
 
     // Disconnect
-    blacklist.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, true);
-    agent.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, true);
+    blacklist.onDisconnect(
+        wirePeer, Optional.of(DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION), true);
+    agent.onDisconnect(
+        wirePeer, Optional.of(DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION), true);
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -329,7 +334,8 @@ public class PeerDiscoveryAgentTest extends AbstractPeerDiscoveryTest {
       }
 
       @Override
-      public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {}
+      public void terminateConnection(
+          final Optional<DisconnectReason> reason, final boolean peerInitiated) {}
 
       @Override
       public void disconnect(final DisconnectReason reason) {}

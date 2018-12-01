@@ -14,13 +14,13 @@ package tech.pegasys.pantheon.ethereum.p2p.peers;
 
 import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
@@ -102,7 +102,7 @@ public class PeerBlacklist implements DisconnectCallback {
   @Override
   public void onDisconnect(
       final PeerConnection connection,
-      final DisconnectReason reason,
+      final Optional<DisconnectReason> reason,
       final boolean initiatedByPeer) {
     if (shouldBlacklistForDisconnect(reason, initiatedByPeer)) {
       add(connection.getPeer().getNodeId());
@@ -110,7 +110,11 @@ public class PeerBlacklist implements DisconnectCallback {
   }
 
   private boolean shouldBlacklistForDisconnect(
-      final DisconnectMessage.DisconnectReason reason, final boolean initiatedByPeer) {
+      final Optional<DisconnectReason> maybeReason, final boolean initiatedByPeer) {
+    if (!maybeReason.isPresent()) {
+      return false;
+    }
+    DisconnectReason reason = maybeReason.get();
     return (!initiatedByPeer && locallyTriggeredBlacklistReasons.contains(reason))
         || (initiatedByPeer && remotelyTriggeredBlacklistReasons.contains(reason));
   }
