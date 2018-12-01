@@ -378,8 +378,7 @@ public final class NettyP2PNetworkTest {
       // Check connection is made, and then a disconnect is registered at remote
       assertThat(connectFuture.get(5L, TimeUnit.SECONDS).getPeer().getNodeId()).isEqualTo(localId);
       assertThat(peerFuture.get(5L, TimeUnit.SECONDS).getPeer().getNodeId()).isEqualTo(localId);
-      assertThat(reasonFuture.get(5L, TimeUnit.SECONDS).get())
-          .isEqualByComparingTo(DisconnectReason.USELESS_PEER);
+      assertThat(reasonFuture.get(5L, TimeUnit.SECONDS)).isNotPresent();
     }
   }
 
