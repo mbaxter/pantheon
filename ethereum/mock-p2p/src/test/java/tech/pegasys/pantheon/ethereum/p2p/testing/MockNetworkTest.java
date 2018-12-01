@@ -93,10 +93,8 @@ public final class MockNetworkTest {
       network1.subscribeDisconnect(
           (peer, reason, initiatedByPeer) -> peer2DisconnectFuture.complete(reason));
       connection.disconnect(DisconnectReason.CLIENT_QUITTING);
-      Assertions.assertThat(peer1DisconnectFuture.get().get())
-          .isEqualTo(DisconnectReason.REQUESTED);
-      Assertions.assertThat(peer2DisconnectFuture.get().get())
-          .isEqualTo(DisconnectReason.CLIENT_QUITTING);
+      Assertions.assertThat(peer1DisconnectFuture.get()).contains(DisconnectReason.REQUESTED);
+      Assertions.assertThat(peer2DisconnectFuture.get()).contains(DisconnectReason.CLIENT_QUITTING);
       Assertions.assertThat(network1.getPeers().stream().filter(isPeerTwo).findFirst())
           .isNotPresent();
       Assertions.assertThat(network2.getPeers().stream().filter(isPeerOne).findFirst())

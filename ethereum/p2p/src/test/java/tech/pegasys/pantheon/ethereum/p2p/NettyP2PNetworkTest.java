@@ -248,8 +248,7 @@ public final class NettyP2PNetworkTest {
       assertThat(connector2.connect(listeningPeer).get(30L, TimeUnit.SECONDS).getPeer().getNodeId())
           .isEqualTo(listenId);
       assertThat(peerFuture.get(30L, TimeUnit.SECONDS).getPeer().getNodeId()).isEqualTo(listenId);
-      assertThat(reasonFuture.get(30L, TimeUnit.SECONDS).get())
-          .isEqualByComparingTo(DisconnectReason.TOO_MANY_PEERS);
+      assertThat(reasonFuture.get(30L, TimeUnit.SECONDS)).contains(DisconnectReason.TOO_MANY_PEERS);
     }
   }
 
