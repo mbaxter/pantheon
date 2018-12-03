@@ -69,6 +69,11 @@ public class MockPeerConnection implements PeerConnection {
   }
 
   @Override
+  public void disconnect() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public SocketAddress getLocalAddress() {
     return localAddress;
   }

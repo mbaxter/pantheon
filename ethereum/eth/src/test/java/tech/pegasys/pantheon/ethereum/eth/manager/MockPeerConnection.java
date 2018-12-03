@@ -82,6 +82,11 @@ class MockPeerConnection implements PeerConnection {
   }
 
   @Override
+  public void disconnect() {
+    disconnected = true;
+  }
+
+  @Override
   public SocketAddress getLocalAddress() {
     throw new UnsupportedOperationException();
   }

@@ -118,9 +118,19 @@ final class NettyPeerConnection implements PeerConnection {
   }
 
   @Override
-  public void disconnect(final DisconnectReason reason) {
+  public void disconnect(DisconnectReason reason) {
+    disconnect(Optional.ofNullable(reason));
+  }
+
+  @Override
+  public void disconnect() {
+    disconnect(Optional.empty());
+  }
+
+  private void disconnect(final Optional<DisconnectReason> reason) {
     if (disconnectDispatched.compareAndSet(false, true)) {
-      LOG.debug("Disconnecting ({}) from {}", reason, peerInfo);
+      String reasonDescription = reason.map(DisconnectReason::toString).orElse("none");
+      LOG.debug("Disconnecting (reason: {}) from {}", reasonDescription, peerInfo);
       callbacks.invokeDisconnect(this, reason, false);
       try {
         send(null, DisconnectMessage.create(reason));

@@ -90,9 +90,8 @@ public interface PeerConnection {
    */
   void disconnect(DisconnectReason reason);
 
-  default void disconnect() {
-    disconnect(null);
-  }
+  /** Disconnect from this Peer. */
+  void disconnect();
 
   SocketAddress getLocalAddress();
 

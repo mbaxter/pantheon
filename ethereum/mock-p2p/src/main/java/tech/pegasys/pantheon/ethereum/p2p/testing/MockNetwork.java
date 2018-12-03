@@ -258,6 +258,11 @@ public final class MockNetwork {
     }
 
     @Override
+    public void disconnect() {
+      network.disconnect(this, Optional.empty());
+    }
+
+    @Override
     public SocketAddress getLocalAddress() {
       throw new UnsupportedOperationException();
     }

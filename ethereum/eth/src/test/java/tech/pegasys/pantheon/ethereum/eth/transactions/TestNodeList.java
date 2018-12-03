@@ -228,8 +228,8 @@ public class TestNodeList implements Closeable {
                 + node.shortId()
                 + " has received a disconnection from "
                 + peerString
-                + " for "
-                + entry.getValue()
+                + " for reason "
+                + entry.getValue().map(DisconnectReason::toString).orElse("none")
                 + "\n";
         sb.append(unsentTxMsg);
         errCnt++;
