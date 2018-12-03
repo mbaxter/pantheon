@@ -75,7 +75,8 @@ public class PeerConnectionRegistry implements DisconnectCallback {
       final PeerConnection connection,
       final Optional<DisconnectReason> reason,
       final boolean initiatedByPeer) {
+    String reasonDescription = reason.map(DisconnectReason::name).orElse("NONE");
     connections.remove(connection.getPeer().getNodeId());
-    disconnectCounter.labels(initiatedByPeer ? "remote" : "local", reason.name()).inc();
+    disconnectCounter.labels(initiatedByPeer ? "remote" : "local", reasonDescription).inc();
   }
 }
