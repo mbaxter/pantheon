@@ -18,7 +18,6 @@ import tech.pegasys.pantheon.config.GenesisConfigFile;
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.chain.ChainHead;
 import tech.pegasys.pantheon.ethereum.chain.GenesisState;
-import tech.pegasys.pantheon.ethereum.eth.EthProtocol;
 import tech.pegasys.pantheon.ethereum.eth.manager.DeterministicEthScheduler.TimeoutPolicy;
 import tech.pegasys.pantheon.ethereum.mainnet.MainnetProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
@@ -53,7 +52,7 @@ public class EthProtocolManagerTestUtil {
       final RespondingEthPeer peer,
       final MessageData message) {
     ethProtocolManager.processMessage(
-        EthProtocol.ETH63, new DefaultMessage(peer.getPeerConnection(), message));
+        peer.getCapability(), new DefaultMessage(peer.getPeerConnection(), message));
   }
 
   public static RespondingEthPeer createPeer(

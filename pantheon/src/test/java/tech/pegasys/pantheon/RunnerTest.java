@@ -78,16 +78,11 @@ public final class RunnerTest {
     syncFromGenesis(SyncMode.FULL);
   }
 
-  @Test
-  public void fastSyncFromGenesis() throws Exception {
-    syncFromGenesis(SyncMode.FAST);
-  }
-
   private void syncFromGenesis(final SyncMode mode) throws Exception {
     final Path dbAhead = temp.newFolder().toPath();
     final int blockCount = 500;
     final KeyPair aheadDbNodeKeys = loadKeyPair(dbAhead);
-    final SynchronizerConfiguration fastSyncConfig =
+    final SynchronizerConfiguration syncConfig =
         SynchronizerConfiguration.builder()
             .syncMode(mode)
             // TODO: Disable switch from fast to full sync via configuration for now, set pivot to
@@ -103,7 +98,7 @@ public final class RunnerTest {
             createKeyValueStorageProvider(dbAhead),
             GenesisConfigFile.mainnet(),
             MainnetProtocolSchedule.create(),
-            fastSyncConfig,
+            syncConfig,
             new MiningParametersTestBuilder().enabled(false).build(),
             aheadDbNodeKeys,
             noOpMetricsSystem)) {
@@ -116,7 +111,7 @@ public final class RunnerTest {
             createKeyValueStorageProvider(dbAhead),
             GenesisConfigFile.mainnet(),
             MainnetProtocolSchedule.create(),
-            fastSyncConfig,
+            syncConfig,
             new MiningParametersTestBuilder().enabled(false).build(),
             aheadDbNodeKeys,
             noOpMetricsSystem);
@@ -156,7 +151,7 @@ public final class RunnerTest {
               new InMemoryStorageProvider(),
               GenesisConfigFile.mainnet(),
               MainnetProtocolSchedule.create(),
-              fastSyncConfig,
+              syncConfig,
               new MiningParametersTestBuilder().enabled(false).build(),
               KeyPair.generate(),
               noOpMetricsSystem);

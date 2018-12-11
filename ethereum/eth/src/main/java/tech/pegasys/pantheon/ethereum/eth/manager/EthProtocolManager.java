@@ -47,8 +47,7 @@ public class EthProtocolManager implements ProtocolManager, MinedBlockObserver {
   private static final Logger LOG = LogManager.getLogger();
   private static final List<Capability> FAST_SYNC_CAPS =
       Collections.singletonList(EthProtocol.ETH63);
-  private static final List<Capability> FULL_SYNC_CAPS =
-      Arrays.asList(EthProtocol.ETH62, EthProtocol.ETH63);
+  private static final List<Capability> FULL_SYNC_CAPS = Arrays.asList(EthProtocol.ETH62);
 
   private final EthScheduler scheduler;
   private final CountDownLatch shutdown;

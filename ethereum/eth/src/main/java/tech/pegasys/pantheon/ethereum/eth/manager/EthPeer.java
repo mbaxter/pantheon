@@ -25,6 +25,7 @@ import tech.pegasys.pantheon.ethereum.eth.messages.GetReceiptsMessage;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection.PeerNotConnected;
+import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -124,6 +125,10 @@ public class EthPeer {
         connection.sendForProtocol(protocolName, messageData);
         return null;
     }
+  }
+
+  public Capability getCapability() {
+    return connection.capability(protocolName);
   }
 
   public ResponseStream getHeadersByHash(

@@ -109,7 +109,7 @@ public class RespondingEthPeer {
       final long estimatedHeight) {
     final EthPeers ethPeers = ethProtocolManager.ethContext().getEthPeers();
 
-    final Set<Capability> caps = new HashSet<>(Collections.singletonList(EthProtocol.ETH63));
+    final Set<Capability> caps = new HashSet<>(Collections.singletonList(EthProtocol.ETH62));
     final Queue<OutgoingMessage> outgoingMessages = new ArrayDeque<>();
     final MockPeerConnection peerConnection =
         new MockPeerConnection(
@@ -125,6 +125,10 @@ public class RespondingEthPeer {
 
   public EthPeer getEthPeer() {
     return ethPeer;
+  }
+
+  public Capability getCapability() {
+    return ethPeer.getCapability();
   }
 
   public void respondWhile(final Responder responder, final RespondWhileCondition condition) {
