@@ -1,0 +1,32 @@
+pipeline {
+    agent {
+        docker {
+            image 'pegasyseng/pantheon-build:0.0.3'
+            args '-v /home/meredithbaxter/import-benchmark-data:/import-benchmark-data'
+        }
+    }
+
+    stages {
+        stage('Inspect Node') {
+            steps {
+                echo "Node: ${env.NODE_NAME}"
+            }
+        }
+        stage('Pull pantheon-benchmark') {
+            steps {
+                script {
+                    checkout([$class: 'GitSCM', branches: [[name: '*/nc-1983']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'pantheon-benchmarks']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'f3f67c22-eead-47db-a8c1-fe32b483583a', url: 'git@github.com:mbaxter/pantheon-benchmark.git']]])
+                }
+            }
+        }
+        stage('Run benchmarks jenkinsfile') {
+            steps {
+                dir('pantheon-benchmarks') {
+                    script {
+                        evaluate(readFile('jenkins/Jenkinsfile'))
+                    }
+                }
+            }
+        }
+    }
+}
