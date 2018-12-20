@@ -15,7 +15,6 @@ package tech.pegasys.pantheon.ethereum.p2p.discovery;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import org.junit.Ignore;
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
@@ -44,6 +43,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
 import io.vertx.core.Vertx;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class PeerDiscoveryAgentTest extends AbstractPeerDiscoveryTest {
