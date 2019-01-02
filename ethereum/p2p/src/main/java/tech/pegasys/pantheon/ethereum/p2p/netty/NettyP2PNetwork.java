@@ -380,7 +380,7 @@ public final class NettyP2PNetwork implements P2PNetwork {
   @Override
   public void run() {
     try {
-      peerDiscoveryAgent.start(ourPeerInfo.getPort()).join();
+      peerDiscoveryAgent.start().join();
       final long observerId =
           peerDiscoveryAgent.observePeerBondedEvents(
               peerBondedEvent -> {

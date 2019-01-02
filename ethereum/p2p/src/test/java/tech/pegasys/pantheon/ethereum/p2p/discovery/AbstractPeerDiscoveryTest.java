@@ -50,7 +50,6 @@ import org.junit.After;
 public abstract class AbstractPeerDiscoveryTest {
   private static final String LOOPBACK_IP_ADDR = "127.0.0.1";
   private static final int TEST_SOCKET_START_TIMEOUT_SECS = 5;
-  private static final int BROADCAST_TCP_PORT = 12356;
   private final Vertx vertx = vertx();
 
   List<DiscoveryTestSocket> discoveryTestSockets = new CopyOnWriteArrayList<>();
@@ -137,7 +136,7 @@ public abstract class AbstractPeerDiscoveryTest {
             blacklist,
             new NodeWhitelistController(PermissioningConfiguration.createDefault()));
     try {
-      agent.start(BROADCAST_TCP_PORT).get(5, TimeUnit.SECONDS);
+      agent.start().get(5, TimeUnit.SECONDS);
     } catch (final Exception ex) {
       throw new AssertionError("Could not initialize discovery agent", ex);
     }

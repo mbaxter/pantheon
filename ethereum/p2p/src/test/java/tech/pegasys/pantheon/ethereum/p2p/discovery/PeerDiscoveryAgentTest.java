@@ -143,7 +143,7 @@ public class PeerDiscoveryAgentTest extends AbstractPeerDiscoveryTest {
             () -> true,
             new PeerBlacklist(),
             new NodeWhitelistController(PermissioningConfiguration.createDefault()));
-    peerDiscoveryAgent1.start(0).join();
+    peerDiscoveryAgent1.start().join();
     final DefaultPeer peer = peerDiscoveryAgent1.getAdvertisedPeer();
 
     final SECP256K1.KeyPair keyPair2 = SECP256K1.KeyPair.generate();
@@ -158,7 +158,7 @@ public class PeerDiscoveryAgentTest extends AbstractPeerDiscoveryTest {
             () -> true,
             new PeerBlacklist(),
             new NodeWhitelistController(PermissioningConfiguration.createDefault()));
-    peerDiscoveryAgent2.start(0).join();
+    peerDiscoveryAgent2.start().join();
 
     assertThat(peerDiscoveryAgent2.getPeers().size()).isEqualTo(1);
 

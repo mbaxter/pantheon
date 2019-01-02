@@ -116,8 +116,7 @@ public class PeerDiscoveryObserversTest extends AbstractPeerDiscoveryTest {
     // A queue for storing peer bonded events.
     final ArrayBlockingQueue<PeerBondedEvent> queue = new ArrayBlockingQueue<>(10);
     agent.observePeerBondedEvents(queue::add);
-    assertThatCode(() -> agent.start(BROADCAST_TCP_PORT).get(5, TimeUnit.SECONDS))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> agent.start().get(5, TimeUnit.SECONDS)).doesNotThrowAnyException();
 
     // Wait until we've received 5 events.
     try {
@@ -173,7 +172,7 @@ public class PeerDiscoveryObserversTest extends AbstractPeerDiscoveryTest {
     queues.forEach(q -> agent.observePeerBondedEvents(q::add));
 
     // Start the agent and wait until each queue receives one event.
-    agent.start(BROADCAST_TCP_PORT);
+    agent.start();
     await()
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(() -> assertThat(queues).allMatch(q -> q.size() == 1));

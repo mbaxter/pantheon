@@ -146,7 +146,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
             nodeWhitelistController);
   }
 
-  public CompletableFuture<?> start(final int tcpPort) {
+  public CompletableFuture<?> start() {
     final CompletableFuture<?> completion = new CompletableFuture<>();
     if (config.isActive()) {
       final String host = config.getBindHost();
