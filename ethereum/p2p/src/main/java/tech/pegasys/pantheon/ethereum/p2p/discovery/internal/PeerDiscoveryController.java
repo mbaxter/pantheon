@@ -18,6 +18,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.AddResult.Outcome;
 
 import java.util.function.Supplier;
+import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
@@ -103,6 +104,7 @@ public class PeerDiscoveryController {
 
   private final AtomicBoolean started = new AtomicBoolean(false);
 
+  private final SECP256K1.KeyPair keypair;
   private final Supplier<DiscoveryPeer> self;
   private final OutboundMessageHandler outboundMessageHandler;
   private final PeerBlacklist peerBlacklist;
@@ -123,6 +125,7 @@ public class PeerDiscoveryController {
 
   public PeerDiscoveryController(
       final Vertx vertx,
+      final SECP256K1.KeyPair keypair,
       final Supplier<DiscoveryPeer> self,
       final PeerTable peerTable,
       final Collection<DiscoveryPeer> bootstrapNodes,
@@ -133,6 +136,7 @@ public class PeerDiscoveryController {
       final OutboundMessageHandler outboundMessageHandler,
       Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers) {
     this.vertx = vertx;
+    this.keypair = keypair;
     this.self = self;
     this.bootstrapNodes = bootstrapNodes;
     this.peerTable = peerTable;
@@ -352,7 +356,7 @@ public class PeerDiscoveryController {
         interaction -> {
           final PingPacketData data =
               PingPacketData.create(self.get().getEndpoint(), peer.getEndpoint());
-          final Packet sentPacket = outboundMessageHandler.send(peer, PacketType.PING, data);
+          final Packet sentPacket = sendPacket(peer, PacketType.PING, data);
 
           final BytesValue pingHash = sentPacket.getHash();
           // Update the matching filter to only accept the PONG if it echoes the hash of our PING.
@@ -371,6 +375,12 @@ public class PeerDiscoveryController {
     dispatchInteraction(peer, ping);
   }
 
+  private Packet sendPacket(DiscoveryPeer peer, PacketType type, PacketData data) {
+    final Packet packet = Packet.create(type, data, keypair);
+    outboundMessageHandler.send(peer, packet);
+    return packet;
+  }
+
   /**
    * Sends a FIND_NEIGHBORS message to a {@link DiscoveryPeer}, in search of a target value.
    *
@@ -381,7 +391,7 @@ public class PeerDiscoveryController {
     final Consumer<PeerInteractionState> action =
         (interaction) -> {
           final FindNeighborsPacketData data = FindNeighborsPacketData.create(target);
-          outboundMessageHandler.send(peer, PacketType.FIND_NEIGHBORS, data);
+          sendPacket(peer, PacketType.FIND_NEIGHBORS, data);
         };
     final PeerInteractionState interaction =
         new PeerInteractionState(action, PacketType.NEIGHBORS, packet -> true, true, false);
@@ -408,7 +418,7 @@ public class PeerDiscoveryController {
   private void respondToPing(
       final PingPacketData packetData, final BytesValue pingHash, final DiscoveryPeer sender) {
     final PongPacketData data = PongPacketData.create(packetData.getFrom(), pingHash);
-    outboundMessageHandler.send(sender, PacketType.PONG, data);
+    sendPacket(sender, PacketType.PONG, data);
   }
 
   private void respondToFindNeighbors(
@@ -417,7 +427,7 @@ public class PeerDiscoveryController {
     // peers they can fit in a 1280-byte payload.
     final List<DiscoveryPeer> peers = peerTable.nearestPeers(packetData.getTarget(), 16);
     final PacketData data = NeighborsPacketData.create(peers);
-    outboundMessageHandler.send(sender, PacketType.NEIGHBORS, data);
+    sendPacket(sender, PacketType.NEIGHBORS, data);
   }
 
   // Dispatches an event to a set of observers.

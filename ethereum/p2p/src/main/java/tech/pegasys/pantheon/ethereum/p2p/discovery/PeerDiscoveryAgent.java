@@ -141,6 +141,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
     this.controller =
       new PeerDiscoveryController(
         vertx,
+        keyPair,
         () -> advertisedPeer,
         peerTable,
         bootstrapPeers,
@@ -297,20 +298,14 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
   }
 
   /**
-   * Allows package-private components to dispatch messages to peers. It updates the lastContacted
-   * timestamp of the {@link DiscoveryPeer}. This method wraps the data in a Packet, calculates its
-   * hash and signs it with our private key.
-   *
+   * Send a packet to the given recipient.
    * @param peer the recipient
-   * @param type the type of message
-   * @param data the data packet to send
-   * @return the sent packet
+   * @param packet the packet to send
    */
-  public Packet sendPacket(final DiscoveryPeer peer, final PacketType type, final PacketData data) {
-    final Packet packet = Packet.create(type, data, keyPair);
+  public void sendPacket(final DiscoveryPeer peer, final Packet packet) {
     LOG.trace(
         ">>> Sending {} discovery packet to {} ({}): {}",
-        type,
+        packet.getType(),
         peer.getEndpoint(),
         peer.getId().slice(0, 16),
         packet);
@@ -333,8 +328,6 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
             peer.setLastContacted(System.currentTimeMillis());
           }
         });
-
-    return packet;
   }
 
   @VisibleForTesting
