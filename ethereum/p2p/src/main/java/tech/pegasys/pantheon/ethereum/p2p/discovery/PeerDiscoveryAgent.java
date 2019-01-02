@@ -104,7 +104,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
   /* The keypair used to sign messages. */
   private final SECP256K1.KeyPair keyPair;
   private final PeerTable peerTable;
-  private final DiscoveryConfiguration config;
+  protected final DiscoveryConfiguration config;
 
   /* This is the {@link tech.pegasys.pantheon.ethereum.p2p.Peer} object holding who we are. */
   private DiscoveryPeer advertisedPeer;
@@ -134,55 +134,91 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
     this.config = config;
     this.keyPair = keyPair;
     this.peerTable = new PeerTable(keyPair.getPublicKey().getEncodedBytes(), 16);
+
     this.controller =
-        new PeerDiscoveryController(
-            vertx,
-            this,
-            peerTable,
-            bootstrapPeers,
-            PEER_REFRESH_INTERVAL_MS,
-            peerRequirement,
-            peerBlacklist,
-            nodeWhitelistController);
+      new PeerDiscoveryController(
+        vertx,
+        () -> advertisedPeer,
+        peerTable,
+        bootstrapPeers,
+        PEER_REFRESH_INTERVAL_MS,
+        peerRequirement,
+        peerBlacklist,
+        nodeWhitelistController,
+        this::sendPacket);
   }
 
   public CompletableFuture<?> start() {
-    final CompletableFuture<?> completion = new CompletableFuture<>();
+    final CompletableFuture<?> future = new CompletableFuture<>();
     if (config.isActive()) {
       final String host = config.getBindHost();
       final int port = config.getBindPort();
       LOG.info("Starting peer discovery agent on host={}, port={}", host, port);
 
-      vertx
-          .createDatagramSocket(
-              new DatagramSocketOptions().setIpV6(NetworkUtility.isIPv6Available()))
-          .listen(
-              port,
-              host,
-              res -> {
-                if (res.failed()) {
-                  Throwable cause = res.cause();
-                  LOG.error("An exception occurred when starting the peer discovery agent", cause);
-
-                  if (cause instanceof BindException || cause instanceof SocketException) {
-                    cause =
-                        new PeerDiscoveryServiceException(
-                            String.format(
-                                "Failed to bind Ethereum UDP discovery listener to %s:%d: %s",
-                                host, port, cause.getMessage()));
-                  }
-                  completion.completeExceptionally(cause);
-                  return;
-                }
-                initialize(res.result(), res.result().localAddress().port());
-                this.isActive = true;
-                completion.complete(null);
-              });
+      listenForConnections()
+        .thenAccept((Integer effectivePort) -> {
+          // Once listener is set up, finish intitializing
+          final BytesValue id = keyPair.getPublicKey().getEncodedBytes();
+          advertisedPeer = new DiscoveryPeer(id, config.getAdvertisedHost(), effectivePort, effectivePort);
+          isActive = true;
+          controller.start();
+        }).whenComplete((res, err) -> {
+          // Finalize future
+          if (err != null) {
+            future.completeExceptionally(err);
+          } else {
+            future.complete(null);
+          }
+      });
     } else {
       this.isActive = false;
-      completion.complete(null);
+      future.complete(null);
     }
-    return completion;
+    return future;
+  }
+
+  protected CompletableFuture<Integer> listenForConnections() {
+    CompletableFuture<Integer> future = new CompletableFuture<>();
+    vertx
+      .createDatagramSocket(
+        new DatagramSocketOptions().setIpV6(NetworkUtility.isIPv6Available()))
+      .listen(
+        config.getBindPort(),
+        config.getBindHost(),
+        res -> {
+          if (res.failed()) {
+            Throwable cause = res.cause();
+            LOG.error("An exception occurred when starting the peer discovery agent", cause);
+
+            if (cause instanceof BindException || cause instanceof SocketException) {
+              cause =
+                new PeerDiscoveryServiceException(
+                  String.format(
+                    "Failed to bind Ethereum UDP discovery listener to %s:%d: %s",
+                    config.getBindHost(), config.getBindPort(), cause.getMessage()));
+            }
+            future.completeExceptionally(cause);
+            return;
+          }
+
+          this.socket = res.result();
+
+          // TODO: when using wildcard hosts (0.0.0.0), we need to handle multiple addresses by selecting
+          // the correct 'announce' address.
+          final String effectiveHost = socket.localAddress().host();
+          final int effectivePort = socket.localAddress().port();
+
+          LOG.info(
+            "Started peer discovery agent successfully, on effective host={} and port={}",
+            effectiveHost,
+            effectivePort);
+
+          socket.exceptionHandler(this::handleException);
+          socket.handler(this::handlePacket);
+
+          future.complete(effectivePort);
+        });
+    return future;
   }
 
   public CompletableFuture<?> stop() {
@@ -202,27 +238,6 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
           }
         });
     return completion;
-  }
-
-  private void initialize(final DatagramSocket socket, final int tcpPort) {
-    this.socket = socket;
-
-    // TODO: when using wildcard hosts (0.0.0.0), we need to handle multiple addresses by selecting
-    // the
-    // correct 'announce' address.
-    final BytesValue id = keyPair.getPublicKey().getEncodedBytes();
-    final String effectiveHost = socket.localAddress().host();
-    final int effectivePort = socket.localAddress().port();
-    advertisedPeer = new DiscoveryPeer(id, config.getAdvertisedHost(), effectivePort, tcpPort);
-
-    LOG.info(
-        "Started peer discovery agent successfully, on effective host={} and port={}",
-        effectiveHost,
-        effectivePort);
-
-    socket.exceptionHandler(this::handleException);
-    socket.handler(this::handlePacket);
-    controller.start();
   }
 
   /**
