@@ -12,7 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.discovery.internal;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -22,7 +21,6 @@ import java.util.function.Supplier;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
@@ -121,10 +119,7 @@ public class PeerDiscoveryController {
   private OptionalLong tableRefreshTimerId = OptionalLong.empty();
 
   // Observers for "peer bonded" discovery events.
-  private final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
-
-  // Observers for "peer dropped" discovery events.
-  private final Subscribers<Consumer<PeerDroppedEvent>> peerDroppedObservers = new Subscribers<>();
+  private final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers;
 
   public PeerDiscoveryController(
       final Vertx vertx,
@@ -135,7 +130,8 @@ public class PeerDiscoveryController {
       final PeerRequirement peerRequirement,
       final PeerBlacklist peerBlacklist,
       final NodeWhitelistController nodeWhitelist,
-      final OutboundMessageHandler outboundMessageHandler) {
+      final OutboundMessageHandler outboundMessageHandler,
+      Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers) {
     this.vertx = vertx;
     this.self = self;
     this.bootstrapNodes = bootstrapNodes;
@@ -145,6 +141,7 @@ public class PeerDiscoveryController {
     this.peerBlacklist = peerBlacklist;
     this.nodeWhitelist = nodeWhitelist;
     this.outboundMessageHandler = outboundMessageHandler;
+    this.peerBondedObservers = peerBondedObservers;
   }
 
   public CompletableFuture<?> start() {
@@ -441,63 +438,6 @@ public class PeerDiscoveryController {
 
   public void setRetryDelayFunction(final RetryDelayFunction retryDelayFunction) {
     this.retryDelayFunction = retryDelayFunction;
-  }
-
-  /**
-   * Adds an observer that will get called when a new peer is bonded with and added to the peer
-   * table.
-   *
-   * <p><i>No guarantees are made about the order in which observers are invoked.</i>
-   *
-   * @param observer The observer to call.
-   * @return A unique ID identifying this observer, to that it can be removed later.
-   */
-  public long observePeerBondedEvents(final Consumer<PeerBondedEvent> observer) {
-    checkNotNull(observer);
-    return peerBondedObservers.subscribe(observer);
-  }
-
-  /**
-   * Adds an observer that will get called when a new peer is dropped from the peer table.
-   *
-   * <p><i>No guarantees are made about the order in which observers are invoked.</i>
-   *
-   * @param observer The observer to call.
-   * @return A unique ID identifying this observer, to that it can be removed later.
-   */
-  public long observePeerDroppedEvents(final Consumer<PeerDroppedEvent> observer) {
-    checkNotNull(observer);
-    return peerDroppedObservers.subscribe(observer);
-  }
-
-  /**
-   * Removes an previously added peer bonded observer.
-   *
-   * @param observerId The unique ID identifying the observer to remove.
-   * @return Whether the observer was located and removed.
-   */
-  public boolean removePeerBondedObserver(final long observerId) {
-    return peerBondedObservers.unsubscribe(observerId);
-  }
-
-  /**
-   * Removes an previously added peer dropped observer.
-   *
-   * @param observerId The unique ID identifying the observer to remove.
-   * @return Whether the observer was located and removed.
-   */
-  public boolean removePeerDroppedObserver(final long observerId) {
-    return peerDroppedObservers.unsubscribe(observerId);
-  }
-
-  /**
-   * Returns the count of observers that are registered on this controller.
-   *
-   * @return The observer count.
-   */
-  @VisibleForTesting
-  public int observerCount() {
-    return peerBondedObservers.getSubscriberCount() + peerDroppedObservers.getSubscriberCount();
   }
 
   /** Holds the state machine data for a peer interaction. */

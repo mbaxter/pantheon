@@ -14,6 +14,7 @@ package tech.pegasys.pantheon.ethereum.p2p.netty;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.annotations.VisibleForTesting;
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.Message;
@@ -425,6 +426,7 @@ public final class NettyP2PNetwork implements P2PNetwork {
     stop();
   }
 
+  @VisibleForTesting
   public Collection<DiscoveryPeer> getDiscoveryPeers() {
     return peerDiscoveryAgent.getPeers();
   }

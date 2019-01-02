@@ -51,9 +51,9 @@ public class PeerDiscoveryObserversTest extends AbstractPeerDiscoveryTest {
     final long id1 = agent.observePeerBondedEvents((event) -> {});
     final long id2 = agent.observePeerBondedEvents((event) -> {});
     final long id3 = agent.observePeerBondedEvents((event) -> {});
-    final long id4 = agent.observePeerDroppedEvents((event) -> {});
-    final long id5 = agent.observePeerDroppedEvents((event) -> {});
-    final long id6 = agent.observePeerDroppedEvents((event) -> {});
+    final long id4 = agent.observePeerBondedEvents((event) -> {});
+    final long id5 = agent.observePeerBondedEvents((event) -> {});
+    final long id6 = agent.observePeerBondedEvents((event) -> {});
     assertThat(agent.getObserverCount()).isEqualTo(6);
 
     agent.removePeerBondedObserver(id1);
@@ -61,19 +61,19 @@ public class PeerDiscoveryObserversTest extends AbstractPeerDiscoveryTest {
     assertThat(agent.getObserverCount()).isEqualTo(4);
 
     agent.removePeerBondedObserver(id3);
-    agent.removePeerDroppedObserver(id4);
+    agent.removePeerBondedObserver(id4);
     assertThat(agent.getObserverCount()).isEqualTo(2);
 
-    agent.removePeerDroppedObserver(id5);
-    agent.removePeerDroppedObserver(id6);
+    agent.removePeerBondedObserver(id5);
+    agent.removePeerBondedObserver(id6);
     assertThat(agent.getObserverCount()).isEqualTo(0);
 
     final long id7 = agent.observePeerBondedEvents((event) -> {});
-    final long id8 = agent.observePeerDroppedEvents((event) -> {});
+    final long id8 = agent.observePeerBondedEvents((event) -> {});
     assertThat(agent.getObserverCount()).isEqualTo(2);
 
     agent.removePeerBondedObserver(id7);
-    agent.removePeerDroppedObserver(id8);
+    agent.removePeerBondedObserver(id8);
     assertThat(agent.getObserverCount()).isEqualTo(0);
   }
 

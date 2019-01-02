@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.ethereum.p2p.discovery;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static tech.pegasys.pantheon.util.Preconditions.checkGuard;
@@ -36,6 +37,7 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.permissioning.NodeWhitelistController;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.util.NetworkUtility;
+import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.io.IOException;
@@ -113,6 +115,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
 
   /* Is discovery enabled? */
   private boolean isActive = false;
+  private final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
 
   public PeerDiscoveryAgent(
       final Vertx vertx,
@@ -145,7 +148,8 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
         peerRequirement,
         peerBlacklist,
         nodeWhitelistController,
-        this::sendPacket);
+        this::sendPacket,
+        peerBondedObservers);
   }
 
   public CompletableFuture<?> start() {
@@ -333,6 +337,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
     return packet;
   }
 
+  @VisibleForTesting
   public Collection<DiscoveryPeer> getPeers() {
     return Collections.unmodifiableCollection(controller.getPeers());
   }
@@ -356,19 +361,8 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
    * @return A unique ID identifying this observer, to that it can be removed later.
    */
   public long observePeerBondedEvents(final Consumer<PeerBondedEvent> observer) {
-    return controller.observePeerBondedEvents(observer);
-  }
-
-  /**
-   * Adds an observer that will get called when a new peer is dropped from the peer table.
-   *
-   * <p><i>No guarantees are made about the order in which observers are invoked.</i>
-   *
-   * @param observer The observer to call.
-   * @return A unique ID identifying this observer, to that it can be removed later.
-   */
-  public long observePeerDroppedEvents(final Consumer<PeerDroppedEvent> observer) {
-    return controller.observePeerDroppedEvents(observer);
+    checkNotNull(observer);
+    return peerBondedObservers.subscribe(observer);
   }
 
   /**
@@ -378,17 +372,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
    * @return Whether the observer was located and removed.
    */
   public boolean removePeerBondedObserver(final long observerId) {
-    return controller.removePeerBondedObserver(observerId);
-  }
-
-  /**
-   * Removes an previously added peer dropped observer.
-   *
-   * @param observerId The unique ID identifying the observer to remove.
-   * @return Whether the observer was located and removed.
-   */
-  public boolean removePeerDroppedObserver(final long observerId) {
-    return controller.removePeerDroppedObserver(observerId);
+    return peerBondedObservers.unsubscribe(observerId);
   }
 
   /**
@@ -398,7 +382,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
    */
   @VisibleForTesting
   public int getObserverCount() {
-    return controller.observerCount();
+    return peerBondedObservers.getSubscriberCount();
   }
 
   private static void validateConfiguration(final DiscoveryConfiguration config) {
