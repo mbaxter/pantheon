@@ -247,9 +247,12 @@ public class PeerDiscoveryController {
                           .orElse(emptyList());
 
                   for (final DiscoveryPeer neighbor : neighbors) {
+                    // If the peer is not whitelisted, is blacklisted, is already known, or
+                    // represents this node, skip bonding
                     if (!nodeWhitelist.isPermitted(neighbor)
                         || peerBlacklist.contains(neighbor)
-                        || peerTable.get(neighbor).isPresent()) {
+                        || peerTable.get(neighbor).isPresent()
+                        || neighbor.getId().equals(agent.getAdvertisedPeer().getId())) {
                       continue;
                     }
                     bond(neighbor, false);
