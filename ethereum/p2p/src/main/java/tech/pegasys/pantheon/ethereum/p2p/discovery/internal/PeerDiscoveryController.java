@@ -105,7 +105,7 @@ public class PeerDiscoveryController {
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   private final SECP256K1.KeyPair keypair;
-  private final Supplier<DiscoveryPeer> self;
+  private final DiscoveryPeer self;
   private final OutboundMessageHandler outboundMessageHandler;
   private final PeerBlacklist peerBlacklist;
   private final NodeWhitelistController nodeWhitelist;
@@ -126,7 +126,7 @@ public class PeerDiscoveryController {
   public PeerDiscoveryController(
       final Vertx vertx,
       final SECP256K1.KeyPair keypair,
-      final Supplier<DiscoveryPeer> self,
+      final DiscoveryPeer self,
       final PeerTable peerTable,
       final Collection<DiscoveryPeer> bootstrapNodes,
       final long tableRefreshIntervalMs,
@@ -200,7 +200,7 @@ public class PeerDiscoveryController {
         packet);
 
     // Message from self. This should not happen.
-    if (sender.getId().equals(self.get().getId())) {
+    if (sender.getId().equals(self.getId())) {
       return;
     }
 
@@ -234,7 +234,7 @@ public class PeerDiscoveryController {
 
                     // If this was a bootstrap peer, let's ask it for nodes near to us.
                     if (interaction.isBootstrap()) {
-                      findNodes(peer, self.get().getId());
+                      findNodes(peer, self.getId());
                     }
                   });
           break;
@@ -256,7 +256,7 @@ public class PeerDiscoveryController {
                     if (!nodeWhitelist.isPermitted(neighbor)
                         || peerBlacklist.contains(neighbor)
                         || peerTable.get(neighbor).isPresent()
-                        || neighbor.getId().equals(self.get().getId())) {
+                        || neighbor.getId().equals(self.getId())) {
                       continue;
                     }
                     bond(neighbor, false);
@@ -355,7 +355,7 @@ public class PeerDiscoveryController {
     final Consumer<PeerInteractionState> action =
         interaction -> {
           final PingPacketData data =
-              PingPacketData.create(self.get().getEndpoint(), peer.getEndpoint());
+              PingPacketData.create(self.getEndpoint(), peer.getEndpoint());
           final Packet sentPacket = sendPacket(peer, PacketType.PING, data);
 
           final BytesValue pingHash = sentPacket.getHash();

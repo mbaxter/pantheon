@@ -19,6 +19,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static tech.pegasys.pantheon.util.Preconditions.checkGuard;
 import static tech.pegasys.pantheon.util.bytes.BytesValue.wrapBuffer;
 
+import java.util.Optional;
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
@@ -64,34 +65,7 @@ import org.apache.logging.log4j.Logger;
 
 /**
  * The peer discovery agent is the network component that sends and receives messages peer discovery
- * messages via UDP. It exposes methods for the {@link PeerDiscoveryController} to dispatch outbound
- * messages too.
- *
- * <h3>How do the peer table and the discovery agent interact with one another?</h3>
- *
- * <ul>
- *   <li>The agent acts like the transport layer, receiving messages from the wire and exposing
- *       methods for the peer table to send packets too.
- *   <li>The table stores and indexes peers in a Kademlia k-bucket table with 256 bins (where bin 0
- *       is not used as it's us, i.e. distance 0 == us). It reacts to messages based on its internal
- *       state. It uses the agent whenever it needs to dispatch a message.
- * </ul>
- *
- * <h3>The flow</h3>
- *
- * <ol>
- *   <li>The discovery agent dispatches all incoming messages that were properly decoded and whose
- *       hash integrity check passes to the peer table.
- *   <li>The peer table decides whether to store the Peer, change its state, send other messages,
- *       etc. based on its internal state.
- *   <li>The agent attaches a callback to the call to the Peer Table. When the Peer Table has
- *       processed the message, it'll perform a callback passing in an Optional which is populated
- *       if we recognised the Peer, and empty if we did not.
- *   <li>The agent reacts to specific messages (PING-&gt;PONG, FIND_NEIGHBORS-&gt;NEIGHBORS), if the
- *       Peer was recognised. Why doesn't the table send these messages itself? Because they don't
- *       affect the state machine of the Peer, and the table is only concerned with storing peers,
- *       keeping them alive and tracking their state. It is not bothered to service requests.
- * </ol>
+ * messages via UDP.
  */
 public class PeerDiscoveryAgent implements DisconnectCallback {
   private static final Logger LOG = LogManager.getLogger();
@@ -101,8 +75,14 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
   private static final int MAX_PACKET_SIZE_BYTES = 1600;
   private static final long PEER_REFRESH_INTERVAL_MS = MILLISECONDS.convert(30, TimeUnit.MINUTES);
   private final Vertx vertx;
+
+  private final List<DiscoveryPeer> bootstrapPeers;
+  private final PeerRequirement peerRequirement;
+  private final PeerBlacklist peerBlacklist;
+  private final NodeWhitelistController nodeWhitelistController;
   /* The peer controller, which takes care of the state machine of peers. */
-  private final PeerDiscoveryController controller;
+  private Optional<PeerDiscoveryController> controller = Optional.empty();
+
   /* The keypair used to sign messages. */
   private final SECP256K1.KeyPair keyPair;
   private final PeerTable peerTable;
@@ -130,27 +110,16 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
 
     validateConfiguration(config);
 
-    final List<DiscoveryPeer> bootstrapPeers =
+    this.peerRequirement = peerRequirement;
+    this.peerBlacklist = peerBlacklist;
+    this.nodeWhitelistController = nodeWhitelistController;
+    this.bootstrapPeers =
         config.getBootstrapPeers().stream().map(DiscoveryPeer::new).collect(Collectors.toList());
 
     this.vertx = vertx;
     this.config = config;
     this.keyPair = keyPair;
     this.peerTable = new PeerTable(keyPair.getPublicKey().getEncodedBytes(), 16);
-
-    this.controller =
-      new PeerDiscoveryController(
-        vertx,
-        keyPair,
-        () -> advertisedPeer,
-        peerTable,
-        bootstrapPeers,
-        PEER_REFRESH_INTERVAL_MS,
-        peerRequirement,
-        peerBlacklist,
-        nodeWhitelistController,
-        this::sendPacket,
-        peerBondedObservers);
   }
 
   public CompletableFuture<?> start() {
@@ -166,7 +135,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
           final BytesValue id = keyPair.getPublicKey().getEncodedBytes();
           advertisedPeer = new DiscoveryPeer(id, config.getAdvertisedHost(), effectivePort, effectivePort);
           isActive = true;
-          controller.start();
+          startController();
         }).whenComplete((res, err) -> {
           // Finalize future
           if (err != null) {
@@ -180,6 +149,24 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
       future.complete(null);
     }
     return future;
+  }
+
+  protected void startController() {
+    PeerDiscoveryController controller =
+      new PeerDiscoveryController(
+        vertx,
+        keyPair,
+        advertisedPeer,
+        peerTable,
+        bootstrapPeers,
+        PEER_REFRESH_INTERVAL_MS,
+        peerRequirement,
+        peerBlacklist,
+        nodeWhitelistController,
+        this::sendPacket,
+        peerBondedObservers);
+    this.controller = Optional.of(controller);
+    controller.start();
   }
 
   protected CompletableFuture<Integer> listenForConnections() {
@@ -235,7 +222,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
     socket.close(
         ar -> {
           if (ar.succeeded()) {
-            controller.stop();
+            controller.ifPresent(PeerDiscoveryController::stop);
             socket = null;
             completion.complete(null);
           } else {
@@ -289,7 +276,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
 
       // Notify the peer controller.
       final DiscoveryPeer peer = new DiscoveryPeer(packet.getNodeId(), addr, port, fromPort);
-      controller.onMessage(packet, peer);
+      controller.ifPresent(c -> c.onMessage(packet, peer));
     } catch (final PeerDiscoveryPacketDecodingException e) {
       LOG.debug("Discarding invalid peer discovery packet", e);
     } catch (final Throwable t) {
@@ -332,7 +319,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
 
   @VisibleForTesting
   public Collection<DiscoveryPeer> getPeers() {
-    return Collections.unmodifiableCollection(controller.getPeers());
+    return controller.map(PeerDiscoveryController::getPeers).map(Collections::unmodifiableCollection).orElse(Collections.emptyList());
   }
 
   public DiscoveryPeer getAdvertisedPeer() {
