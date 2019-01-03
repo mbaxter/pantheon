@@ -17,7 +17,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.AddResult.Outcome;
 
-import java.util.function.Supplier;
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent;
@@ -354,8 +353,7 @@ public class PeerDiscoveryController {
 
     final Consumer<PeerInteractionState> action =
         interaction -> {
-          final PingPacketData data =
-              PingPacketData.create(self.getEndpoint(), peer.getEndpoint());
+          final PingPacketData data = PingPacketData.create(self.getEndpoint(), peer.getEndpoint());
           final Packet sentPacket = sendPacket(peer, PacketType.PING, data);
 
           final BytesValue pingHash = sentPacket.getHash();
@@ -375,10 +373,16 @@ public class PeerDiscoveryController {
     dispatchInteraction(peer, ping);
   }
 
-  private Packet sendPacket(DiscoveryPeer peer, PacketType type, PacketData data) {
-    final Packet packet = Packet.create(type, data, keypair);
+  @VisibleForTesting
+  Packet sendPacket(DiscoveryPeer peer, PacketType type, PacketData data) {
+    Packet packet = createPacket(type, data);
     outboundMessageHandler.send(peer, packet);
     return packet;
+  }
+
+  @VisibleForTesting
+  Packet createPacket(PacketType type, PacketData data) {
+    return Packet.create(type, data, keypair);
   }
 
   /**

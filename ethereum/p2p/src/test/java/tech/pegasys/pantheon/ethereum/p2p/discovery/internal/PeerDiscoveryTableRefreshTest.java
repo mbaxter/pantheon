@@ -23,12 +23,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
+import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryTestHelper;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.permissioning.NodeWhitelistController;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
+import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.ArrayList;
@@ -50,19 +52,25 @@ public class PeerDiscoveryTableRefreshTest {
 
     final PeerDiscoveryAgent agent = mock(PeerDiscoveryAgent.class);
     when(agent.getAdvertisedPeer()).thenReturn(peers[0]);
+    DiscoveryPeer self = peers[0];
+    KeyPair selfKeyPair = keypairs[0];
 
     // Create and start the PeerDiscoveryController, setting the refresh interval to something
     // small.
     final PeerDiscoveryController controller =
-        new PeerDiscoveryController(
-            vertx,
-            agent,
-            new PeerTable(agent.getAdvertisedPeer().getId()),
-            emptyList(),
-            100,
-            () -> true,
-            new PeerBlacklist(),
-            new NodeWhitelistController(PermissioningConfiguration.createDefault()));
+        spy(
+            new PeerDiscoveryController(
+                vertx,
+                selfKeyPair,
+                self,
+                new PeerTable(agent.getAdvertisedPeer().getId()),
+                emptyList(),
+                100,
+                () -> true,
+                new PeerBlacklist(),
+                new NodeWhitelistController(PermissioningConfiguration.createDefault()),
+                OutboundMessageHandler.NOOP,
+                new Subscribers<>()));
     controller.start();
 
     // Send a PING, so as to add a Peer in the controller.
@@ -82,7 +90,7 @@ public class PeerDiscoveryTableRefreshTest {
     // Within 1000ms, there should be ~10 packets. But let's be less ambitious and expect at least
     // 5.
     final ArgumentCaptor<PacketData> packetDataCaptor = ArgumentCaptor.forClass(PacketData.class);
-    verify(agent, timeout(1000).atLeast(5))
+    verify(controller, timeout(1000).atLeast(5))
         .sendPacket(eq(peers[1]), eq(PacketType.FIND_NEIGHBORS), packetDataCaptor.capture());
 
     // Assert that all packets were FIND_NEIGHBORS packets.

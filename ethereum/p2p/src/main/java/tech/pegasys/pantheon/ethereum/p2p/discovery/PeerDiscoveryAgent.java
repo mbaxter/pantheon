@@ -19,16 +19,12 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static tech.pegasys.pantheon.util.Preconditions.checkGuard;
 import static tech.pegasys.pantheon.util.bytes.BytesValue.wrapBuffer;
 
-import java.util.Optional;
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.Packet;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PacketData;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PacketType;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerDiscoveryController;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerRequirement;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable;
@@ -48,6 +44,7 @@ import java.net.SocketException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -130,20 +127,24 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
       LOG.info("Starting peer discovery agent on host={}, port={}", host, port);
 
       listenForConnections()
-        .thenAccept((Integer effectivePort) -> {
-          // Once listener is set up, finish intitializing
-          final BytesValue id = keyPair.getPublicKey().getEncodedBytes();
-          advertisedPeer = new DiscoveryPeer(id, config.getAdvertisedHost(), effectivePort, effectivePort);
-          isActive = true;
-          startController();
-        }).whenComplete((res, err) -> {
-          // Finalize future
-          if (err != null) {
-            future.completeExceptionally(err);
-          } else {
-            future.complete(null);
-          }
-      });
+          .thenAccept(
+              (Integer effectivePort) -> {
+                // Once listener is set up, finish intitializing
+                final BytesValue id = keyPair.getPublicKey().getEncodedBytes();
+                advertisedPeer =
+                    new DiscoveryPeer(id, config.getAdvertisedHost(), effectivePort, effectivePort);
+                isActive = true;
+                startController();
+              })
+          .whenComplete(
+              (res, err) -> {
+                // Finalize future
+                if (err != null) {
+                  future.completeExceptionally(err);
+                } else {
+                  future.complete(null);
+                }
+              });
     } else {
       this.isActive = false;
       future.complete(null);
@@ -153,18 +154,18 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
 
   protected void startController() {
     PeerDiscoveryController controller =
-      new PeerDiscoveryController(
-        vertx,
-        keyPair,
-        advertisedPeer,
-        peerTable,
-        bootstrapPeers,
-        PEER_REFRESH_INTERVAL_MS,
-        peerRequirement,
-        peerBlacklist,
-        nodeWhitelistController,
-        this::sendPacket,
-        peerBondedObservers);
+        new PeerDiscoveryController(
+            vertx,
+            keyPair,
+            advertisedPeer,
+            peerTable,
+            bootstrapPeers,
+            PEER_REFRESH_INTERVAL_MS,
+            peerRequirement,
+            peerBlacklist,
+            nodeWhitelistController,
+            this::sendPacket,
+            peerBondedObservers);
     this.controller = Optional.of(controller);
     controller.start();
   }
@@ -172,44 +173,44 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
   protected CompletableFuture<Integer> listenForConnections() {
     CompletableFuture<Integer> future = new CompletableFuture<>();
     vertx
-      .createDatagramSocket(
-        new DatagramSocketOptions().setIpV6(NetworkUtility.isIPv6Available()))
-      .listen(
-        config.getBindPort(),
-        config.getBindHost(),
-        res -> {
-          if (res.failed()) {
-            Throwable cause = res.cause();
-            LOG.error("An exception occurred when starting the peer discovery agent", cause);
+        .createDatagramSocket(new DatagramSocketOptions().setIpV6(NetworkUtility.isIPv6Available()))
+        .listen(
+            config.getBindPort(),
+            config.getBindHost(),
+            res -> {
+              if (res.failed()) {
+                Throwable cause = res.cause();
+                LOG.error("An exception occurred when starting the peer discovery agent", cause);
 
-            if (cause instanceof BindException || cause instanceof SocketException) {
-              cause =
-                new PeerDiscoveryServiceException(
-                  String.format(
-                    "Failed to bind Ethereum UDP discovery listener to %s:%d: %s",
-                    config.getBindHost(), config.getBindPort(), cause.getMessage()));
-            }
-            future.completeExceptionally(cause);
-            return;
-          }
+                if (cause instanceof BindException || cause instanceof SocketException) {
+                  cause =
+                      new PeerDiscoveryServiceException(
+                          String.format(
+                              "Failed to bind Ethereum UDP discovery listener to %s:%d: %s",
+                              config.getBindHost(), config.getBindPort(), cause.getMessage()));
+                }
+                future.completeExceptionally(cause);
+                return;
+              }
 
-          this.socket = res.result();
+              this.socket = res.result();
 
-          // TODO: when using wildcard hosts (0.0.0.0), we need to handle multiple addresses by selecting
-          // the correct 'announce' address.
-          final String effectiveHost = socket.localAddress().host();
-          final int effectivePort = socket.localAddress().port();
+              // TODO: when using wildcard hosts (0.0.0.0), we need to handle multiple addresses by
+              // selecting
+              // the correct 'announce' address.
+              final String effectiveHost = socket.localAddress().host();
+              final int effectivePort = socket.localAddress().port();
 
-          LOG.info(
-            "Started peer discovery agent successfully, on effective host={} and port={}",
-            effectiveHost,
-            effectivePort);
+              LOG.info(
+                  "Started peer discovery agent successfully, on effective host={} and port={}",
+                  effectiveHost,
+                  effectivePort);
 
-          socket.exceptionHandler(this::handleException);
-          socket.handler(this::handlePacket);
+              socket.exceptionHandler(this::handleException);
+              socket.handler(this::handlePacket);
 
-          future.complete(effectivePort);
-        });
+              future.complete(effectivePort);
+            });
     return future;
   }
 
@@ -286,6 +287,7 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
 
   /**
    * Send a packet to the given recipient.
+   *
    * @param peer the recipient
    * @param packet the packet to send
    */
@@ -319,7 +321,10 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
 
   @VisibleForTesting
   public Collection<DiscoveryPeer> getPeers() {
-    return controller.map(PeerDiscoveryController::getPeers).map(Collections::unmodifiableCollection).orElse(Collections.emptyList());
+    return controller
+        .map(PeerDiscoveryController::getPeers)
+        .map(Collections::unmodifiableCollection)
+        .orElse(Collections.emptyList());
   }
 
   public DiscoveryPeer getAdvertisedPeer() {

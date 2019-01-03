@@ -18,6 +18,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
+import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.OutboundMessageHandler;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.Packet;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PacketType;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerDiscoveryController;
@@ -26,6 +28,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PingPacketData;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.permissioning.NodeWhitelistController;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
+import tech.pegasys.pantheon.util.Subscribers;
 
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
@@ -44,17 +47,22 @@ public class PeerDiscoveryTimestampsTest extends AbstractPeerDiscoveryTest {
 
     final PeerDiscoveryAgent agent = mock(PeerDiscoveryAgent.class);
     when(agent.getAdvertisedPeer()).thenReturn(peers[0]);
+    DiscoveryPeer self = peers[0];
+    KeyPair selfKeyPair = keypairs[0];
 
     final PeerDiscoveryController controller =
         new PeerDiscoveryController(
             mock(Vertx.class),
-            agent,
+            selfKeyPair,
+            self,
             new PeerTable(agent.getAdvertisedPeer().getId()),
             Collections.emptyList(),
             TimeUnit.HOURS.toMillis(1),
             () -> true,
             new PeerBlacklist(),
-            new NodeWhitelistController(PermissioningConfiguration.createDefault()));
+            new NodeWhitelistController(PermissioningConfiguration.createDefault()),
+            OutboundMessageHandler.NOOP,
+            new Subscribers<>());
     controller.start();
 
     final PingPacketData ping =
