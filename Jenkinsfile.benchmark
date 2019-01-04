@@ -1,8 +1,16 @@
+properties([
+        parameters([
+                string(defaultValue: 'from-0', description: 'The name of the directory containing the benchmark data', name: 'DATASET', trim: true),
+                string(defaultValue: '1000.blocks', description: 'The name of the file to import', name: 'IMPORT_FILE', trim: true)
+        ])
+])
+
 pipeline {
     agent {
         docker {
             image 'pegasyseng/pantheon-build:0.0.3'
-            args '-v /home/meredithbaxter/import-benchmark-data:/import-benchmark-data'
+            label 'jenkins-benchmark-1'
+            args '-v /benchmarks/block-import:/benchmarks-block-import-read-only'
         }
     }
 
@@ -10,6 +18,8 @@ pipeline {
         stage('Inspect Node') {
             steps {
                 echo "Node: ${env.NODE_NAME}"
+                echo "Param DATASET: ${params.DATASET}"
+                echo "Param IMPORT_FILE: ${params.IMPORT_FILE}"
             }
         }
         stage('Pull pantheon-benchmark') {
@@ -21,9 +31,14 @@ pipeline {
         }
         stage('Run benchmarks jenkinsfile') {
             steps {
-                dir('pantheon-benchmarks') {
-                    script {
-                        evaluate(readFile('jenkins/Jenkinsfile'))
+                withEnv([
+                        "DATA_DIR=/benchmarks-block-import-read-only/${params.DATASET}/pantheon/data",
+                        "IMPORT_FILE=/benchmarks-block-import-read-only/${params.DATASET}/${params.IMPORT_FILE}"
+                ]) {
+                    dir('pantheon-benchmarks') {
+                        script {
+                            evaluate(readFile('jenkins/Jenkinsfile'))
+                        }
                     }
                 }
             }
