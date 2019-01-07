@@ -18,6 +18,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.AddResult.Outcome;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
+import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
@@ -40,7 +41,6 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.vertx.core.Vertx;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -92,7 +92,7 @@ public class PeerDiscoveryController {
 
   private static final Logger LOG = LogManager.getLogger();
   private static final long REFRESH_CHECK_INTERVAL_MILLIS = MILLISECONDS.convert(30, SECONDS);
-  private final Vertx vertx;
+  protected final TimerUtil timerUtil;
   private final PeerTable peerTable;
 
   private final Collection<DiscoveryPeer> bootstrapNodes;
@@ -104,7 +104,7 @@ public class PeerDiscoveryController {
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   private final SECP256K1.KeyPair keypair;
-  private final DiscoveryPeer self;
+  final DiscoveryPeer self;
   private final OutboundMessageHandler outboundMessageHandler;
   private final PeerBlacklist peerBlacklist;
   private final NodeWhitelistController nodeWhitelist;
@@ -123,8 +123,8 @@ public class PeerDiscoveryController {
   private final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers;
 
   public PeerDiscoveryController(
-      final Vertx vertx,
-      final SECP256K1.KeyPair keypair,
+      final TimerUtil timerUtil,
+      final KeyPair keypair,
       final DiscoveryPeer self,
       final PeerTable peerTable,
       final Collection<DiscoveryPeer> bootstrapNodes,
@@ -134,7 +134,7 @@ public class PeerDiscoveryController {
       final NodeWhitelistController nodeWhitelist,
       final OutboundMessageHandler outboundMessageHandler,
       Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers) {
-    this.vertx = vertx;
+    this.timerUtil = timerUtil;
     this.keypair = keypair;
     this.self = self;
     this.bootstrapNodes = bootstrapNodes;
@@ -159,9 +159,9 @@ public class PeerDiscoveryController {
         .forEach(node -> bond(node, true));
 
     final long timerId =
-        vertx.setPeriodic(
+        timerUtil.setPeriodic(
             Math.min(REFRESH_CHECK_INTERVAL_MILLIS, tableRefreshIntervalMs),
-            (l) -> refreshTableIfRequired());
+            () -> refreshTableIfRequired());
     tableRefreshTimerId = OptionalLong.of(timerId);
 
     return CompletableFuture.completedFuture(null);
@@ -172,7 +172,7 @@ public class PeerDiscoveryController {
       return CompletableFuture.completedFuture(null);
     }
 
-    tableRefreshTimerId.ifPresent(vertx::cancelTimer);
+    tableRefreshTimerId.ifPresent(timerUtil::cancelTimer);
     tableRefreshTimerId = OptionalLong.empty();
     inflightInteractions.values().forEach(PeerInteractionState::cancelTimers);
     inflightInteractions.clear();
@@ -321,7 +321,7 @@ public class PeerDiscoveryController {
 
   private void refreshTableIfRequired() {
     final long now = System.currentTimeMillis();
-    if (lastRefreshTime + tableRefreshIntervalMs < now) {
+    if (lastRefreshTime + tableRefreshIntervalMs <= now) {
       LOG.info("Peer table refresh triggered by timer expiry");
       refreshTable();
     } else if (!peerRequirement.hasSufficientPeers()) {
@@ -509,13 +509,13 @@ public class PeerDiscoveryController {
       action.accept(this);
       if (retryable) {
         final long newTimeout = retryDelayFunction.apply(lastTimeout);
-        timerId = OptionalLong.of(vertx.setTimer(newTimeout, id -> execute(newTimeout)));
+        timerId = OptionalLong.of(timerUtil.setTimer(newTimeout, () -> execute(newTimeout)));
       }
     }
 
     /** Cancels any timers associated with this entry. */
     void cancelTimers() {
-      timerId.ifPresent(vertx::cancelTimer);
+      timerId.ifPresent(timerUtil::cancelTimer);
     }
   }
 }

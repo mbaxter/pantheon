@@ -29,6 +29,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerDiscoveryContro
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerRequirement;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PingPacketData;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.VertxTimerUtil;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeerId;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.permissioning.NodeWhitelistController;
@@ -70,29 +71,29 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
   // The devp2p specification says only accept packets up to 1280, but some
   // clients ignore that, so we add in a little extra padding.
   private static final int MAX_PACKET_SIZE_BYTES = 1600;
-  private static final long PEER_REFRESH_INTERVAL_MS = MILLISECONDS.convert(30, TimeUnit.MINUTES);
+  protected static final long PEER_REFRESH_INTERVAL_MS = MILLISECONDS.convert(30, TimeUnit.MINUTES);
   private final Vertx vertx;
 
-  private final List<DiscoveryPeer> bootstrapPeers;
-  private final PeerRequirement peerRequirement;
-  private final PeerBlacklist peerBlacklist;
-  private final NodeWhitelistController nodeWhitelistController;
+  protected final List<DiscoveryPeer> bootstrapPeers;
+  protected final PeerRequirement peerRequirement;
+  protected final PeerBlacklist peerBlacklist;
+  protected final NodeWhitelistController nodeWhitelistController;
   /* The peer controller, which takes care of the state machine of peers. */
   private Optional<PeerDiscoveryController> controller = Optional.empty();
 
   /* The keypair used to sign messages. */
-  private final SECP256K1.KeyPair keyPair;
-  private final PeerTable peerTable;
+  protected final SECP256K1.KeyPair keyPair;
+  protected final PeerTable peerTable;
   protected final DiscoveryConfiguration config;
 
   /* This is the {@link tech.pegasys.pantheon.ethereum.p2p.Peer} object holding who we are. */
-  private DiscoveryPeer advertisedPeer;
+  protected DiscoveryPeer advertisedPeer;
   /* The vert.x UDP socket. */
   private DatagramSocket socket;
 
   /* Is discovery enabled? */
   private boolean isActive = false;
-  private final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
+  protected final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
 
   public PeerDiscoveryAgent(
       final Vertx vertx,
@@ -153,21 +154,25 @@ public class PeerDiscoveryAgent implements DisconnectCallback {
   }
 
   protected void startController() {
-    PeerDiscoveryController controller =
-        new PeerDiscoveryController(
-            vertx,
-            keyPair,
-            advertisedPeer,
-            peerTable,
-            bootstrapPeers,
-            PEER_REFRESH_INTERVAL_MS,
-            peerRequirement,
-            peerBlacklist,
-            nodeWhitelistController,
-            this::sendPacket,
-            peerBondedObservers);
+    PeerDiscoveryController controller = createController();
     this.controller = Optional.of(controller);
     controller.start();
+  }
+
+  @VisibleForTesting
+  protected PeerDiscoveryController createController() {
+    return new PeerDiscoveryController(
+        new VertxTimerUtil(vertx),
+        keyPair,
+        advertisedPeer,
+        peerTable,
+        bootstrapPeers,
+        PEER_REFRESH_INTERVAL_MS,
+        peerRequirement,
+        peerBlacklist,
+        nodeWhitelistController,
+        this::sendPacket,
+        peerBondedObservers);
   }
 
   protected CompletableFuture<Integer> listenForConnections() {
