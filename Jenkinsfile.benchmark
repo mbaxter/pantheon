@@ -1,7 +1,9 @@
 properties([
         parameters([
-                string(defaultValue: 'from-0', description: 'The name of the directory containing the benchmark data', name: 'DATASET', trim: true),
-                string(defaultValue: '1000.blocks', description: 'The name of the file to import', name: 'IMPORT_FILE', trim: true)
+                string(name: 'BENCHMARKS_FORK', defaultValue: 'mbaxter', description: 'The user or org from which to checkout the benchmarks repo', trim: true),
+                string(name: 'BENCHMARKS_BRANCH', defaultValue: 'nc-1983', description: 'The benchmarks branch to be checked out', trim: true),
+                string(name: 'DATASET', defaultValue: 'from-0', description: 'The name of the directory containing the benchmark data', trim: true),
+                string(name: 'IMPORT_FILE', defaultValue: '1000.blocks', description: 'The name of the file to import', trim: true)
         ])
 ])
 
@@ -15,17 +17,10 @@ pipeline {
     }
 
     stages {
-        stage('Inspect Node') {
-            steps {
-                echo "Node: ${env.NODE_NAME}"
-                echo "Param DATASET: ${params.DATASET}"
-                echo "Param IMPORT_FILE: ${params.IMPORT_FILE}"
-            }
-        }
         stage('Pull pantheon-benchmark') {
             steps {
                 script {
-                    checkout([$class: 'GitSCM', branches: [[name: '*/nc-1983']], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'pantheon-benchmarks']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'f3f67c22-eead-47db-a8c1-fe32b483583a', url: 'git@github.com:mbaxter/pantheon-benchmark.git']]])
+                    checkout([$class: 'GitSCM', branches: [[name: "*/${params.BENCHMARKS_BRANCH}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: 'RelativeTargetDirectory', relativeTargetDir: 'pantheon-benchmarks']], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'f3f67c22-eead-47db-a8c1-fe32b483583a', url: "git@github.com:${params.BENCHMARKS_FORK}/pantheon-benchmark.git"]]])
                 }
             }
         }
@@ -37,7 +32,7 @@ pipeline {
                 ]) {
                     dir('pantheon-benchmarks') {
                         script {
-                            evaluate(readFile('jenkins/Jenkinsfile'))
+                            evaluate(readFile('jenkins/Jenkinsfile.pantheon-block-import'))
                         }
                     }
                 }
