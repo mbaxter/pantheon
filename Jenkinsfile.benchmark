@@ -28,7 +28,8 @@ pipeline {
             steps {
                 withEnv([
                         "DATA_DIR=/benchmarks-block-import-read-only/${params.DATASET}/pantheon/data",
-                        "IMPORT_FILE=/benchmarks-block-import-read-only/${params.DATASET}/${params.IMPORT_FILE}"
+                        "IMPORT_FILE=/benchmarks-block-import-read-only/${params.DATASET}/${params.IMPORT_FILE}",
+                        "PANTHEON_SRC_DIR=${WORKSPACE}"
                 ]) {
                     dir('pantheon-benchmarks') {
                         script {
