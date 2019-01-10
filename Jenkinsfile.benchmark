@@ -2,8 +2,9 @@ properties([
         parameters([
                 string(name: 'BENCHMARKS_FORK', defaultValue: 'PegaSysEng', description: 'The user or org from which to checkout the benchmarks repo', trim: true),
                 string(name: 'BENCHMARKS_BRANCH', defaultValue: 'master', description: 'The benchmarks branch to be checked out', trim: true),
+                string(name: 'NETWORK', defaultValue: 'mainnet', description: 'The name of the network being tested', trim: true),
                 string(name: 'DATASET', defaultValue: 'from-0', description: 'The name of the directory containing the benchmark data', trim: true),
-                string(name: 'IMPORT_FILE', defaultValue: '1000.blocks', description: 'The name of the file to import', trim: true)
+                string(name: 'IMPORT_FILE', defaultValue: '0-999.blocks', description: 'The name of the file to import', trim: true)
         ])
 ])
 
@@ -12,7 +13,7 @@ pipeline {
         docker {
             image 'pegasyseng/pantheon-build:0.0.3'
             label 'jenkins-benchmark-1'
-            args '-v /benchmarks/block-import:/benchmarks-block-import-read-only'
+            args '-v /benchmarks/block-import:/data'
         }
     }
 
@@ -27,8 +28,10 @@ pipeline {
         stage('Run benchmarks jenkinsfile') {
             steps {
                 withEnv([
-                        "DATA_DIR=/benchmarks-block-import-read-only/${params.DATASET}/pantheon/data",
-                        "IMPORT_FILE=/benchmarks-block-import-read-only/${params.DATASET}/${params.IMPORT_FILE}",
+                        "DATA_DIR=/data",
+                        "NETWORK=${params.NETWORK}",
+                        "DATASET=${params.DATASET}",
+                        "IMPORT_FILE=${params.IMPORT_FILE}",
                         "PANTHEON_SRC_DIR=${WORKSPACE}"
                 ]) {
                     dir('pantheon-benchmarks') {
