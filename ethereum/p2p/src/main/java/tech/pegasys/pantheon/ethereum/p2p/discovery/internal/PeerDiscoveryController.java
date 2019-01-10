@@ -133,7 +133,7 @@ public class PeerDiscoveryController {
       final PeerBlacklist peerBlacklist,
       final NodeWhitelistController nodeWhitelist,
       final OutboundMessageHandler outboundMessageHandler,
-      Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers) {
+      final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers) {
     this.timerUtil = timerUtil;
     this.keypair = keypair;
     this.self = self;
@@ -354,9 +354,9 @@ public class PeerDiscoveryController {
     final Consumer<PeerInteractionState> action =
         interaction -> {
           final PingPacketData data = PingPacketData.create(self.getEndpoint(), peer.getEndpoint());
-          final Packet sentPacket = sendPacket(peer, PacketType.PING, data);
+          final Packet pingPacket = createPacket(PacketType.PING, data);
 
-          final BytesValue pingHash = sentPacket.getHash();
+          final BytesValue pingHash = pingPacket.getHash();
           // Update the matching filter to only accept the PONG if it echoes the hash of our PING.
           final Predicate<Packet> newFilter =
               packet ->
@@ -365,6 +365,8 @@ public class PeerDiscoveryController {
                       .map(pong -> pong.getPingHash().equals(pingHash))
                       .orElse(false);
           interaction.updateFilter(newFilter);
+
+          sendPacket(peer, pingPacket);
         };
 
     // The filter condition will be updated as soon as the action is performed.
@@ -373,15 +375,17 @@ public class PeerDiscoveryController {
     dispatchInteraction(peer, ping);
   }
 
-  @VisibleForTesting
-  Packet sendPacket(DiscoveryPeer peer, PacketType type, PacketData data) {
+  private void sendPacket(final DiscoveryPeer peer, final PacketType type, final PacketData data) {
     Packet packet = createPacket(type, data);
     outboundMessageHandler.send(peer, packet);
-    return packet;
+  }
+
+  private void sendPacket(final DiscoveryPeer peer, final Packet packet) {
+    outboundMessageHandler.send(peer, packet);
   }
 
   @VisibleForTesting
-  Packet createPacket(PacketType type, PacketData data) {
+  Packet createPacket(final PacketType type, final PacketData data) {
     return Packet.create(type, data, keypair);
   }
 

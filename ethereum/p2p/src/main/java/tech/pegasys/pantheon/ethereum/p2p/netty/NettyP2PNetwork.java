@@ -22,6 +22,7 @@ import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerRequirement;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
@@ -175,7 +176,7 @@ public final class NettyP2PNetwork implements P2PNetwork {
     this.peerBlacklist = peerBlacklist;
     this.nodeWhitelistController = nodeWhitelistController;
     peerDiscoveryAgent =
-        new PeerDiscoveryAgent(
+        new VertxPeerDiscoveryAgent(
             vertx,
             keyPair,
             config.getDiscovery(),

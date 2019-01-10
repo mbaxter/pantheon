@@ -18,22 +18,22 @@ public class VertxTimerUtil implements TimerUtil {
 
   private final Vertx vertx;
 
-  public VertxTimerUtil(Vertx vertx) {
+  public VertxTimerUtil(final Vertx vertx) {
     this.vertx = vertx;
   }
 
   @Override
-  public long setPeriodic(long delay, TimerHandler handler) {
+  public long setPeriodic(final long delay, final TimerHandler handler) {
     return vertx.setPeriodic(delay, (l) -> handler.handle());
   }
 
   @Override
-  public long setTimer(long delay, TimerHandler handler) {
+  public long setTimer(final long delay, final TimerHandler handler) {
     return vertx.setTimer(delay, (l) -> handler.handle());
   }
 
   @Override
-  public void cancelTimer(long timerId) {
+  public void cancelTimer(final long timerId) {
     vertx.cancelTimer(timerId);
   }
 }

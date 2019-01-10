@@ -18,5 +18,5 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 public interface OutboundMessageHandler {
   public static OutboundMessageHandler NOOP = (peer, packet) -> {};
 
-  void send(final DiscoveryPeer peer, final Packet packet);
+  void send(final DiscoveryPeer toPeer, final Packet packet);
 }
