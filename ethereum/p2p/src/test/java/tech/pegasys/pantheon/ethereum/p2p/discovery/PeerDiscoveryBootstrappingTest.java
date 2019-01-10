@@ -49,7 +49,7 @@ public class PeerDiscoveryBootstrappingTest {
             .collect(toList());
     assertThat(incomingPackets.size()).isEqualTo(1);
     Packet pingPacket = incomingPackets.get(0).packet;
-    assertThat(pingPacket.getNodeId()).isEqualTo(agent.advertisedPeer.getId());
+    assertThat(pingPacket.getNodeId()).isEqualTo(agent.getAdvertisedPeer().getId());
 
     final PingPacketData pingData = pingPacket.getPacketData(PingPacketData.class).get();
     assertThat(pingData.getExpiration())

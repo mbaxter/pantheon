@@ -172,7 +172,7 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
     try {
       final int length = datagram.data().length();
       Preconditions.checkGuard(
-          length <= MAX_PACKET_SIZE_BYTES,
+          validatePacketSize(length),
           PeerDiscoveryPacketDecodingException::new,
           "Packet too large. Actual size (bytes): %s",
           length);

@@ -63,29 +63,29 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
 
   // The devp2p specification says only accept packets up to 1280, but some
   // clients ignore that, so we add in a little extra padding.
-  protected static final int MAX_PACKET_SIZE_BYTES = 1600;
-  protected static final long PEER_REFRESH_INTERVAL_MS = MILLISECONDS.convert(30, TimeUnit.MINUTES);
+  private static final int MAX_PACKET_SIZE_BYTES = 1600;
+  private static final long PEER_REFRESH_INTERVAL_MS = MILLISECONDS.convert(30, TimeUnit.MINUTES);
 
   protected final List<DiscoveryPeer> bootstrapPeers;
-  protected final PeerRequirement peerRequirement;
-  protected final PeerBlacklist peerBlacklist;
-  protected final NodeWhitelistController nodeWhitelistController;
+  private final PeerRequirement peerRequirement;
+  private final PeerBlacklist peerBlacklist;
+  private final NodeWhitelistController nodeWhitelistController;
   /* The peer controller, which takes care of the state machine of peers. */
   protected Optional<PeerDiscoveryController> controller = Optional.empty();
 
   /* The keypair used to sign messages. */
   protected final SECP256K1.KeyPair keyPair;
   private final BytesValue id;
-  protected final PeerTable peerTable;
+  private final PeerTable peerTable;
   protected final DiscoveryConfiguration config;
 
   /* This is the {@link tech.pegasys.pantheon.ethereum.p2p.Peer} object holding who we are. */
-  protected DiscoveryPeer advertisedPeer;
+  private DiscoveryPeer advertisedPeer;
   private InetSocketAddress localAddress;
 
   /* Is discovery enabled? */
   private boolean isActive = false;
-  protected final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
+  private final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
 
   public PeerDiscoveryAgent(
       final SECP256K1.KeyPair keyPair,
@@ -176,6 +176,10 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
         peerBlacklist,
         nodeWhitelistController,
         peerBondedObservers);
+  }
+
+  protected boolean validatePacketSize(int packetSize) {
+    return packetSize <= MAX_PACKET_SIZE_BYTES;
   }
 
   protected void handleIncomingPacket(final Endpoint sourceEndpoint, final Packet packet) {
