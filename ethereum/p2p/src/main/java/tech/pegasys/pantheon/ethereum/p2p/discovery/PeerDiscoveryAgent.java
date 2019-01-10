@@ -165,16 +165,16 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
 
   private PeerDiscoveryController createController() {
     return new PeerDiscoveryController(
-        createTimer(),
         keyPair,
         advertisedPeer,
         peerTable,
         bootstrapPeers,
+        this::handleOutgoingPacket,
+        createTimer(),
         PEER_REFRESH_INTERVAL_MS,
         peerRequirement,
         peerBlacklist,
         nodeWhitelistController,
-        this::handleOutgoingPacket,
         peerBondedObservers);
   }
 

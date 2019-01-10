@@ -123,16 +123,16 @@ public class PeerDiscoveryController {
   private final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers;
 
   public PeerDiscoveryController(
-      final TimerUtil timerUtil,
       final KeyPair keypair,
       final DiscoveryPeer self,
       final PeerTable peerTable,
       final Collection<DiscoveryPeer> bootstrapNodes,
+      final OutboundMessageHandler outboundMessageHandler,
+      final TimerUtil timerUtil,
       final long tableRefreshIntervalMs,
       final PeerRequirement peerRequirement,
       final PeerBlacklist peerBlacklist,
       final NodeWhitelistController nodeWhitelist,
-      final OutboundMessageHandler outboundMessageHandler,
       final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers) {
     this.timerUtil = timerUtil;
     this.keypair = keypair;

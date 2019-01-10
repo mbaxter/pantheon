@@ -55,16 +55,16 @@ public class PeerDiscoveryTableRefreshTest {
     final PeerDiscoveryController controller =
         spy(
             new PeerDiscoveryController(
-                timer,
                 selfKeyPair,
                 self,
                 new PeerTable(self.getId()),
                 emptyList(),
+                outboundMessageHandler,
+                timer,
                 0,
                 () -> true,
                 new PeerBlacklist(),
                 new NodeWhitelistController(PermissioningConfiguration.createDefault()),
-                outboundMessageHandler,
                 new Subscribers<>()));
     controller.start();
 

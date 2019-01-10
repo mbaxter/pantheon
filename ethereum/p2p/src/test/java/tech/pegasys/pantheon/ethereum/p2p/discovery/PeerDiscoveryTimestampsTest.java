@@ -53,16 +53,16 @@ public class PeerDiscoveryTimestampsTest {
 
     final PeerDiscoveryController controller =
         new PeerDiscoveryController(
-            new MockTimerUtil(),
             selfKeyPair,
             self,
             new PeerTable(agent.getAdvertisedPeer().getId()),
             Collections.emptyList(),
+            OutboundMessageHandler.NOOP,
+            new MockTimerUtil(),
             TimeUnit.HOURS.toMillis(1),
             () -> true,
             new PeerBlacklist(),
             new NodeWhitelistController(PermissioningConfiguration.createDefault()),
-            OutboundMessageHandler.NOOP,
             new Subscribers<>());
     controller.start();
 

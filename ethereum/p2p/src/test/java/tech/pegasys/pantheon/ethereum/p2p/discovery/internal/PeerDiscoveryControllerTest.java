@@ -1107,16 +1107,16 @@ public class PeerDiscoveryControllerTest {
       }
       return spy(
           new PeerDiscoveryController(
-              timerUtil,
               keypair,
               self,
               peerTable,
               discoPeers,
+              outboundMessageHandler,
+              timerUtil,
               TABLE_REFRESH_INTERVAL_MS,
               PEER_REQUIREMENT,
               blacklist,
               whitelist,
-              outboundMessageHandler,
               new Subscribers<>()));
     }
   }
