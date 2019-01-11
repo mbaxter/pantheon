@@ -275,7 +275,7 @@ public class PeerDiscoveryAgentTest {
 
   @Test
   public void shouldBeActiveWhenConfigIsTrue() {
-    AgentBuilder agentBuilder = helper.agentBuilder().setActive(true);
+    AgentBuilder agentBuilder = helper.agentBuilder().active(true);
     final MockPeerDiscoveryAgent agent = helper.startDiscoveryAgent(agentBuilder);
 
     assertThat(agent.isActive()).isTrue();
@@ -283,7 +283,7 @@ public class PeerDiscoveryAgentTest {
 
   @Test
   public void shouldNotBeActiveWhenConfigIsFalse() {
-    AgentBuilder agentBuilder = helper.agentBuilder().setActive(false);
+    AgentBuilder agentBuilder = helper.agentBuilder().active(false);
     final MockPeerDiscoveryAgent agent = helper.startDiscoveryAgent(agentBuilder);
 
     assertThat(agent.isActive()).isFalse();

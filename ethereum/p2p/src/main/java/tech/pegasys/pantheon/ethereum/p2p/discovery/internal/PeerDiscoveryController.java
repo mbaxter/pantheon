@@ -104,7 +104,8 @@ public class PeerDiscoveryController {
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   private final SECP256K1.KeyPair keypair;
-  final DiscoveryPeer self;
+  // The peer representation of this node
+  private final DiscoveryPeer localPeer;
   private final OutboundMessageHandler outboundMessageHandler;
   private final PeerBlacklist peerBlacklist;
   private final NodeWhitelistController nodeWhitelist;
@@ -124,7 +125,7 @@ public class PeerDiscoveryController {
 
   public PeerDiscoveryController(
       final KeyPair keypair,
-      final DiscoveryPeer self,
+      final DiscoveryPeer localPeer,
       final PeerTable peerTable,
       final Collection<DiscoveryPeer> bootstrapNodes,
       final OutboundMessageHandler outboundMessageHandler,
@@ -136,7 +137,7 @@ public class PeerDiscoveryController {
       final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers) {
     this.timerUtil = timerUtil;
     this.keypair = keypair;
-    this.self = self;
+    this.localPeer = localPeer;
     this.bootstrapNodes = bootstrapNodes;
     this.peerTable = peerTable;
     this.tableRefreshIntervalMs = tableRefreshIntervalMs;
@@ -199,7 +200,7 @@ public class PeerDiscoveryController {
         packet);
 
     // Message from self. This should not happen.
-    if (sender.getId().equals(self.getId())) {
+    if (sender.getId().equals(localPeer.getId())) {
       return;
     }
 
@@ -233,7 +234,7 @@ public class PeerDiscoveryController {
 
                     // If this was a bootstrap peer, let's ask it for nodes near to us.
                     if (interaction.isBootstrap()) {
-                      findNodes(peer, self.getId());
+                      findNodes(peer, localPeer.getId());
                     }
                   });
           break;
@@ -255,7 +256,7 @@ public class PeerDiscoveryController {
                     if (!nodeWhitelist.isPermitted(neighbor)
                         || peerBlacklist.contains(neighbor)
                         || peerTable.get(neighbor).isPresent()
-                        || neighbor.getId().equals(self.getId())) {
+                        || neighbor.getId().equals(localPeer.getId())) {
                       continue;
                     }
                     bond(neighbor, false);
@@ -353,7 +354,8 @@ public class PeerDiscoveryController {
 
     final Consumer<PeerInteractionState> action =
         interaction -> {
-          final PingPacketData data = PingPacketData.create(self.getEndpoint(), peer.getEndpoint());
+          final PingPacketData data =
+              PingPacketData.create(localPeer.getEndpoint(), peer.getEndpoint());
           final Packet pingPacket = createPacket(PacketType.PING, data);
 
           final BytesValue pingHash = pingPacket.getHash();

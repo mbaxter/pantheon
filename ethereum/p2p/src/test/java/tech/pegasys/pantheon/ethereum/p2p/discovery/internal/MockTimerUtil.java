@@ -49,6 +49,7 @@ public class MockTimerUtil implements TimerUtil {
   }
 
   public void runTimerHandlers() {
+    // Create a copy of the handlers to avoid concurrent modification as handlers run
     List<TimerHandler> handlers = new ArrayList<>();
     timerHandlers.forEach((id, handler) -> handlers.add(handler));
     timerHandlers.clear();
@@ -57,6 +58,7 @@ public class MockTimerUtil implements TimerUtil {
   }
 
   public void runPeriodicHandlers() {
+    // Create a copy of the handlers to avoid concurrent modification as handlers run
     List<TimerHandler> handlers = new ArrayList<>();
     periodicHandlers.forEach((id, handler) -> handlers.add(handler));
 

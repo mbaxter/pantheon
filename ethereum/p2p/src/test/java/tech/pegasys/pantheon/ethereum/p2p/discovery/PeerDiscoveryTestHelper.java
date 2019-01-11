@@ -114,13 +114,13 @@ public class PeerDiscoveryTestHelper {
    * @return a list of discovery agents.
    */
   public MockPeerDiscoveryAgent startDiscoveryAgent(final List<DiscoveryPeer> bootstrapPeers) {
-    AgentBuilder agentBuilder = agentBuilder().setBootstrapPeers(bootstrapPeers);
+    AgentBuilder agentBuilder = agentBuilder().bootstrapPeers(bootstrapPeers);
 
     return startDiscoveryAgent(agentBuilder);
   }
 
   public MockPeerDiscoveryAgent startDiscoveryAgent(final DiscoveryPeer... bootstrapPeers) {
-    AgentBuilder agentBuilder = agentBuilder().setBootstrapPeers(bootstrapPeers);
+    AgentBuilder agentBuilder = agentBuilder().bootstrapPeers(bootstrapPeers);
 
     return startDiscoveryAgent(agentBuilder);
   }
@@ -134,8 +134,7 @@ public class PeerDiscoveryTestHelper {
    */
   public MockPeerDiscoveryAgent startDiscoveryAgent(
       final List<DiscoveryPeer> bootstrapPeers, final PeerBlacklist blacklist) {
-    AgentBuilder agentBuilder =
-        agentBuilder().setBootstrapPeers(bootstrapPeers).setBlacklist(blacklist);
+    AgentBuilder agentBuilder = agentBuilder().bootstrapPeers(bootstrapPeers).blacklist(blacklist);
 
     return startDiscoveryAgent(agentBuilder);
   }
@@ -147,13 +146,13 @@ public class PeerDiscoveryTestHelper {
   }
 
   public MockPeerDiscoveryAgent createDiscoveryAgent(final List<DiscoveryPeer> bootstrapPeers) {
-    AgentBuilder agentBuilder = agentBuilder().setBootstrapPeers(bootstrapPeers);
+    AgentBuilder agentBuilder = agentBuilder().bootstrapPeers(bootstrapPeers);
 
     return createDiscoveryAgent(agentBuilder);
   }
 
   public MockPeerDiscoveryAgent createDiscoveryAgent(final DiscoveryPeer... bootstrapPeers) {
-    AgentBuilder agentBuilder = agentBuilder().setBootstrapPeers(bootstrapPeers);
+    AgentBuilder agentBuilder = agentBuilder().bootstrapPeers(bootstrapPeers);
 
     return createDiscoveryAgent(agentBuilder);
   }
@@ -181,27 +180,27 @@ public class PeerDiscoveryTestHelper {
       this.nextAvailablePort = nextAvailablePort;
     }
 
-    public AgentBuilder setBootstrapPeers(final List<DiscoveryPeer> peers) {
+    public AgentBuilder bootstrapPeers(final List<DiscoveryPeer> peers) {
       this.bootstrapPeers = peers;
       return this;
     }
 
-    public AgentBuilder setBootstrapPeers(final DiscoveryPeer... peers) {
+    public AgentBuilder bootstrapPeers(final DiscoveryPeer... peers) {
       this.bootstrapPeers = Arrays.asList(peers);
       return this;
     }
 
-    public AgentBuilder setWhiteList(final NodeWhitelistController whitelist) {
+    public AgentBuilder whiteList(final NodeWhitelistController whitelist) {
       this.whitelist = whitelist;
       return this;
     }
 
-    public AgentBuilder setBlacklist(final PeerBlacklist blacklist) {
+    public AgentBuilder blacklist(final PeerBlacklist blacklist) {
       this.blacklist = blacklist;
       return this;
     }
 
-    public AgentBuilder setActive(final boolean active) {
+    public AgentBuilder active(final boolean active) {
       this.active = active;
       return this;
     }

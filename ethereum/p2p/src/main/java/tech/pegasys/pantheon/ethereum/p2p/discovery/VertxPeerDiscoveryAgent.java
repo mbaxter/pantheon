@@ -34,6 +34,7 @@ import java.net.SocketException;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Vertx;
 import io.vertx.core.datagram.DatagramPacket;
 import io.vertx.core.datagram.DatagramSocket;
@@ -71,45 +72,47 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
     vertx
         .createDatagramSocket(new DatagramSocketOptions().setIpV6(NetworkUtility.isIPv6Available()))
         .listen(
-            config.getBindPort(),
-            config.getBindHost(),
-            res -> {
-              if (res.failed()) {
-                Throwable cause = res.cause();
-                LOG.error("An exception occurred when starting the peer discovery agent", cause);
-
-                if (cause instanceof BindException || cause instanceof SocketException) {
-                  cause =
-                      new PeerDiscoveryServiceException(
-                          String.format(
-                              "Failed to bind Ethereum UDP discovery listener to %s:%d: %s",
-                              config.getBindHost(), config.getBindPort(), cause.getMessage()));
-                }
-                future.completeExceptionally(cause);
-                return;
-              }
-
-              this.socket = res.result();
-
-              // TODO: when using wildcard hosts (0.0.0.0), we need to handle multiple addresses by
-              // selecting
-              // the correct 'announce' address.
-              final String effectiveHost = socket.localAddress().host();
-              final int effectivePort = socket.localAddress().port();
-
-              LOG.info(
-                  "Started peer discovery agent successfully, on effective host={} and port={}",
-                  effectiveHost,
-                  effectivePort);
-
-              socket.exceptionHandler(this::handleException);
-              socket.handler(this::handlePacket);
-
-              InetSocketAddress address =
-                  new InetSocketAddress(socket.localAddress().host(), socket.localAddress().port());
-              future.complete(address);
-            });
+            config.getBindPort(), config.getBindHost(), res -> handleListenerSetup(res, future));
     return future;
+  }
+
+  protected void handleListenerSetup(
+      AsyncResult<DatagramSocket> listenResult,
+      CompletableFuture<InetSocketAddress> addressFuture) {
+    if (listenResult.failed()) {
+      Throwable cause = listenResult.cause();
+      LOG.error("An exception occurred when starting the peer discovery agent", cause);
+
+      if (cause instanceof BindException || cause instanceof SocketException) {
+        cause =
+            new PeerDiscoveryServiceException(
+                String.format(
+                    "Failed to bind Ethereum UDP discovery listener to %s:%d: %s",
+                    config.getBindHost(), config.getBindPort(), cause.getMessage()));
+      }
+      addressFuture.completeExceptionally(cause);
+      return;
+    }
+
+    this.socket = listenResult.result();
+
+    // TODO: when using wildcard hosts (0.0.0.0), we need to handle multiple addresses by
+    // selecting
+    // the correct 'announce' address.
+    final String effectiveHost = socket.localAddress().host();
+    final int effectivePort = socket.localAddress().port();
+
+    LOG.info(
+        "Started peer discovery agent successfully, on effective host={} and port={}",
+        effectiveHost,
+        effectivePort);
+
+    socket.exceptionHandler(this::handleException);
+    socket.handler(this::handlePacket);
+
+    InetSocketAddress address =
+        new InetSocketAddress(socket.localAddress().host(), socket.localAddress().port());
+    addressFuture.complete(address);
   }
 
   @Override

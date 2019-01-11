@@ -438,7 +438,7 @@ public final class NettyP2PNetwork implements P2PNetwork {
   }
 
   @Override
-  public PeerInfo getSelf() {
+  public PeerInfo getLocalPeerInfo() {
     return ourPeerInfo;
   }
 

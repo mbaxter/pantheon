@@ -46,8 +46,8 @@ public class PeerDiscoveryTableRefreshTest {
   public void tableRefreshSingleNode() {
     final List<SECP256K1.KeyPair> keypairs = PeerDiscoveryTestHelper.generateKeyPairs(2);
     final List<DiscoveryPeer> peers = helper.createDiscoveryPeers(keypairs);
-    DiscoveryPeer self = peers.get(0);
-    KeyPair selfKeyPair = keypairs.get(0);
+    DiscoveryPeer localPeer = peers.get(0);
+    KeyPair localKeyPair = keypairs.get(0);
 
     // Create and start the PeerDiscoveryController
     final OutboundMessageHandler outboundMessageHandler = mock(OutboundMessageHandler.class);
@@ -55,9 +55,9 @@ public class PeerDiscoveryTableRefreshTest {
     final PeerDiscoveryController controller =
         spy(
             new PeerDiscoveryController(
-                selfKeyPair,
-                self,
-                new PeerTable(self.getId()),
+                localKeyPair,
+                localPeer,
+                new PeerTable(localPeer.getId()),
                 emptyList(),
                 outboundMessageHandler,
                 timer,
@@ -86,7 +86,6 @@ public class PeerDiscoveryTableRefreshTest {
     for (int i = 0; i < 5; i++) {
       timer.runPeriodicHandlers();
     }
-
     verify(outboundMessageHandler, atLeast(5)).send(eq(peers.get(1)), captor.capture());
     List<Packet> capturedFindNeighborsPackets =
         captor

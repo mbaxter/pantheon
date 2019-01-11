@@ -41,9 +41,9 @@ public class PeerTableTest {
 
   @Test
   public void addSelf() {
-    final DiscoveryPeer self = new DiscoveryPeer(Peer.randomId(), "127.0.0.1", 12345, 12345);
-    final PeerTable table = new PeerTable(self.getId(), 16);
-    final PeerTable.AddResult result = table.tryAdd(self);
+    final DiscoveryPeer localPeer = new DiscoveryPeer(Peer.randomId(), "127.0.0.1", 12345, 12345);
+    final PeerTable table = new PeerTable(localPeer.getId(), 16);
+    final PeerTable.AddResult result = table.tryAdd(localPeer);
 
     assertThat(result.getOutcome()).isEqualTo(Outcome.SELF);
     assertThat(table.getAllPeers()).hasSize(0);
