@@ -55,8 +55,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * The peer discovery agent is the network component that sends and receives messages peer discovery
- * messages via UDP.
+ * The peer discovery agent is the network component that sends and receives peer discovery messages
+ * via UDP.
  */
 public abstract class PeerDiscoveryAgent implements DisconnectCallback {
   protected static final Logger LOG = LogManager.getLogger();

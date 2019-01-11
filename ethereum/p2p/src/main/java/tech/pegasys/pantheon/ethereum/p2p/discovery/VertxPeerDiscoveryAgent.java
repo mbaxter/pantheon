@@ -77,8 +77,8 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
   }
 
   protected void handleListenerSetup(
-      AsyncResult<DatagramSocket> listenResult,
-      CompletableFuture<InetSocketAddress> addressFuture) {
+      final AsyncResult<DatagramSocket> listenResult,
+      final CompletableFuture<InetSocketAddress> addressFuture) {
     if (listenResult.failed()) {
       Throwable cause = listenResult.cause();
       LOG.error("An exception occurred when starting the peer discovery agent", cause);
