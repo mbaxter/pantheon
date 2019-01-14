@@ -11,9 +11,9 @@ properties([
 pipeline {
     agent {
         docker {
-            image 'pegasyseng/pantheon-build:0.0.3'
+            image "pantheon-benchmarks/${params.NETWORK}-${params.DATASET}-pantheon:latest"
             label 'jenkins-benchmark-1'
-            args '-v /benchmarks/block-import:/data'
+            args '-v /benchmarks/block-import:/benchmarks-data'
         }
     }
 
@@ -29,6 +29,7 @@ pipeline {
             steps {
                 withEnv([
                         "DATA_DIR=/data",
+                        "BENCHMARKS_DATA=/benchmarks-data",
                         "NETWORK=${params.NETWORK}",
                         "DATASET=${params.DATASET}",
                         "IMPORT_FILE=${params.IMPORT_FILE}",
