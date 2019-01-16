@@ -17,6 +17,7 @@ import static tech.pegasys.pantheon.crypto.Hash.keccak256;
 import static tech.pegasys.pantheon.util.Preconditions.checkGuard;
 import static tech.pegasys.pantheon.util.bytes.BytesValues.asUnsignedBigInteger;
 
+import io.netty.buffer.ByteBuf;
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.crypto.SECP256K1.PublicKey;
 import tech.pegasys.pantheon.crypto.SECP256K1.Signature;
@@ -93,6 +94,9 @@ public class Packet {
     return new Packet(packetType, packetData, keyPair);
   }
 
+  /**
+   * @deprecated
+   */
   public static Packet decode(final Buffer message) {
     checkGuard(
         message.length() >= PACKET_DATA_INDEX,
@@ -113,6 +117,35 @@ public class Packet {
     final PacketData packetData;
     try {
       packetData = deserializer.deserialize(RLP.input(message, PACKET_DATA_INDEX));
+    } catch (final RLPException e) {
+      throw new PeerDiscoveryPacketDecodingException("Malformed packet of type: " + packetType, e);
+    }
+
+    return new Packet(packetType, packetData, BytesValue.wrapBuffer(message));
+  }
+
+  public static Packet decode(final ByteBuf message) {
+    checkGuard(
+      message.readableBytes() >= PACKET_DATA_INDEX,
+      PeerDiscoveryPacketDecodingException::new,
+      "Packet too short: expected at least %s bytes, got %s",
+      PACKET_DATA_INDEX,
+      message.readableBytes());
+
+    final byte type = message.getByte(PACKET_TYPE_INDEX);
+
+    final PacketType packetType =
+      PacketType.forByte(type)
+        .orElseThrow(
+          () ->
+            new PeerDiscoveryPacketDecodingException("Unrecognized packet type: " + type));
+
+    final PacketType.Deserializer<?> deserializer = packetType.getDeserializer();
+    final PacketData packetData;
+    try {
+      // Create a copy of the message bytes
+      BytesValue messageBytes = BytesValue.wrapBuffer(message.nioBuffer(), message.readerIndex() + PACKET_DATA_INDEX, message.readableBytes()).copy();
+      packetData = deserializer.deserialize(RLP.input(messageBytes, PACKET_DATA_INDEX));
     } catch (final RLPException e) {
       throw new PeerDiscoveryPacketDecodingException("Malformed packet of type: " + packetType, e);
     }
