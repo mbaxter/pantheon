@@ -12,14 +12,7 @@
  */
 package tech.pegasys.pantheon.services.queue;
 
-import static com.google.common.base.Preconditions.checkState;
-
-import tech.pegasys.pantheon.util.bytes.BytesValue;
-
 import java.io.Closeable;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Stream;
 
 public interface Queue<T> extends Closeable {
 

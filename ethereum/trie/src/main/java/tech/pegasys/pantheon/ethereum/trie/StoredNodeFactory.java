@@ -26,7 +26,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-class StoredNodeFactory<V> implements NodeFactory<V> {
+public class StoredNodeFactory<V> implements NodeFactory<V> {
   @SuppressWarnings("rawtypes")
   private static final NullNode NULL_NODE = NullNode.instance();
 
@@ -41,6 +41,11 @@ class StoredNodeFactory<V> implements NodeFactory<V> {
     this.nodeLoader = nodeLoader;
     this.valueSerializer = valueSerializer;
     this.valueDeserializer = valueDeserializer;
+  }
+
+  public static StoredNodeFactory<BytesValue> create() {
+    return new StoredNodeFactory<>(
+        (h) -> Optional.empty(), Function.identity(), Function.identity());
   }
 
   @Override
@@ -87,7 +92,7 @@ class StoredNodeFactory<V> implements NodeFactory<V> {
     return node;
   }
 
-  public Node<V> retrieve(final Bytes32 hash) throws MerkleStorageException {
+  public Optional<Node<V>> retrieve(final Bytes32 hash) throws MerkleStorageException {
     return nodeLoader
         .getNode(hash)
         .map(
@@ -97,8 +102,11 @@ class StoredNodeFactory<V> implements NodeFactory<V> {
               assert (hash.equals(node.getHash()))
                   : "Node hash " + node.getHash() + " not equal to expected " + hash;
               return node;
-            })
-        .orElseThrow(() -> new MerkleStorageException("Missing value for hash " + hash));
+            });
+  }
+
+  public Node<V> decode(final BytesValue rlp) {
+    return decode(rlp, () -> String.format("Failed to decode value %s", rlp.toString()));
   }
 
   private Node<V> decode(final BytesValue rlp, final Supplier<String> errMessage)

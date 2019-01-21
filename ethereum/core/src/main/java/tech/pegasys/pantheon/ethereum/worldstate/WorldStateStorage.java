@@ -28,6 +28,11 @@ public interface WorldStateStorage {
 
   Optional<BytesValue> getNodeData(Hash hash);
 
+  // TODO: look into optimizing this call in implementing classes
+  default boolean contains(Hash hash) {
+    return getNodeData(hash).isPresent();
+  }
+
   Updater updater();
 
   interface Updater {

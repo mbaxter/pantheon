@@ -16,9 +16,10 @@ import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.List;
 import java.util.Optional;
 
-class StoredNode<V> implements Node<V> {
+public class StoredNode<V> implements Node<V> {
   private final StoredNodeFactory<V> nodeFactory;
   private final Bytes32 hash;
   private Node<V> loaded;
@@ -26,6 +27,10 @@ class StoredNode<V> implements Node<V> {
   StoredNode(final StoredNodeFactory<V> nodeFactory, final Bytes32 hash) {
     this.nodeFactory = nodeFactory;
     this.hash = hash;
+  }
+
+  public boolean isLoaded() {
+    return loaded != null;
   }
 
   /** @return True if the node needs to be persisted. */
@@ -64,6 +69,11 @@ class StoredNode<V> implements Node<V> {
   }
 
   @Override
+  public Optional<List<Node<V>>> getChildren() {
+    return load().getChildren();
+  }
+
+  @Override
   public BytesValue getRlp() {
     // Getting the rlp representation is only needed when persisting a concrete node
     throw new UnsupportedOperationException();
@@ -87,7 +97,10 @@ class StoredNode<V> implements Node<V> {
 
   private Node<V> load() {
     if (loaded == null) {
-      loaded = nodeFactory.retrieve(hash);
+      loaded =
+          nodeFactory
+              .retrieve(hash)
+              .orElseThrow(() -> new MerkleStorageException("Missing value for hash " + hash));
     }
 
     return loaded;

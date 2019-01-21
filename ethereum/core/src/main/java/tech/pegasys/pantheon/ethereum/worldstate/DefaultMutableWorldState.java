@@ -14,6 +14,7 @@ package tech.pegasys.pantheon.ethereum.worldstate;
 
 import tech.pegasys.pantheon.ethereum.core.AbstractWorldUpdater;
 import tech.pegasys.pantheon.ethereum.core.Account;
+import tech.pegasys.pantheon.ethereum.core.AccountTuple;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
@@ -103,31 +104,14 @@ public class DefaultMutableWorldState implements MutableWorldState {
   private AccountState deserializeAccount(
       final Address address, final Hash addressHash, final BytesValue encoded) throws RLPException {
     final RLPInput in = RLP.input(encoded);
-    in.enterList();
-
-    final long nonce = in.readLongScalar();
-    final Wei balance = in.readUInt256Scalar(Wei::wrap);
-    final Hash storageRoot = Hash.wrap(in.readBytes32());
-    final Hash codeHash = Hash.wrap(in.readBytes32());
-
-    in.leaveList();
-
-    return new AccountState(address, addressHash, nonce, balance, storageRoot, codeHash);
+    AccountTuple tuple = AccountTuple.readFrom(in);
+    return new AccountState(address, addressHash, tuple);
   }
 
   private static BytesValue serializeAccount(
-      final long nonce, final Wei balance, final Hash codeHash, final Hash storageRoot) {
-    return RLP.encode(
-        out -> {
-          out.startList();
-
-          out.writeLongScalar(nonce);
-          out.writeUInt256Scalar(balance);
-          out.writeBytesValue(storageRoot);
-          out.writeBytesValue(codeHash);
-
-          out.endList();
-        });
+      final long nonce, final Wei balance, final Hash storageRoot, final Hash codeHash) {
+    AccountTuple tuple = new AccountTuple(nonce, balance, storageRoot, codeHash);
+    return RLP.encode(tuple::writeTo);
   }
 
   @Override
@@ -195,20 +179,14 @@ public class DefaultMutableWorldState implements MutableWorldState {
     // Lazily initialized since we don't always access storage.
     private volatile MerklePatriciaTrie<Bytes32, BytesValue> storageTrie;
 
-    private AccountState(
-        final Address address,
-        final Hash addressHash,
-        final long nonce,
-        final Wei balance,
-        final Hash storageRoot,
-        final Hash codeHash) {
+    private AccountState(final Address address, final Hash addressHash, final AccountTuple tuple) {
 
       this.address = address;
       this.addressHash = addressHash;
-      this.nonce = nonce;
-      this.balance = balance;
-      this.storageRoot = storageRoot;
-      this.codeHash = codeHash;
+      this.nonce = tuple.getNonce();
+      this.balance = tuple.getBalance();
+      this.storageRoot = tuple.getStorageRoot();
+      this.codeHash = tuple.getCodeHash();
     }
 
     private MerklePatriciaTrie<Bytes32, BytesValue> storageTrie() {
@@ -386,7 +364,7 @@ public class DefaultMutableWorldState implements MutableWorldState {
 
         // Lastly, save the new account.
         final BytesValue account =
-            serializeAccount(updated.getNonce(), updated.getBalance(), codeHash, storageRoot);
+            serializeAccount(updated.getNonce(), updated.getBalance(), storageRoot, codeHash);
 
         wrapped.accountStateTrie.put(updated.getAddressHash(), account);
       }

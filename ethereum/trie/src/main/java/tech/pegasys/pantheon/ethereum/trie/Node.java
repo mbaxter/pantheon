@@ -15,9 +15,10 @@ package tech.pegasys.pantheon.ethereum.trie;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.List;
 import java.util.Optional;
 
-interface Node<V> {
+public interface Node<V> {
 
   Node<V> accept(PathNodeVisitor<V> visitor, BytesValue path);
 
@@ -27,9 +28,23 @@ interface Node<V> {
 
   Optional<V> getValue();
 
+  Optional<List<Node<V>>> getChildren();
+
   BytesValue getRlp();
 
   BytesValue getRlpRef();
+
+  /**
+   * Whether a reference to this node should be inlined (the rlp stored directly in the parent
+   * node). If true, rlp is included in parent directly. If false, a hash of the rlp is stored in
+   * the parent node as a reference.
+   *
+   * @return
+   */
+  default boolean shouldBeInlined() {
+    BytesValue rlp = getRlp();
+    return rlp.size() >= 32;
+  }
 
   Bytes32 getHash();
 

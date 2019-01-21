@@ -1,13 +1,24 @@
+/*
+ * Copyright 2019 ConsenSys AG.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package tech.pegasys.pantheon.ethereum.eth.sync.worldstate;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
-import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage.Updater;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
-public abstract class NodeData {
+import java.util.stream.Stream;
+
+abstract class NodeData {
   public enum Kind {
     ACCOUNT_TRIE_NODE,
     STORAGE_TRIE_NODE,
@@ -18,20 +29,20 @@ public abstract class NodeData {
   private final Hash hash;
   private BytesValue data;
 
-  protected NodeData(Kind kind, Hash hash) {
+  protected NodeData(final Kind kind, final Hash hash) {
     this.kind = kind;
     this.hash = hash;
   }
 
-  public static AccountTrieNodeData createAccountTrieNode(Hash hash) {
+  public static AccountTrieNodeData createAccountTrieNode(final Hash hash) {
     return new AccountTrieNodeData(hash);
   }
 
-  public static StorageTrieNodeData createStorageTrieNode(Hash hash) {
+  public static StorageTrieNodeData createStorageTrieNode(final Hash hash) {
     return new StorageTrieNodeData(hash);
   }
 
-  public static CodeNodeData createCodeNode(Hash hash) {
+  public static CodeNodeData createCodeNode(final Hash hash) {
     return new CodeNodeData(hash);
   }
 
@@ -47,50 +58,12 @@ public abstract class NodeData {
     return data;
   }
 
-  public NodeData setData(BytesValue data) {
+  public NodeData setData(final BytesValue data) {
     this.data = data;
     return this;
   }
 
-  abstract void persist(WorldStateStorage.Updater updater);
+  abstract void persist(final WorldStateStorage.Updater updater);
 
-
-  public static class AccountTrieNodeData extends NodeData {
-
-    public AccountTrieNodeData(Hash hash) {
-      super(Kind.ACCOUNT_TRIE_NODE, hash);
-    }
-
-    @Override
-    void persist(Updater updater) {
-      checkNotNull(getData(), "Must set data before node can be persisted.");
-      updater.putAccountStateTrieNode(getHash(), getData());
-    }
-  }
-
-  public static class StorageTrieNodeData extends NodeData {
-
-    public StorageTrieNodeData(Hash hash) {
-      super(Kind.STORAGE_TRIE_NODE, hash);
-    }
-
-    @Override
-    void persist(Updater updater) {
-      checkNotNull(getData(), "Must set data before node can be persisted.");
-      updater.putAccountStorageTrieNode(getHash(), getData());
-    }
-  }
-
-  public static class CodeNodeData extends NodeData {
-
-    public CodeNodeData(Hash hash) {
-      super(Kind.CODE, hash);
-    }
-
-    @Override
-    void persist(Updater updater) {
-      checkNotNull(getData(), "Must set data before node can be persisted.");
-      updater.putCode(getHash(), getData());
-    }
-  }
+  abstract Stream<NodeData> getChildNodeData();
 }

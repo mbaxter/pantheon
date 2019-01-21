@@ -18,6 +18,7 @@ import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.List;
 import java.util.Optional;
 
 class NullNode<V> implements Node<V> {
@@ -50,6 +51,11 @@ class NullNode<V> implements Node<V> {
 
   @Override
   public Optional<V> getValue() {
+    return Optional.empty();
+  }
+
+  @Override
+  public Optional<List<Node<V>>> getChildren() {
     return Optional.empty();
   }
 
