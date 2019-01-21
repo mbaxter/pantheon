@@ -32,7 +32,11 @@ public interface WorldStateStorage {
 
   interface Updater {
 
-    void putCode(BytesValue code);
+    void putCode(Bytes32 nodeHash, BytesValue code);
+
+    default void putCode(final BytesValue code) {
+      putCode(Hash.hash(code), code);
+    }
 
     void putAccountStateTrieNode(Bytes32 nodeHash, BytesValue node);
 

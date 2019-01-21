@@ -62,8 +62,8 @@ public class KeyValueStorageWorldStateStorage implements WorldStateStorage {
     }
 
     @Override
-    public void putCode(final BytesValue code) {
-      transaction.put(Hash.hash(code), code);
+    public void putCode(final Bytes32 codeHash, final BytesValue code) {
+      transaction.put(codeHash, code);
     }
 
     @Override
