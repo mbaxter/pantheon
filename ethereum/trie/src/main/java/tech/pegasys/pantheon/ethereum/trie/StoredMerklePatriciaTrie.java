@@ -48,6 +48,12 @@ public class StoredMerklePatriciaTrie<K extends BytesValue, V> implements Merkle
     this(nodeLoader, MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH, valueSerializer, valueDeserializer);
   }
 
+  public static StoredMerklePatriciaTrie<BytesValue, BytesValue> create(
+      NodeLoader nodeLoader, Bytes32 rootHash) {
+    return new StoredMerklePatriciaTrie<>(
+        nodeLoader, rootHash, Function.identity(), Function.identity());
+  }
+
   /**
    * Create a trie.
    *

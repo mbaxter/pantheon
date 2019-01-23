@@ -47,4 +47,8 @@ public class WorldStateArchive {
   public Optional<BytesValue> getNodeData(final Hash hash) {
     return storage.getNodeData(hash);
   }
+
+  public WorldStateStorage getStorage() {
+    return storage;
+  }
 }

@@ -58,6 +58,14 @@ public class EthServerTest {
   }
 
   @Test
+  public void shouldRespondToNodeDataRequestsForEmptyValues() throws Exception {
+    when(worldStateArchive.getNodeData(Hash.EMPTY)).thenReturn(Optional.empty());
+    ethMessages.dispatch(new EthMessage(ethPeer, GetNodeDataMessage.create(asList(Hash.EMPTY))));
+
+    verify(ethPeer).send(NodeDataMessage.create(asList(BytesValue.EMPTY)));
+  }
+
+  @Test
   public void shouldHandleDataBeingUnavailableWhenRespondingToNodeDataRequests() throws Exception {
     when(worldStateArchive.getNodeData(HASH1)).thenReturn(Optional.of(VALUE1));
     when(worldStateArchive.getNodeData(HASH2)).thenReturn(Optional.empty());

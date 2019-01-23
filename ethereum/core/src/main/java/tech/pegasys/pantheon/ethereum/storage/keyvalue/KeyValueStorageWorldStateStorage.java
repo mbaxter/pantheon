@@ -30,6 +30,9 @@ public class KeyValueStorageWorldStateStorage implements WorldStateStorage {
 
   @Override
   public Optional<BytesValue> getCode(final Hash codeHash) {
+    if (codeHash.equals(Hash.EMPTY)) {
+      return Optional.of(BytesValue.EMPTY);
+    }
     return keyValueStorage.get(codeHash);
   }
 
@@ -63,6 +66,10 @@ public class KeyValueStorageWorldStateStorage implements WorldStateStorage {
 
     @Override
     public void putCode(final Bytes32 codeHash, final BytesValue code) {
+      if (code.size() == 0) {
+        // Don't save empty values
+        return;
+      }
       transaction.put(codeHash, code);
     }
 

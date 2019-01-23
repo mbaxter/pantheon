@@ -48,8 +48,7 @@ public class WorldStateDownloader {
   private final AtomicInteger outstandingRequests = new AtomicInteger(0);
   private final LabelledMetric<OperationTimer> ethTasksTimer;
   private final WorldStateStorage worldStateStorage;
-  private final AtomicReference<CompletableFuture<Void>> future =
-      new AtomicReference<>(null);
+  private final AtomicReference<CompletableFuture<Void>> future = new AtomicReference<>(null);
 
   public WorldStateDownloader(
       EthContext ethContext,

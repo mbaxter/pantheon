@@ -45,8 +45,10 @@ class AccountTrieNodeData extends TrieNodeData {
   protected List<NodeData> getNodeDataFromTrieNodeValue(final BytesValue value) {
     List<NodeData> nodeData = new ArrayList<>(2);
     AccountTuple accountTuple = AccountTuple.readFrom(RLP.input(value));
-    // Add code
-    nodeData.add(NodeData.createCodeNode(accountTuple.getCodeHash()));
+    // Add code, if appropriate
+    if (!accountTuple.getCodeHash().equals(Hash.EMPTY)) {
+      nodeData.add(NodeData.createCodeNode(accountTuple.getCodeHash()));
+    }
     // Add storage, if appropriate
     if (!accountTuple.getStorageRoot().equals(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH)) {
       // If storage is non-empty queue download

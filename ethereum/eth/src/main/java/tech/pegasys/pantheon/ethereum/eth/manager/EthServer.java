@@ -217,7 +217,12 @@ class EthServer {
       }
       count++;
 
-      worldStateArchive.getNodeData(hash).ifPresent(nodeData::add);
+      if (hash.equals(Hash.EMPTY)) {
+        // No need to go to the archive for an empty value
+        nodeData.add(BytesValue.EMPTY);
+      } else {
+        worldStateArchive.getNodeData(hash).ifPresent(nodeData::add);
+      }
     }
     return NodeDataMessage.create(nodeData);
   }

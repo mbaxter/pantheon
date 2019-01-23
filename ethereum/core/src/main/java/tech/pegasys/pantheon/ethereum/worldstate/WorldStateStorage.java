@@ -40,7 +40,9 @@ public interface WorldStateStorage {
     void putCode(Bytes32 nodeHash, BytesValue code);
 
     default void putCode(final BytesValue code) {
-      putCode(Hash.hash(code), code);
+      // Skip the hash calculation for empty code
+      Hash codeHash = code.size() == 0 ? Hash.EMPTY : Hash.hash(code);
+      putCode(codeHash, code);
     }
 
     void putAccountStateTrieNode(Bytes32 nodeHash, BytesValue node);
