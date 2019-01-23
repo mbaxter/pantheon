@@ -23,7 +23,8 @@ public class AccountTuple {
   private final Hash storageRoot;
   private final Hash codeHash;
 
-  public AccountTuple(long nonce, Wei balance, Hash storageRoot, Hash codeHash) {
+  public AccountTuple(
+      final long nonce, final Wei balance, final Hash storageRoot, final Hash codeHash) {
     this.nonce = nonce;
     this.balance = balance;
     this.storageRoot = storageRoot;

@@ -108,7 +108,9 @@ public class WorldStateDownloaderTest {
   }
 
   protected void assertStorageForWorldStateMatchesExpectation(
-      Hash stateRoot, WorldStateStorage expectedStorage, WorldStateStorage actualStorage) {
+      final Hash stateRoot,
+      final WorldStateStorage expectedStorage,
+      final WorldStateStorage actualStorage) {
     // Get account entries
     final MerklePatriciaTrie<BytesValue, BytesValue> expectedWorldStateTrie =
         StoredMerklePatriciaTrie.create(expectedStorage::getAccountStorageTrieNode, stateRoot);

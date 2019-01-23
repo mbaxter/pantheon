@@ -51,10 +51,10 @@ public class WorldStateDownloader {
   private final AtomicReference<CompletableFuture<Void>> future = new AtomicReference<>(null);
 
   public WorldStateDownloader(
-      EthContext ethContext,
-      WorldStateStorage worldStateStorage,
-      BlockHeader header,
-      Queue<NodeData> pendingNodeQueue,
+      final EthContext ethContext,
+      final WorldStateStorage worldStateStorage,
+      final BlockHeader header,
+      final Queue<NodeData> pendingNodeQueue,
       final LabelledMetric<OperationTimer> ethTasksTimer) {
     this.ethContext = ethContext;
     this.worldStateStorage = worldStateStorage;
@@ -129,7 +129,7 @@ public class WorldStateDownloader {
   }
 
   private CompletableFuture<?> sendAndProcessNodeDataRequest(
-      EthPeer peer, List<NodeData> nodeData) {
+      final EthPeer peer, final List<NodeData> nodeData) {
     List<Hash> hashes = nodeData.stream().map(NodeData::getHash).collect(Collectors.toList());
     return GetNodeDataFromPeerTask.forHashes(ethContext, hashes, ethTasksTimer)
         .assignPeer(peer)
@@ -158,7 +158,7 @@ public class WorldStateDownloader {
             });
   }
 
-  private Map<Hash, BytesValue> mapNodeDataByHash(List<BytesValue> data) {
+  private Map<Hash, BytesValue> mapNodeDataByHash(final List<BytesValue> data) {
     // Map data by hash
     Map<Hash, BytesValue> dataByHash = new HashMap<>();
     data.stream().forEach(d -> dataByHash.put(Hash.hash(d), d));

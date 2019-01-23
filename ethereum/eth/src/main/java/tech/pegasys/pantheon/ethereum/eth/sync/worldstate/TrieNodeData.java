@@ -25,7 +25,7 @@ abstract class TrieNodeData extends NodeData {
 
   private static final StoredNodeFactory<BytesValue> nodeFactory = StoredNodeFactory.create();
 
-  TrieNodeData(Kind kind, Hash hash) {
+  TrieNodeData(final Kind kind, final Hash hash) {
     super(kind, hash);
   }
 

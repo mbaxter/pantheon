@@ -49,7 +49,7 @@ public class StoredMerklePatriciaTrie<K extends BytesValue, V> implements Merkle
   }
 
   public static StoredMerklePatriciaTrie<BytesValue, BytesValue> create(
-      NodeLoader nodeLoader, Bytes32 rootHash) {
+      final NodeLoader nodeLoader, final Bytes32 rootHash) {
     return new StoredMerklePatriciaTrie<>(
         nodeLoader, rootHash, Function.identity(), Function.identity());
   }
