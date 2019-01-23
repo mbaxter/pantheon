@@ -110,9 +110,8 @@ class BranchNode<V> implements Node<V> {
 
   @Override
   public BytesValue getRlpRef() {
-    final BytesValue rlp = getRlp();
     if (shouldBeInlined()) {
-      return rlp;
+      return getRlp();
     } else {
       return RLP.encodeOne(getHash());
     }

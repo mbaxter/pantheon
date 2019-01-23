@@ -42,8 +42,7 @@ public interface Node<V> {
    * @return
    */
   default boolean shouldBeInlined() {
-    BytesValue rlp = getRlp();
-    return rlp.size() >= 32;
+    return getRlp().size() < 32;
   }
 
   Bytes32 getHash();
