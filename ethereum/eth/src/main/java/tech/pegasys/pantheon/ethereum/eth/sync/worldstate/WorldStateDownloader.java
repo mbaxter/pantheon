@@ -49,13 +49,13 @@ public class WorldStateDownloader {
   private final LabelledMetric<OperationTimer> ethTasksTimer;
   private final WorldStateStorage worldStateStorage;
   private final AtomicReference<CompletableFuture<Void>> future =
-      new AtomicReference<CompletableFuture<Void>>(null);
+      new AtomicReference<>(null);
 
   public WorldStateDownloader(
       EthContext ethContext,
       WorldStateStorage worldStateStorage,
       BlockHeader header,
-      Queue pendingNodeQueue,
+      Queue<NodeData> pendingNodeQueue,
       final LabelledMetric<OperationTimer> ethTasksTimer) {
     this.ethContext = ethContext;
     this.worldStateStorage = worldStateStorage;
@@ -113,6 +113,7 @@ public class WorldStateDownloader {
               (res, error) -> {
                 if (outstandingRequests.decrementAndGet() == 0 && pendingNodeQueue.isEmpty()) {
                   // We're done
+                  worldStateStorageUpdater.commit();
                   future.get().complete(null);
                 } else {
                   // Send out additional requests

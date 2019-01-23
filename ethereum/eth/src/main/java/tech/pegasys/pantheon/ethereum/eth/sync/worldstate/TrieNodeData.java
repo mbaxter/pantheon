@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 
 abstract class TrieNodeData extends NodeData {
 
-  private static StoredNodeFactory<BytesValue> nodeFactory = StoredNodeFactory.create();
+  private static final StoredNodeFactory<BytesValue> nodeFactory = StoredNodeFactory.create();
 
   TrieNodeData(Kind kind, Hash hash) {
     super(kind, hash);

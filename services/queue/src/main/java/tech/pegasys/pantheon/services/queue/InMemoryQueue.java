@@ -18,10 +18,10 @@ import java.util.Deque;
 
 public class InMemoryQueue<T> implements Queue<T> {
   private long size = 0;
-  private Deque<T> internalQueue = new ArrayDeque<T>();
+  private final Deque<T> internalQueue = new ArrayDeque<T>();
 
   @Override
-  public void enqueue(T value) {
+  public void enqueue(final T value) {
     size += 1;
     internalQueue.addFirst(value);
   }
