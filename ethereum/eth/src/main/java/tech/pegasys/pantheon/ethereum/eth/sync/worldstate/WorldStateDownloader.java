@@ -22,7 +22,7 @@ import tech.pegasys.pantheon.ethereum.eth.sync.tasks.WaitForPeerTask;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
 import tech.pegasys.pantheon.metrics.OperationTimer;
-import tech.pegasys.pantheon.services.queue.Queue;
+import tech.pegasys.pantheon.services.queue.BigQueue;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.time.Duration;
@@ -41,7 +41,7 @@ public class WorldStateDownloader {
   private final EthContext ethContext;
   // The target header for which we want to retrieve world state
   private final BlockHeader header;
-  private final Queue<NodeData> pendingNodeQueue;
+  private final BigQueue<NodeDataRequest> pendingRequests;
   private final WorldStateStorage.Updater worldStateStorageUpdater;
   private final int hashCountPerRequest = 50;
   private final int maxOutstandingRequests = 50;
@@ -54,17 +54,17 @@ public class WorldStateDownloader {
       final EthContext ethContext,
       final WorldStateStorage worldStateStorage,
       final BlockHeader header,
-      final Queue<NodeData> pendingNodeQueue,
+      final BigQueue<NodeDataRequest> pendingRequests,
       final LabelledMetric<OperationTimer> ethTasksTimer) {
     this.ethContext = ethContext;
     this.worldStateStorage = worldStateStorage;
     this.header = header;
-    this.pendingNodeQueue = pendingNodeQueue;
+    this.pendingRequests = pendingRequests;
     this.ethTasksTimer = ethTasksTimer;
     // TODO: construct an updater that will commit changes periodically as updates accumulate
     this.worldStateStorageUpdater = worldStateStorage.updater();
 
-    pendingNodeQueue.enqueue(NodeData.createAccountTrieNode(header.getStateRoot()));
+    pendingRequests.enqueue(NodeDataRequest.createAccountTrieNode(header.getStateRoot()));
   }
 
   public CompletableFuture<Void> run() {
@@ -81,7 +81,7 @@ public class WorldStateDownloader {
   private void requestNodeData() {
     while (!future.get().isDone()
         && outstandingRequests.get() < maxOutstandingRequests
-        && !pendingNodeQueue.isEmpty()) {
+        && !pendingRequests.isEmpty()) {
       // Find available peer
       Optional<EthPeer> maybePeer = ethContext.getEthPeers().idlePeer(header.getNumber());
 
@@ -97,20 +97,20 @@ public class WorldStateDownloader {
       EthPeer peer = maybePeer.get();
 
       // Collect data to be requested
-      List<NodeData> toRequest = new ArrayList<>();
+      List<NodeDataRequest> toRequest = new ArrayList<>();
       for (int i = 0; i < hashCountPerRequest; i++) {
-        if (pendingNodeQueue.isEmpty()) {
+        if (pendingRequests.isEmpty()) {
           break;
         }
-        toRequest.add(pendingNodeQueue.dequeue());
+        toRequest.add(pendingRequests.dequeue());
       }
 
       // Request and process node data
       outstandingRequests.incrementAndGet();
-      sendAndProcessNodeDataRequest(peer, toRequest)
+      sendAndProcessRequests(peer, toRequest)
           .whenComplete(
               (res, error) -> {
-                if (outstandingRequests.decrementAndGet() == 0 && pendingNodeQueue.isEmpty()) {
+                if (outstandingRequests.decrementAndGet() == 0 && pendingRequests.isEmpty()) {
                   // We're done
                   worldStateStorageUpdater.commit();
                   future.get().complete(null);
@@ -128,9 +128,10 @@ public class WorldStateDownloader {
         .timeout(WaitForPeerTask.create(ethContext, ethTasksTimer), Duration.ofSeconds(5));
   }
 
-  private CompletableFuture<?> sendAndProcessNodeDataRequest(
-      final EthPeer peer, final List<NodeData> nodeData) {
-    List<Hash> hashes = nodeData.stream().map(NodeData::getHash).collect(Collectors.toList());
+  private CompletableFuture<?> sendAndProcessRequests(
+      final EthPeer peer, final List<NodeDataRequest> requests) {
+    List<Hash> hashes =
+        requests.stream().map(NodeDataRequest::getHash).collect(Collectors.toList());
     return GetNodeDataFromPeerTask.forHashes(ethContext, hashes, ethTasksTimer)
         .assignPeer(peer)
         .run()
@@ -139,20 +140,20 @@ public class WorldStateDownloader {
         .thenApply(this::mapNodeDataByHash)
         .thenAccept(
             data -> {
-              for (NodeData nodeDatum : nodeData) {
-                BytesValue matchingData = data.get(nodeDatum.getHash());
+              for (NodeDataRequest request : requests) {
+                BytesValue matchingData = data.get(request.getHash());
                 if (matchingData == null) {
-                  pendingNodeQueue.enqueue(nodeDatum);
+                  pendingRequests.enqueue(request);
                 } else {
-                  // Persist node
-                  nodeDatum.setData(matchingData);
-                  nodeDatum.persist(worldStateStorageUpdater);
+                  // Persist request data
+                  request.setData(matchingData);
+                  request.persist(worldStateStorageUpdater);
 
                   // Queue child requests
-                  nodeDatum
-                      .getChildNodeData()
+                  request
+                      .getChildRequests()
                       .filter(n -> !worldStateStorage.contains(n.getHash()))
-                      .forEach(pendingNodeQueue::enqueue);
+                      .forEach(pendingRequests::enqueue);
                 }
               }
             });

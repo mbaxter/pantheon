@@ -14,7 +14,12 @@ package tech.pegasys.pantheon.services.queue;
 
 import java.io.Closeable;
 
-public interface Queue<T> extends Closeable {
+/**
+ * Represents a very large queue that may exceed memory limits.
+ *
+ * @param <T>
+ */
+public interface BigQueue<T> extends Closeable {
 
   void enqueue(T value);
 

@@ -21,47 +21,47 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 import java.util.List;
 import java.util.stream.Stream;
 
-abstract class TrieNodeData extends NodeData {
+abstract class TrieNodeDataRequest extends NodeDataRequest {
 
   private static final StoredNodeFactory<BytesValue> nodeFactory = StoredNodeFactory.create();
 
-  TrieNodeData(final Kind kind, final Hash hash) {
+  TrieNodeDataRequest(final Kind kind, final Hash hash) {
     super(kind, hash);
   }
 
   @Override
-  Stream<NodeData> getChildNodeData() {
+  Stream<NodeDataRequest> getChildRequests() {
     if (getData() == null) {
       // If this node hasn't been downloaded yet, we can't return any child data
       return Stream.empty();
     }
 
     final Node<BytesValue> node = nodeFactory.decode(getData());
-    return processTrieNode(node);
+    return getRequestsFromTrieNode(node);
   }
 
-  private Stream<NodeData> processTrieNode(final Node<BytesValue> trieNode) {
+  private Stream<NodeDataRequest> getRequestsFromTrieNode(final Node<BytesValue> trieNode) {
     if (trieNode instanceof StoredNode && !((StoredNode) trieNode).isLoaded()) {
       // Stored nodes represent nodes that are referenced by hash (and therefore must be downloaded)
-      NodeData req = createTrieChildNodeData(Hash.wrap(trieNode.getHash()));
+      NodeDataRequest req = createTrieChildNodeData(Hash.wrap(trieNode.getHash()));
       return Stream.of(req);
     }
     // Process this child's children
-    final Stream<NodeData> childRequests =
+    final Stream<NodeDataRequest> childRequests =
         trieNode
             .getChildren()
             .map(List::stream)
-            .map(s -> s.flatMap(this::processTrieNode))
+            .map(s -> s.flatMap(this::getRequestsFromTrieNode))
             .orElse(Stream.of());
 
     // Process value at this node, if present
     return trieNode
         .getValue()
-        .map(v -> Stream.concat(childRequests, (getNodeDataFromTrieNodeValue(v).stream())))
+        .map(v -> Stream.concat(childRequests, (getRequestsFromTrieNodeValue(v).stream())))
         .orElse(childRequests);
   }
 
-  protected abstract NodeData createTrieChildNodeData(final Hash childHash);
+  protected abstract NodeDataRequest createTrieChildNodeData(final Hash childHash);
 
-  protected abstract List<NodeData> getNodeDataFromTrieNodeValue(final BytesValue value);
+  protected abstract List<NodeDataRequest> getRequestsFromTrieNodeValue(final BytesValue value);
 }

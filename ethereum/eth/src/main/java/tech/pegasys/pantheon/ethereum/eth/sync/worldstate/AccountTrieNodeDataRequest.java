@@ -24,9 +24,9 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 import java.util.ArrayList;
 import java.util.List;
 
-class AccountTrieNodeData extends TrieNodeData {
+class AccountTrieNodeDataRequest extends TrieNodeDataRequest {
 
-  AccountTrieNodeData(final Hash hash) {
+  AccountTrieNodeDataRequest(final Hash hash) {
     super(Kind.ACCOUNT_TRIE_NODE, hash);
   }
 
@@ -37,22 +37,23 @@ class AccountTrieNodeData extends TrieNodeData {
   }
 
   @Override
-  protected NodeData createTrieChildNodeData(final Hash childHash) {
-    return NodeData.createAccountTrieNode(childHash);
+  protected NodeDataRequest createTrieChildNodeData(final Hash childHash) {
+    return NodeDataRequest.createAccountTrieNode(childHash);
   }
 
   @Override
-  protected List<NodeData> getNodeDataFromTrieNodeValue(final BytesValue value) {
-    List<NodeData> nodeData = new ArrayList<>(2);
+  protected List<NodeDataRequest> getRequestsFromTrieNodeValue(final BytesValue value) {
+    List<NodeDataRequest> nodeData = new ArrayList<>(2);
     AccountTuple accountTuple = AccountTuple.readFrom(RLP.input(value));
     // Add code, if appropriate
     if (!accountTuple.getCodeHash().equals(Hash.EMPTY)) {
-      nodeData.add(NodeData.createCodeNode(accountTuple.getCodeHash()));
+      nodeData.add(NodeDataRequest.createCodeNode(accountTuple.getCodeHash()));
     }
     // Add storage, if appropriate
     if (!accountTuple.getStorageRoot().equals(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH)) {
       // If storage is non-empty queue download
-      NodeData storageNode = NodeData.createStorageTrieNode(accountTuple.getStorageRoot());
+      NodeDataRequest storageNode =
+          NodeDataRequest.createStorageTrieNode(accountTuple.getStorageRoot());
       nodeData.add(storageNode);
     }
     return nodeData;

@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-public class InMemoryQueue<T> implements Queue<T> {
+public class InMemoryBigQueue<T> implements BigQueue<T> {
   private long size = 0;
   private final Deque<T> internalQueue = new ArrayDeque<T>();
 

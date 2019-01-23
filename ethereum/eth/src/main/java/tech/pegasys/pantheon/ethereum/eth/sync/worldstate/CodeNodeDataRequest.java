@@ -16,31 +16,24 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage.Updater;
-import tech.pegasys.pantheon.util.bytes.BytesValue;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.stream.Stream;
 
-class StorageTrieNodeData extends TrieNodeData {
+class CodeNodeDataRequest extends NodeDataRequest {
 
-  StorageTrieNodeData(final Hash hash) {
-    super(Kind.STORAGE_TRIE_NODE, hash);
+  CodeNodeDataRequest(final Hash hash) {
+    super(Kind.CODE, hash);
   }
 
   @Override
   void persist(final Updater updater) {
     checkNotNull(getData(), "Must set data before node can be persisted.");
-    updater.putAccountStorageTrieNode(getHash(), getData());
+    updater.putCode(getHash(), getData());
   }
 
   @Override
-  protected NodeData createTrieChildNodeData(final Hash childHash) {
-    return NodeData.createStorageTrieNode(childHash);
-  }
-
-  @Override
-  protected List<NodeData> getNodeDataFromTrieNodeValue(final BytesValue value) {
-    // Nothing to do for terminal storage node
-    return Collections.emptyList();
+  Stream<NodeDataRequest> getChildRequests() {
+    // Code nodes have nothing further to download
+    return Stream.empty();
   }
 }

@@ -18,7 +18,7 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.stream.Stream;
 
-abstract class NodeData {
+abstract class NodeDataRequest {
   public enum Kind {
     ACCOUNT_TRIE_NODE,
     STORAGE_TRIE_NODE,
@@ -29,21 +29,21 @@ abstract class NodeData {
   private final Hash hash;
   private BytesValue data;
 
-  protected NodeData(final Kind kind, final Hash hash) {
+  protected NodeDataRequest(final Kind kind, final Hash hash) {
     this.kind = kind;
     this.hash = hash;
   }
 
-  public static AccountTrieNodeData createAccountTrieNode(final Hash hash) {
-    return new AccountTrieNodeData(hash);
+  public static AccountTrieNodeDataRequest createAccountTrieNode(final Hash hash) {
+    return new AccountTrieNodeDataRequest(hash);
   }
 
-  public static StorageTrieNodeData createStorageTrieNode(final Hash hash) {
-    return new StorageTrieNodeData(hash);
+  public static StorageTrieNodeDataRequest createStorageTrieNode(final Hash hash) {
+    return new StorageTrieNodeDataRequest(hash);
   }
 
-  public static CodeNodeData createCodeNode(final Hash hash) {
-    return new CodeNodeData(hash);
+  public static CodeNodeDataRequest createCodeNode(final Hash hash) {
+    return new CodeNodeDataRequest(hash);
   }
 
   public Kind getKind() {
@@ -58,12 +58,12 @@ abstract class NodeData {
     return data;
   }
 
-  public NodeData setData(final BytesValue data) {
+  public NodeDataRequest setData(final BytesValue data) {
     this.data = data;
     return this;
   }
 
   abstract void persist(final WorldStateStorage.Updater updater);
 
-  abstract Stream<NodeData> getChildNodeData();
+  abstract Stream<NodeDataRequest> getChildRequests();
 }

@@ -33,8 +33,8 @@ import tech.pegasys.pantheon.metrics.LabelledMetric;
 import tech.pegasys.pantheon.metrics.OperationTimer;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
-import tech.pegasys.pantheon.services.queue.InMemoryQueue;
-import tech.pegasys.pantheon.services.queue.Queue;
+import tech.pegasys.pantheon.services.queue.BigQueue;
+import tech.pegasys.pantheon.services.queue.InMemoryBigQueue;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
@@ -73,7 +73,7 @@ public class WorldStateDownloaderTest {
     BlockHeader header = remoteBlockchain.getBlockHeader(chainHead.getNumber() - 1).get();
     assertThat(chainHead.getStateRoot()).isNotEqualTo(header.getStateRoot());
 
-    Queue<NodeData> queue = new InMemoryQueue<>();
+    BigQueue<NodeDataRequest> queue = new InMemoryBigQueue<>();
     WorldStateStorage localStorage =
         new KeyValueStorageWorldStateStorage(new InMemoryKeyValueStorage());
     WorldStateDownloader downloader =
