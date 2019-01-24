@@ -87,6 +87,7 @@ public class WorldStateDownloader {
     }
   }
 
+  // TODO: add a cancel method
   public CompletableFuture<Void> run() {
     synchronized (this) {
       if (status == Status.DONE || status == Status.RUNNING) {

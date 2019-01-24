@@ -99,11 +99,11 @@ public class BlockDataGenerator {
     WorldUpdater updater = worldState.updater();
     List<Account> accounts = new ArrayList<>(count);
     for (int i = 0; i < count; i++) {
-      MutableAccount account = updater.getOrCreate(this.address());
+      MutableAccount account = updater.getOrCreate(address());
       // Make some accounts contract accounts
       if (random.nextFloat() < .5) {
         // Subset of random accounts are contract accounts
-        account.setCode(this.bytesValue(5, 50));
+        account.setCode(bytesValue(5, 50));
         if (random.nextFloat() < .75) {
           // Add some storage for most contract accounts
           int storageValues = random.nextInt(20) + 10;
