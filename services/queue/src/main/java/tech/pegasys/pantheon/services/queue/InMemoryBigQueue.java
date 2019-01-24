@@ -12,36 +12,36 @@
  */
 package tech.pegasys.pantheon.services.queue;
 
-import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class InMemoryBigQueue<T> implements BigQueue<T> {
-  private long size = 0;
-  private final Deque<T> internalQueue = new ArrayDeque<T>();
+  private final AtomicLong size = new AtomicLong(0);
+  private final Queue<T> internalQueue = new ConcurrentLinkedQueue<>();
 
   @Override
   public void enqueue(final T value) {
-    size += 1;
-    internalQueue.addFirst(value);
+    internalQueue.add(value);
+    size.incrementAndGet();
   }
 
   @Override
   public T dequeue() {
-    if (size == 0) {
-      return null;
+    T result = internalQueue.poll();
+    if (result != null) {
+      size.decrementAndGet();
     }
-    size -= 1;
-    return internalQueue.removeLast();
+    return result;
   }
 
   @Override
   public long size() {
-    return size;
+    return size.get();
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     internalQueue.clear();
   }
 }

@@ -15,7 +15,7 @@ package tech.pegasys.pantheon.services.queue;
 import java.io.Closeable;
 
 /**
- * Represents a very large queue that may exceed memory limits.
+ * Represents a very large thread-safe queue that may exceed memory limits.
  *
  * @param <T>
  */

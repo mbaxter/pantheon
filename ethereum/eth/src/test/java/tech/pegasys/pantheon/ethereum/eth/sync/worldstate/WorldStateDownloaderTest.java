@@ -78,7 +78,7 @@ public class WorldStateDownloaderTest {
         new KeyValueStorageWorldStateStorage(new InMemoryKeyValueStorage());
     WorldStateDownloader downloader =
         new WorldStateDownloader(
-            ethProtocolManager.ethContext(), localStorage, header, queue, ethTasksTimer);
+            ethProtocolManager.ethContext(), localStorage, header, queue, 50, 50, ethTasksTimer);
 
     // Create some peers that can respond
     int peerCount = 5;
