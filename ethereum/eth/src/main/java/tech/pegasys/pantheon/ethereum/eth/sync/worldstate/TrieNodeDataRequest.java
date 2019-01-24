@@ -43,7 +43,7 @@ abstract class TrieNodeDataRequest extends NodeDataRequest {
   private Stream<NodeDataRequest> getRequestsFromTrieNode(final Node<BytesValue> trieNode) {
     if (trieNode instanceof StoredNode && !((StoredNode) trieNode).isLoaded()) {
       // Stored nodes represent nodes that are referenced by hash (and therefore must be downloaded)
-      NodeDataRequest req = createTrieChildNodeData(Hash.wrap(trieNode.getHash()));
+      NodeDataRequest req = createChildNodeDataRequest(Hash.wrap(trieNode.getHash()));
       return Stream.of(req);
     }
     // Process this child's children
@@ -61,7 +61,7 @@ abstract class TrieNodeDataRequest extends NodeDataRequest {
         .orElse(childRequests);
   }
 
-  protected abstract NodeDataRequest createTrieChildNodeData(final Hash childHash);
+  protected abstract NodeDataRequest createChildNodeDataRequest(final Hash childHash);
 
   protected abstract List<NodeDataRequest> getRequestsFromTrieNodeValue(final BytesValue value);
 }

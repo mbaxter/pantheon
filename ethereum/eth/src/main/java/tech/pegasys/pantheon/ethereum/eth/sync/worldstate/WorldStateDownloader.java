@@ -83,7 +83,7 @@ public class WorldStateDownloader {
       future = CompletableFuture.completedFuture(null);
       status = Status.DONE;
     } else {
-      pendingRequests.enqueue(NodeDataRequest.createAccountTrieNode(header.getStateRoot()));
+      pendingRequests.enqueue(NodeDataRequest.createAccountDataRequest(header.getStateRoot()));
     }
   }
 
@@ -140,7 +140,6 @@ public class WorldStateDownloader {
                     }
                   });
         }
-
       }
       sendingRequests.set(false);
     }

@@ -34,8 +34,8 @@ class StorageTrieNodeDataRequest extends TrieNodeDataRequest {
   }
 
   @Override
-  protected NodeDataRequest createTrieChildNodeData(final Hash childHash) {
-    return NodeDataRequest.createStorageTrieNode(childHash);
+  protected NodeDataRequest createChildNodeDataRequest(final Hash childHash) {
+    return NodeDataRequest.createStorageDataRequest(childHash);
   }
 
   @Override

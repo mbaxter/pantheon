@@ -37,8 +37,8 @@ class AccountTrieNodeDataRequest extends TrieNodeDataRequest {
   }
 
   @Override
-  protected NodeDataRequest createTrieChildNodeData(final Hash childHash) {
-    return NodeDataRequest.createAccountTrieNode(childHash);
+  protected NodeDataRequest createChildNodeDataRequest(final Hash childHash) {
+    return NodeDataRequest.createAccountDataRequest(childHash);
   }
 
   @Override
@@ -47,13 +47,13 @@ class AccountTrieNodeDataRequest extends TrieNodeDataRequest {
     AccountTuple accountTuple = AccountTuple.readFrom(RLP.input(value));
     // Add code, if appropriate
     if (!accountTuple.getCodeHash().equals(Hash.EMPTY)) {
-      nodeData.add(NodeDataRequest.createCodeNode(accountTuple.getCodeHash()));
+      nodeData.add(NodeDataRequest.createCodeRequest(accountTuple.getCodeHash()));
     }
     // Add storage, if appropriate
     if (!accountTuple.getStorageRoot().equals(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH)) {
       // If storage is non-empty queue download
       NodeDataRequest storageNode =
-          NodeDataRequest.createStorageTrieNode(accountTuple.getStorageRoot());
+          NodeDataRequest.createStorageDataRequest(accountTuple.getStorageRoot());
       nodeData.add(storageNode);
     }
     return nodeData;

@@ -34,15 +34,15 @@ abstract class NodeDataRequest {
     this.hash = hash;
   }
 
-  public static AccountTrieNodeDataRequest createAccountTrieNode(final Hash hash) {
+  public static AccountTrieNodeDataRequest createAccountDataRequest(final Hash hash) {
     return new AccountTrieNodeDataRequest(hash);
   }
 
-  public static StorageTrieNodeDataRequest createStorageTrieNode(final Hash hash) {
+  public static StorageTrieNodeDataRequest createStorageDataRequest(final Hash hash) {
     return new StorageTrieNodeDataRequest(hash);
   }
 
-  public static CodeNodeDataRequest createCodeNode(final Hash hash) {
+  public static CodeNodeDataRequest createCodeRequest(final Hash hash) {
     return new CodeNodeDataRequest(hash);
   }
 
