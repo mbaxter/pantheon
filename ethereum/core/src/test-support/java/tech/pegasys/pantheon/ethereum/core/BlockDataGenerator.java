@@ -95,6 +95,33 @@ public class BlockDataGenerator {
     return seq;
   }
 
+  public List<Account> createRandomAccounts(final MutableWorldState worldState, final int count) {
+    WorldUpdater updater = worldState.updater();
+    List<Account> accounts = new ArrayList<>(count);
+    for (int i = 0; i < count; i++) {
+      MutableAccount account = updater.getOrCreate(this.address());
+      // Make some accounts contract accounts
+      if (random.nextFloat() < .5) {
+        // Subset of random accounts are contract accounts
+        account.setCode(this.bytesValue(5, 50));
+        if (random.nextFloat() < .75) {
+          // Add some storage for most contract accounts
+          int storageValues = random.nextInt(20) + 10;
+          for (int j = 0; j < storageValues; j++) {
+            account.setStorageValue(uint256(), uint256());
+          }
+        }
+      }
+      account.setNonce(random.nextInt(10));
+      account.setBalance(Wei.of(positiveLong()));
+
+      accounts.add(account);
+    }
+    updater.commit();
+    worldState.persist();
+    return accounts;
+  }
+
   public List<Block> blockSequence(final int count) {
     final WorldStateArchive worldState = createInMemoryWorldStateArchive();
     return blockSequence(count, worldState, Collections.emptyList(), Collections.emptyList());
