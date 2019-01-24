@@ -113,6 +113,7 @@ public class WorldStateDownloader {
                   (r, t) -> {
                     requestNodeData();
                   });
+          break;
         } else {
           EthPeer peer = maybePeer.get();
 
