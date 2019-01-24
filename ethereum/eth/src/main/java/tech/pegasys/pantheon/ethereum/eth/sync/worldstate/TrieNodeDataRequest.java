@@ -46,7 +46,7 @@ abstract class TrieNodeDataRequest extends NodeDataRequest {
       NodeDataRequest req = createChildNodeDataRequest(Hash.wrap(trieNode.getHash()));
       return Stream.of(req);
     }
-    // Process this child's children
+    // Process this node's children
     final Stream<NodeDataRequest> childRequests =
         trieNode
             .getChildren()
