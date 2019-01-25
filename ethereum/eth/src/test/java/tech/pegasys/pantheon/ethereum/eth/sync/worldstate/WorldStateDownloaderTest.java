@@ -48,7 +48,7 @@ import org.junit.Test;
 
 public class WorldStateDownloaderTest {
 
-  private static final Hash EMPTY_TRIE_ROOT = Hash.wrap(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH);
+  private static final Hash EMPTY_TRIE_ROOT = Hash.wrap(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH);
 
   @Test
   public void downloadWorldStateFromPeers_onePeerOneWithManyRequestsOneAtATime() {

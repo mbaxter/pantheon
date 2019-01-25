@@ -77,7 +77,7 @@ public class WorldStateDownloader {
     this.worldStateStorageUpdater = worldStateStorage.updater();
 
     Hash stateRoot = header.getStateRoot();
-    if (stateRoot.equals(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH)) {
+    if (stateRoot.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
       // If we're requesting data for an empty world state, we're already done
       future = CompletableFuture.completedFuture(null);
       status = Status.DONE;

@@ -13,12 +13,15 @@
 package tech.pegasys.pantheon.ethereum.storage.keyvalue;
 
 import tech.pegasys.pantheon.ethereum.core.Hash;
+import tech.pegasys.pantheon.ethereum.rlp.RLP;
+import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Optional;
+import java.util.function.Function;
 
 public class KeyValueStorageWorldStateStorage implements WorldStateStorage {
 
@@ -29,26 +32,46 @@ public class KeyValueStorageWorldStateStorage implements WorldStateStorage {
   }
 
   @Override
-  public Optional<BytesValue> getCode(final Hash codeHash) {
-    if (codeHash.equals(Hash.EMPTY)) {
-      return Optional.of(BytesValue.EMPTY);
-    }
-    return keyValueStorage.get(codeHash);
+  public Optional<BytesValue> getCode(final Bytes32 codeHash) {
+    return getCodeValue(codeHash, keyValueStorage::get);
   }
 
   @Override
   public Optional<BytesValue> getAccountStateTrieNode(final Bytes32 nodeHash) {
-    return keyValueStorage.get(nodeHash);
+    return getTrieValue(nodeHash, keyValueStorage::get);
   }
 
   @Override
   public Optional<BytesValue> getAccountStorageTrieNode(final Bytes32 nodeHash) {
-    return keyValueStorage.get(nodeHash);
+    return getTrieValue(nodeHash, keyValueStorage::get);
   }
 
   @Override
-  public Optional<BytesValue> getNodeData(final Hash hash) {
-    return keyValueStorage.get(hash);
+  public Optional<BytesValue> getNodeData(final Bytes32 hash) {
+    return getValue(hash, keyValueStorage::get);
+  }
+
+  private Optional<BytesValue> getTrieValue(
+      final Bytes32 hash, final Function<Bytes32, Optional<BytesValue>> getter) {
+    if (hash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
+      return Optional.of(RLP.NULL);
+    } else {
+      return getter.apply(hash);
+    }
+  }
+
+  private Optional<BytesValue> getCodeValue(
+      final Bytes32 hash, final Function<Bytes32, Optional<BytesValue>> getter) {
+    if (hash.equals(Hash.EMPTY)) {
+      return Optional.of(BytesValue.EMPTY);
+    } else {
+      return getter.apply(hash);
+    }
+  }
+
+  private Optional<BytesValue> getValue(
+      final Bytes32 hash, final Function<Bytes32, Optional<BytesValue>> getter) {
+    return getTrieValue(hash, (h) -> getCodeValue(h, getter));
   }
 
   @Override
@@ -65,22 +88,33 @@ public class KeyValueStorageWorldStateStorage implements WorldStateStorage {
     }
 
     @Override
-    public void putCode(final Bytes32 codeHash, final BytesValue code) {
+    public Updater putCode(final Bytes32 codeHash, final BytesValue code) {
       if (code.size() == 0) {
         // Don't save empty values
-        return;
+        return this;
       }
       transaction.put(codeHash, code);
+      return this;
     }
 
     @Override
-    public void putAccountStateTrieNode(final Bytes32 nodeHash, final BytesValue node) {
+    public Updater putAccountStateTrieNode(final Bytes32 nodeHash, final BytesValue node) {
+      if (nodeHash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
+        // Don't save empty nodes
+        return this;
+      }
       transaction.put(nodeHash, node);
+      return this;
     }
 
     @Override
-    public void putAccountStorageTrieNode(final Bytes32 nodeHash, final BytesValue node) {
+    public Updater putAccountStorageTrieNode(final Bytes32 nodeHash, final BytesValue node) {
+      if (nodeHash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
+        // Don't save empty nodes
+        return this;
+      }
       transaction.put(nodeHash, node);
+      return this;
     }
 
     @Override

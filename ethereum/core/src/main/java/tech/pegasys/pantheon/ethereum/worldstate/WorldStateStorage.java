@@ -20,15 +20,15 @@ import java.util.Optional;
 
 public interface WorldStateStorage {
 
-  Optional<BytesValue> getCode(Hash codeHash);
+  Optional<BytesValue> getCode(Bytes32 codeHash);
 
   Optional<BytesValue> getAccountStateTrieNode(Bytes32 nodeHash);
 
   Optional<BytesValue> getAccountStorageTrieNode(Bytes32 nodeHash);
 
-  Optional<BytesValue> getNodeData(Hash hash);
+  Optional<BytesValue> getNodeData(Bytes32 hash);
 
-  default boolean contains(final Hash hash) {
+  default boolean contains(final Bytes32 hash) {
     return getNodeData(hash).isPresent();
   }
 
@@ -36,17 +36,17 @@ public interface WorldStateStorage {
 
   interface Updater {
 
-    void putCode(Bytes32 nodeHash, BytesValue code);
+    Updater putCode(Bytes32 nodeHash, BytesValue code);
 
-    default void putCode(final BytesValue code) {
+    default Updater putCode(final BytesValue code) {
       // Skip the hash calculation for empty code
       Hash codeHash = code.size() == 0 ? Hash.EMPTY : Hash.hash(code);
-      putCode(codeHash, code);
+      return putCode(codeHash, code);
     }
 
-    void putAccountStateTrieNode(Bytes32 nodeHash, BytesValue node);
+    Updater putAccountStateTrieNode(Bytes32 nodeHash, BytesValue node);
 
-    void putAccountStorageTrieNode(Bytes32 nodeHash, BytesValue node);
+    Updater putAccountStorageTrieNode(Bytes32 nodeHash, BytesValue node);
 
     void commit();
 

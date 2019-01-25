@@ -14,10 +14,10 @@ package tech.pegasys.pantheon.ethereum.eth.sync.worldstate;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import tech.pegasys.pantheon.ethereum.worldstate.StateTrieAccountValue;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
+import tech.pegasys.pantheon.ethereum.worldstate.StateTrieAccountValue;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage.Updater;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
@@ -50,7 +50,7 @@ class AccountTrieNodeDataRequest extends TrieNodeDataRequest {
       nodeData.add(NodeDataRequest.createCodeRequest(accountValue.getCodeHash()));
     }
     // Add storage, if appropriate
-    if (!accountValue.getStorageRoot().equals(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH)) {
+    if (!accountValue.getStorageRoot().equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
       // If storage is non-empty queue download
       NodeDataRequest storageNode =
           NodeDataRequest.createStorageDataRequest(accountValue.getStorageRoot());

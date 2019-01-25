@@ -22,7 +22,7 @@ import java.util.Optional;
 
 public class WorldStateArchive {
   private final WorldStateStorage storage;
-  private static final Hash EMPTY_ROOT_HASH = Hash.wrap(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH);
+  private static final Hash EMPTY_ROOT_HASH = Hash.wrap(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH);
 
   public WorldStateArchive(final WorldStateStorage storage) {
     this.storage = storage;
@@ -45,7 +45,15 @@ public class WorldStateArchive {
   }
 
   public Optional<BytesValue> getNodeData(final Hash hash) {
-    return storage.getNodeData(hash);
+    if (hash.equals(Hash.EMPTY)) {
+      // No need to go to storage for an empty value
+      return Optional.of(BytesValue.EMPTY);
+    } else if (hash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
+      // No need to go to storage for an trie node
+      return Optional.of(MerklePatriciaTrie.EMPTY_TRIE_NODE);
+    } else {
+      return storage.getNodeData(hash);
+    }
   }
 
   public WorldStateStorage getStorage() {

@@ -58,7 +58,7 @@ public class BlockDataGenerator {
     final List<Block> seq = new ArrayList<>(count);
 
     final MutableWorldState worldState =
-        worldStateArchive.getMutable(Hash.wrap(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH));
+        worldStateArchive.getMutable(Hash.wrap(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH));
 
     long nextBlockNumber = nextBlock;
     Hash parentHash = parent;

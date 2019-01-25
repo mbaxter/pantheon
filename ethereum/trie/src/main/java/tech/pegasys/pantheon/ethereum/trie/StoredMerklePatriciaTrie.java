@@ -45,7 +45,7 @@ public class StoredMerklePatriciaTrie<K extends BytesValue, V> implements Merkle
       final NodeLoader nodeLoader,
       final Function<V, BytesValue> valueSerializer,
       final Function<BytesValue, V> valueDeserializer) {
-    this(nodeLoader, MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH, valueSerializer, valueDeserializer);
+    this(nodeLoader, MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH, valueSerializer, valueDeserializer);
   }
 
   public static StoredMerklePatriciaTrie<BytesValue, BytesValue> create(
@@ -70,7 +70,7 @@ public class StoredMerklePatriciaTrie<K extends BytesValue, V> implements Merkle
       final Function<BytesValue, V> valueDeserializer) {
     this.nodeFactory = new StoredNodeFactory<>(nodeLoader, valueSerializer, valueDeserializer);
     this.root =
-        rootHash.equals(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH)
+        rootHash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)
             ? NullNode.instance()
             : new StoredNode<>(nodeFactory, rootHash);
   }
@@ -105,7 +105,7 @@ public class StoredMerklePatriciaTrie<K extends BytesValue, V> implements Merkle
     // Reset root so dirty nodes can be garbage collected
     final Bytes32 rootHash = root.getHash();
     this.root =
-        rootHash.equals(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH)
+        rootHash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)
             ? NullNode.instance()
             : new StoredNode<>(nodeFactory, rootHash);
   }

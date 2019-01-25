@@ -12,9 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.trie;
 
-import static tech.pegasys.pantheon.crypto.Hash.keccak256;
-
-import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
@@ -22,8 +19,6 @@ import java.util.List;
 import java.util.Optional;
 
 class NullNode<V> implements Node<V> {
-  private static final Bytes32 HASH = keccak256(RLP.NULL);
-
   @SuppressWarnings("rawtypes")
   private static final NullNode instance = new NullNode();
 
@@ -61,17 +56,17 @@ class NullNode<V> implements Node<V> {
 
   @Override
   public BytesValue getRlp() {
-    return RLP.NULL;
+    return MerklePatriciaTrie.EMPTY_TRIE_NODE;
   }
 
   @Override
   public BytesValue getRlpRef() {
-    return RLP.NULL;
+    return MerklePatriciaTrie.EMPTY_TRIE_NODE;
   }
 
   @Override
   public Bytes32 getHash() {
-    return HASH;
+    return MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH;
   }
 
   @Override

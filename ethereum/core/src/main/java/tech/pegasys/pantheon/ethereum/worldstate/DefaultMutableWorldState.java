@@ -49,7 +49,7 @@ public class DefaultMutableWorldState implements MutableWorldState {
   private final WorldStateStorage worldStateStorage;
 
   public DefaultMutableWorldState(final WorldStateStorage storage) {
-    this(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH, storage);
+    this(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH, storage);
   }
 
   public DefaultMutableWorldState(
@@ -109,7 +109,8 @@ public class DefaultMutableWorldState implements MutableWorldState {
 
   private static BytesValue serializeAccount(
       final long nonce, final Wei balance, final Hash storageRoot, final Hash codeHash) {
-    StateTrieAccountValue accountValue = new StateTrieAccountValue(nonce, balance, storageRoot, codeHash);
+    StateTrieAccountValue accountValue =
+        new StateTrieAccountValue(nonce, balance, storageRoot, codeHash);
     return RLP.encode(accountValue::writeTo);
   }
 
@@ -175,7 +176,8 @@ public class DefaultMutableWorldState implements MutableWorldState {
     // Lazily initialized since we don't always access storage.
     private volatile MerklePatriciaTrie<Bytes32, BytesValue> storageTrie;
 
-    private AccountState(final Address address, final Hash addressHash, final StateTrieAccountValue accountValue) {
+    private AccountState(
+        final Address address, final Hash addressHash, final StateTrieAccountValue accountValue) {
 
       this.address = address;
       this.addressHash = addressHash;
