@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.ethereum.worldstate;
 
 import tech.pegasys.pantheon.ethereum.core.AbstractWorldUpdater;
 import tech.pegasys.pantheon.ethereum.core.Account;
-import tech.pegasys.pantheon.ethereum.core.AccountTuple;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
@@ -104,14 +103,14 @@ public class DefaultMutableWorldState implements MutableWorldState {
   private AccountState deserializeAccount(
       final Address address, final Hash addressHash, final BytesValue encoded) throws RLPException {
     final RLPInput in = RLP.input(encoded);
-    AccountTuple tuple = AccountTuple.readFrom(in);
-    return new AccountState(address, addressHash, tuple);
+    StateTrieAccountValue accountValue = StateTrieAccountValue.readFrom(in);
+    return new AccountState(address, addressHash, accountValue);
   }
 
   private static BytesValue serializeAccount(
       final long nonce, final Wei balance, final Hash storageRoot, final Hash codeHash) {
-    AccountTuple tuple = new AccountTuple(nonce, balance, storageRoot, codeHash);
-    return RLP.encode(tuple::writeTo);
+    StateTrieAccountValue accountValue = new StateTrieAccountValue(nonce, balance, storageRoot, codeHash);
+    return RLP.encode(accountValue::writeTo);
   }
 
   @Override
@@ -171,22 +170,16 @@ public class DefaultMutableWorldState implements MutableWorldState {
     private final Address address;
     private final Hash addressHash;
 
-    private final long nonce;
-    private final Wei balance;
-    private final Hash storageRoot;
-    private final Hash codeHash;
+    final StateTrieAccountValue accountValue;
 
     // Lazily initialized since we don't always access storage.
     private volatile MerklePatriciaTrie<Bytes32, BytesValue> storageTrie;
 
-    private AccountState(final Address address, final Hash addressHash, final AccountTuple tuple) {
+    private AccountState(final Address address, final Hash addressHash, final StateTrieAccountValue accountValue) {
 
       this.address = address;
       this.addressHash = addressHash;
-      this.nonce = tuple.getNonce();
-      this.balance = tuple.getBalance();
-      this.storageRoot = tuple.getStorageRoot();
-      this.codeHash = tuple.getCodeHash();
+      this.accountValue = accountValue;
     }
 
     private MerklePatriciaTrie<Bytes32, BytesValue> storageTrie() {
@@ -195,7 +188,7 @@ public class DefaultMutableWorldState implements MutableWorldState {
         storageTrie = updatedTrie;
       }
       if (storageTrie == null) {
-        storageTrie = newAccountStorageTrie(storageRoot);
+        storageTrie = newAccountStorageTrie(getStorageRoot());
       }
       return storageTrie;
     }
@@ -212,12 +205,16 @@ public class DefaultMutableWorldState implements MutableWorldState {
 
     @Override
     public long getNonce() {
-      return nonce;
+      return accountValue.getNonce();
     }
 
     @Override
     public Wei getBalance() {
-      return balance;
+      return accountValue.getBalance();
+    }
+
+    Hash getStorageRoot() {
+      return accountValue.getStorageRoot();
     }
 
     @Override
@@ -227,6 +224,7 @@ public class DefaultMutableWorldState implements MutableWorldState {
         return updatedCode;
       }
       // No code is common, save the KV-store lookup.
+      Hash codeHash = getCodeHash();
       if (codeHash.equals(Hash.EMPTY)) {
         return BytesValue.EMPTY;
       }
@@ -240,7 +238,7 @@ public class DefaultMutableWorldState implements MutableWorldState {
 
     @Override
     public Hash getCodeHash() {
-      return codeHash;
+      return accountValue.getCodeHash();
     }
 
     @Override
@@ -281,8 +279,8 @@ public class DefaultMutableWorldState implements MutableWorldState {
       builder.append("address=").append(getAddress()).append(", ");
       builder.append("nonce=").append(getNonce()).append(", ");
       builder.append("balance=").append(getBalance()).append(", ");
-      builder.append("storageRoot=").append(storageRoot).append(", ");
-      builder.append("codeHash=").append(codeHash);
+      builder.append("storageRoot=").append(getStorageRoot()).append(", ");
+      builder.append("codeHash=").append(getCodeHash());
       return builder.append("}").toString();
     }
   }
@@ -331,14 +329,14 @@ public class DefaultMutableWorldState implements MutableWorldState {
         final AccountState origin = updated.getWrappedAccount();
 
         // Save the code in key-value storage ...
-        Hash codeHash = origin == null ? Hash.EMPTY : origin.codeHash;
+        Hash codeHash = origin == null ? Hash.EMPTY : origin.getCodeHash();
         if (updated.codeWasUpdated()) {
           codeHash = Hash.hash(updated.getCode());
           wrapped.updatedAccountCode.put(updated.getAddress(), updated.getCode());
         }
         // ...and storage in the account trie first.
         final boolean freshState = origin == null || updated.getStorageWasCleared();
-        Hash storageRoot = freshState ? Hash.EMPTY_TRIE_HASH : origin.storageRoot;
+        Hash storageRoot = freshState ? Hash.EMPTY_TRIE_HASH : origin.getStorageRoot();
         if (freshState) {
           wrapped.updatedStorageTries.remove(updated.getAddress());
         }

@@ -14,7 +14,7 @@ package tech.pegasys.pantheon.ethereum.eth.sync.worldstate;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import tech.pegasys.pantheon.ethereum.core.AccountTuple;
+import tech.pegasys.pantheon.ethereum.worldstate.StateTrieAccountValue;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
@@ -44,16 +44,16 @@ class AccountTrieNodeDataRequest extends TrieNodeDataRequest {
   @Override
   protected List<NodeDataRequest> getRequestsFromTrieNodeValue(final BytesValue value) {
     List<NodeDataRequest> nodeData = new ArrayList<>(2);
-    AccountTuple accountTuple = AccountTuple.readFrom(RLP.input(value));
+    StateTrieAccountValue accountValue = StateTrieAccountValue.readFrom(RLP.input(value));
     // Add code, if appropriate
-    if (!accountTuple.getCodeHash().equals(Hash.EMPTY)) {
-      nodeData.add(NodeDataRequest.createCodeRequest(accountTuple.getCodeHash()));
+    if (!accountValue.getCodeHash().equals(Hash.EMPTY)) {
+      nodeData.add(NodeDataRequest.createCodeRequest(accountValue.getCodeHash()));
     }
     // Add storage, if appropriate
-    if (!accountTuple.getStorageRoot().equals(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH)) {
+    if (!accountValue.getStorageRoot().equals(MerklePatriciaTrie.EMPTY_TRIE_ROOT_HASH)) {
       // If storage is non-empty queue download
       NodeDataRequest storageNode =
-          NodeDataRequest.createStorageDataRequest(accountTuple.getStorageRoot());
+          NodeDataRequest.createStorageDataRequest(accountValue.getStorageRoot());
       nodeData.add(storageNode);
     }
     return nodeData;

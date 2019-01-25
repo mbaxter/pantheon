@@ -10,20 +10,22 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.core;
+package tech.pegasys.pantheon.ethereum.worldstate;
 
+import tech.pegasys.pantheon.ethereum.core.Hash;
+import tech.pegasys.pantheon.ethereum.core.Wei;
 import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
 import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
 
 /** Represents the raw values associated with an account in the world state trie. */
-public class AccountTuple {
+public class StateTrieAccountValue {
 
   private final long nonce;
   private final Wei balance;
   private final Hash storageRoot;
   private final Hash codeHash;
 
-  public AccountTuple(
+  public StateTrieAccountValue(
       final long nonce, final Wei balance, final Hash storageRoot, final Hash codeHash) {
     this.nonce = nonce;
     this.balance = balance;
@@ -78,7 +80,7 @@ public class AccountTuple {
     out.endList();
   }
 
-  public static AccountTuple readFrom(final RLPInput in) {
+  public static StateTrieAccountValue readFrom(final RLPInput in) {
     in.enterList();
 
     final long nonce = in.readLongScalar();
@@ -88,6 +90,6 @@ public class AccountTuple {
 
     in.leaveList();
 
-    return new AccountTuple(nonce, balance, storageRoot, codeHash);
+    return new StateTrieAccountValue(nonce, balance, storageRoot, codeHash);
   }
 }
