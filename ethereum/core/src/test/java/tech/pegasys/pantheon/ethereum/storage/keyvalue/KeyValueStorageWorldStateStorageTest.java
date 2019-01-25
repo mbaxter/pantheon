@@ -24,13 +24,13 @@ import org.junit.Test;
 public class KeyValueStorageWorldStateStorageTest {
 
   @Test
-  public void getsCode_returnsEmpty() {
+  public void getCode_returnsEmpty() {
     KeyValueStorageWorldStateStorage storage = emptyStorage();
     assertThat(storage.getCode(Hash.EMPTY)).contains(BytesValue.EMPTY);
   }
 
   @Test
-  public void getAccountStateTrieNode_returnsNodeNode() {
+  public void getAccountStateTrieNode_returnsEmptyNode() {
     KeyValueStorageWorldStateStorage storage = emptyStorage();
     assertThat(storage.getAccountStateTrieNode(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH))
         .contains(MerklePatriciaTrie.EMPTY_TRIE_NODE);
