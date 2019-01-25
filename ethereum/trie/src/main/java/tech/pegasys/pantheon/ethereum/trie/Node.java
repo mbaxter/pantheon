@@ -35,14 +35,14 @@ public interface Node<V> {
   BytesValue getRlpRef();
 
   /**
-   * Whether a reference to this node should be inlined (the rlp stored directly in the parent
-   * node). If true, rlp is included in parent directly. If false, a hash of the rlp is stored in
-   * the parent node as a reference.
+   * Whether a reference to this node should be represented as a hash of the rlp, or the node rlp
+   * itself should be inlined (the rlp stored directly in the parent node). If true, the node is
+   * referenced by hash. If false, the node is referenced by its rlp-encoded value.
    *
-   * @return
+   * @return true if this node should be referenced by hash
    */
-  default boolean shouldBeInlined() {
-    return getRlp().size() < 32;
+  default boolean isReferencedByHash() {
+    return getRlp().size() >= 32;
   }
 
   Bytes32 getHash();

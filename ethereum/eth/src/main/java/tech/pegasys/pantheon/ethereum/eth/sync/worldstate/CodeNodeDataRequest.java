@@ -26,13 +26,13 @@ class CodeNodeDataRequest extends NodeDataRequest {
   }
 
   @Override
-  void persist(final Updater updater) {
+  public void persist(final Updater updater) {
     checkNotNull(getData(), "Must set data before node can be persisted.");
     updater.putCode(getHash(), getData());
   }
 
   @Override
-  Stream<NodeDataRequest> getChildRequests() {
+  public Stream<NodeDataRequest> getChildRequests() {
     // Code nodes have nothing further to download
     return Stream.empty();
   }

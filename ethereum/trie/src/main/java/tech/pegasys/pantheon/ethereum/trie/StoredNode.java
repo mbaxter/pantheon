@@ -19,7 +19,7 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 import java.util.List;
 import java.util.Optional;
 
-public class StoredNode<V> implements Node<V> {
+class StoredNode<V> implements Node<V> {
   private final StoredNodeFactory<V> nodeFactory;
   private final Bytes32 hash;
   private Node<V> loaded;
@@ -27,10 +27,6 @@ public class StoredNode<V> implements Node<V> {
   StoredNode(final StoredNodeFactory<V> nodeFactory, final Bytes32 hash) {
     this.nodeFactory = nodeFactory;
     this.hash = hash;
-  }
-
-  public boolean isLoaded() {
-    return loaded != null;
   }
 
   /** @return True if the node needs to be persisted. */
@@ -75,14 +71,19 @@ public class StoredNode<V> implements Node<V> {
 
   @Override
   public BytesValue getRlp() {
-    // Getting the rlp representation is only needed when persisting a concrete node
-    throw new UnsupportedOperationException();
+    return load().getRlp();
   }
 
   @Override
   public BytesValue getRlpRef() {
     // If this node was stored, then it must have a rlp larger than a hash
     return RLP.encodeOne(hash);
+  }
+
+  @Override
+  public boolean isReferencedByHash() {
+    // Stored nodes represent only nodes that are referenced by hash
+    return true;
   }
 
   @Override
@@ -108,7 +109,10 @@ public class StoredNode<V> implements Node<V> {
 
   @Override
   public String print() {
-    final String value = load().print();
-    return value;
+    if (loaded == null) {
+      return "StoredNode:" + "\n\tRef: " + getRlpRef();
+    } else {
+      return load().print();
+    }
   }
 }

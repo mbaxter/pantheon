@@ -63,7 +63,7 @@ abstract class NodeDataRequest {
     return this;
   }
 
-  abstract void persist(final WorldStateStorage.Updater updater);
+  public abstract void persist(final WorldStateStorage.Updater updater);
 
-  abstract Stream<NodeDataRequest> getChildRequests();
+  public abstract Stream<NodeDataRequest> getChildRequests();
 }

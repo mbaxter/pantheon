@@ -28,7 +28,7 @@ class StorageTrieNodeDataRequest extends TrieNodeDataRequest {
   }
 
   @Override
-  void persist(final Updater updater) {
+  public void persist(final Updater updater) {
     checkNotNull(getData(), "Must set data before node can be persisted.");
     updater.putAccountStorageTrieNode(getHash(), getData());
   }

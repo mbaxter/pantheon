@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.ethereum.eth.sync.worldstate;
 
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.trie.Node;
-import tech.pegasys.pantheon.ethereum.trie.StoredNode;
 import tech.pegasys.pantheon.ethereum.trie.StoredNodeFactory;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
@@ -30,28 +29,23 @@ abstract class TrieNodeDataRequest extends NodeDataRequest {
   }
 
   @Override
-  Stream<NodeDataRequest> getChildRequests() {
+  public Stream<NodeDataRequest> getChildRequests() {
     if (getData() == null) {
       // If this node hasn't been downloaded yet, we can't return any child data
       return Stream.empty();
     }
 
     final Node<BytesValue> node = nodeFactory.decode(getData());
-    return getRequestsFromTrieNode(node);
+    return getRequestsFromLoadedTrieNode(node);
   }
 
-  private Stream<NodeDataRequest> getRequestsFromTrieNode(final Node<BytesValue> trieNode) {
-    if (trieNode instanceof StoredNode && !((StoredNode) trieNode).isLoaded()) {
-      // Stored nodes represent nodes that are referenced by hash (and therefore must be downloaded)
-      NodeDataRequest req = createChildNodeDataRequest(Hash.wrap(trieNode.getHash()));
-      return Stream.of(req);
-    }
+  private Stream<NodeDataRequest> getRequestsFromLoadedTrieNode(final Node<BytesValue> trieNode) {
     // Process this node's children
     final Stream<NodeDataRequest> childRequests =
         trieNode
             .getChildren()
             .map(List::stream)
-            .map(s -> s.flatMap(this::getRequestsFromTrieNode))
+            .map(s -> s.flatMap(this::getRequestsFromChildTrieNode))
             .orElse(Stream.of());
 
     // Process value at this node, if present
@@ -59,6 +53,16 @@ abstract class TrieNodeDataRequest extends NodeDataRequest {
         .getValue()
         .map(v -> Stream.concat(childRequests, (getRequestsFromTrieNodeValue(v).stream())))
         .orElse(childRequests);
+  }
+
+  private Stream<NodeDataRequest> getRequestsFromChildTrieNode(final Node<BytesValue> trieNode) {
+    if (trieNode.isReferencedByHash()) {
+      // If child nodes are reference by hash, we need to download them
+      NodeDataRequest req = createChildNodeDataRequest(Hash.wrap(trieNode.getHash()));
+      return Stream.of(req);
+    }
+    // Otherwise if the child's value has been inlined we can go ahead and process it
+    return getRequestsFromLoadedTrieNode(trieNode);
   }
 
   protected abstract NodeDataRequest createChildNodeDataRequest(final Hash childHash);

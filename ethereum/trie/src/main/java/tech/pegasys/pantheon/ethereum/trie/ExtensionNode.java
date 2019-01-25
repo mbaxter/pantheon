@@ -92,10 +92,10 @@ class ExtensionNode<V> implements Node<V> {
 
   @Override
   public BytesValue getRlpRef() {
-    if (shouldBeInlined()) {
-      return getRlp();
-    } else {
+    if (isReferencedByHash()) {
       return RLP.encodeOne(getHash());
+    } else {
+      return getRlp();
     }
   }
 
