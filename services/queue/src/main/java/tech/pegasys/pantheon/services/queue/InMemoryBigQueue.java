@@ -14,30 +14,23 @@ package tech.pegasys.pantheon.services.queue;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class InMemoryBigQueue<T> implements BigQueue<T> {
-  private final AtomicLong size = new AtomicLong(0);
   private final Queue<T> internalQueue = new ConcurrentLinkedQueue<>();
 
   @Override
   public void enqueue(final T value) {
     internalQueue.add(value);
-    size.incrementAndGet();
   }
 
   @Override
   public T dequeue() {
-    T result = internalQueue.poll();
-    if (result != null) {
-      size.decrementAndGet();
-    }
-    return result;
+    return internalQueue.poll();
   }
 
   @Override
   public long size() {
-    return size.get();
+    return internalQueue.size();
   }
 
   @Override

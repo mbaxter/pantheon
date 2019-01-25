@@ -23,6 +23,7 @@ import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
 import tech.pegasys.pantheon.ethereum.core.WorldState;
+import tech.pegasys.pantheon.ethereum.eth.manager.DeterministicEthScheduler.TimeoutPolicy;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManager;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManagerTestUtil;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer;
@@ -116,6 +117,63 @@ public class WorldStateDownloaderTest {
     for (RespondingEthPeer peer : peers) {
       assertThat(peer.hasOutstandingRequests()).isFalse();
     }
+  }
+
+  @Test
+  public void canRecoverFromTimeouts() {
+    BlockDataGenerator dataGen = new BlockDataGenerator(1);
+    TimeoutPolicy timeoutPolicy = TimeoutPolicy.timeoutXTimes(2);
+    final EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create(timeoutPolicy);
+
+    // Setup "remote" state
+    final WorldStateStorage remoteStorage =
+        new KeyValueStorageWorldStateStorage(new InMemoryKeyValueStorage());
+    final WorldStateArchive remoteWorldStateArchive = new WorldStateArchive(remoteStorage);
+    final MutableWorldState remoteWorldState = remoteWorldStateArchive.getMutable();
+
+    // Generate accounts and save corresponding state root
+    final List<Account> accounts = dataGen.createRandomAccounts(remoteWorldState, 20);
+    final Hash stateRoot = remoteWorldState.rootHash();
+    assertThat(stateRoot).isNotEqualTo(EMPTY_TRIE_ROOT); // Sanity check
+    BlockHeader header =
+        dataGen.block(BlockOptions.create().setStateRoot(stateRoot).setBlockNumber(10)).getHeader();
+
+    // Create some peers
+    List<RespondingEthPeer> peers =
+        Stream.generate(
+                () -> EthProtocolManagerTestUtil.createPeer(ethProtocolManager, header.getNumber()))
+            .limit(5)
+            .collect(Collectors.toList());
+
+    BigQueue<NodeDataRequest> queue = new InMemoryBigQueue<>();
+    WorldStateStorage localStorage =
+        new KeyValueStorageWorldStateStorage(new InMemoryKeyValueStorage());
+    WorldStateDownloader downloader =
+        new WorldStateDownloader(
+            ethProtocolManager.ethContext(),
+            localStorage,
+            header,
+            queue,
+            10,
+            10,
+            NoOpMetricsSystem.NO_OP_LABELLED_TIMER);
+
+    CompletableFuture<Void> result = downloader.run();
+
+    // Respond to node data requests
+    Responder responder =
+        RespondingEthPeer.blockchainResponder(mock(Blockchain.class), remoteWorldStateArchive);
+    while (!result.isDone()) {
+      for (RespondingEthPeer peer : peers) {
+        peer.respond(responder);
+      }
+    }
+
+    // Check that all expected account data was downloaded
+    WorldStateArchive localWorldStateArchive = new WorldStateArchive(localStorage);
+    final WorldState localWorldState = localWorldStateArchive.get(stateRoot);
+    assertThat(result).isDone();
+    assertAccountsMatch(localWorldState, accounts);
   }
 
   private void downloadAvailableWorldStateFromPeers(

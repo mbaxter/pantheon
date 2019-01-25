@@ -79,8 +79,7 @@ public class WorldStateDownloader {
     Hash stateRoot = header.getStateRoot();
     if (stateRoot.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
       // If we're requesting data for an empty world state, we're already done
-      future = CompletableFuture.completedFuture(null);
-      status = Status.DONE;
+      markDone();
     } else {
       pendingRequests.enqueue(NodeDataRequest.createAccountDataRequest(header.getStateRoot()));
     }
@@ -106,11 +105,7 @@ public class WorldStateDownloader {
 
         if (!maybePeer.isPresent()) {
           // If no peer is available, wait and try again
-          waitForNewPeer()
-              .whenComplete(
-                  (r, t) -> {
-                    requestNodeData();
-                  });
+          waitForNewPeer().whenComplete((r, t) -> requestNodeData());
           break;
         } else {
           EthPeer peer = maybePeer.get();
@@ -118,10 +113,11 @@ public class WorldStateDownloader {
           // Collect data to be requested
           List<NodeDataRequest> toRequest = new ArrayList<>();
           for (int i = 0; i < hashCountPerRequest; i++) {
-            if (pendingRequests.isEmpty()) {
+            NodeDataRequest pendingRequest = pendingRequests.dequeue();
+            if (pendingRequest == null) {
               break;
             }
-            toRequest.add(pendingRequests.dequeue());
+            toRequest.add(pendingRequest);
           }
 
           // Request and process node data
@@ -132,7 +128,7 @@ public class WorldStateDownloader {
                     if (outstandingRequests.decrementAndGet() == 0 && pendingRequests.isEmpty()) {
                       // We're done
                       worldStateStorageUpdater.commit();
-                      future.complete(null);
+                      markDone();
                     } else {
                       // Send out additional requests
                       requestNodeData();
@@ -142,6 +138,15 @@ public class WorldStateDownloader {
       }
       sendingRequests.set(false);
     }
+  }
+
+  private synchronized void markDone() {
+    if (future == null) {
+      future = CompletableFuture.completedFuture(null);
+    } else {
+      future.complete(null);
+    }
+    status = Status.DONE;
   }
 
   private boolean shouldRequestNodeData() {
@@ -165,10 +170,11 @@ public class WorldStateDownloader {
         .run()
         .thenApply(PeerTaskResult::getResult)
         .thenApply(this::mapNodeDataByHash)
-        .thenAccept(
-            data -> {
+        .whenComplete(
+            (data, err) -> {
+              boolean requestFailed = err != null;
               for (NodeDataRequest request : requests) {
-                BytesValue matchingData = data.get(request.getHash());
+                BytesValue matchingData = requestFailed ? null : data.get(request.getHash());
                 if (matchingData == null) {
                   pendingRequests.enqueue(request);
                 } else {
