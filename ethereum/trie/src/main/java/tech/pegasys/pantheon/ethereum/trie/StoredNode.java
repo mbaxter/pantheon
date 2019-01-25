@@ -101,7 +101,8 @@ class StoredNode<V> implements Node<V> {
       loaded =
           nodeFactory
               .retrieve(hash)
-              .orElseThrow(() -> new MerkleStorageException("Missing value for hash " + hash));
+              .orElseThrow(
+                  () -> new MerkleTrieException("Unable to load trie node value for hash " + hash));
     }
 
     return loaded;
