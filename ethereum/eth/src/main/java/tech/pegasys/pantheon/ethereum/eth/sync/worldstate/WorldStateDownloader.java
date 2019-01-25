@@ -74,7 +74,6 @@ public class WorldStateDownloader {
     this.hashCountPerRequest = hashCountPerRequest;
     this.maxOutstandingRequests = maxOutstandingRequests;
     this.ethTasksTimer = ethTasksTimer;
-    // TODO: construct an updater that will commit changes periodically as updates accumulate
     this.worldStateStorageUpdater = worldStateStorage.updater();
 
     Hash stateRoot = header.getStateRoot();
@@ -87,7 +86,6 @@ public class WorldStateDownloader {
     }
   }
 
-  // TODO: add a cancel method
   public CompletableFuture<Void> run() {
     synchronized (this) {
       if (status == Status.DONE || status == Status.RUNNING) {
@@ -98,7 +96,6 @@ public class WorldStateDownloader {
     }
 
     requestNodeData();
-    // TODO: Complete exceptionally on timeout / stalled download
     return future;
   }
 
@@ -167,7 +164,6 @@ public class WorldStateDownloader {
         .assignPeer(peer)
         .run()
         .thenApply(PeerTaskResult::getResult)
-        // TODO: Update task to return this mapping
         .thenApply(this::mapNodeDataByHash)
         .thenAccept(
             data -> {
