@@ -45,15 +45,7 @@ public class WorldStateArchive {
   }
 
   public Optional<BytesValue> getNodeData(final Hash hash) {
-    if (hash.equals(Hash.EMPTY)) {
-      // No need to go to storage for an empty value
-      return Optional.of(BytesValue.EMPTY);
-    } else if (hash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
-      // No need to go to storage for an trie node
-      return Optional.of(MerklePatriciaTrie.EMPTY_TRIE_NODE);
-    } else {
-      return storage.getNodeData(hash);
-    }
+    return storage.getNodeData(hash);
   }
 
   public WorldStateStorage getStorage() {

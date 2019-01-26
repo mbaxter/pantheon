@@ -13,7 +13,6 @@
 package tech.pegasys.pantheon.ethereum.storage.keyvalue;
 
 import tech.pegasys.pantheon.ethereum.core.Hash;
-import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
@@ -21,7 +20,6 @@ import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Optional;
-import java.util.function.Function;
 
 public class KeyValueStorageWorldStateStorage implements WorldStateStorage {
 
@@ -33,45 +31,40 @@ public class KeyValueStorageWorldStateStorage implements WorldStateStorage {
 
   @Override
   public Optional<BytesValue> getCode(final Bytes32 codeHash) {
-    return getCodeValue(codeHash, keyValueStorage::get);
+    if (codeHash.equals(Hash.EMPTY)) {
+      return Optional.of(BytesValue.EMPTY);
+    } else {
+      return keyValueStorage.get(codeHash);
+    }
   }
 
   @Override
   public Optional<BytesValue> getAccountStateTrieNode(final Bytes32 nodeHash) {
-    return getTrieValue(nodeHash, keyValueStorage::get);
+    return getTrieNode(nodeHash);
   }
 
   @Override
   public Optional<BytesValue> getAccountStorageTrieNode(final Bytes32 nodeHash) {
-    return getTrieValue(nodeHash, keyValueStorage::get);
+    return getTrieNode(nodeHash);
+  }
+
+  private Optional<BytesValue> getTrieNode(final Bytes32 nodeHash) {
+    if (nodeHash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
+      return Optional.of(MerklePatriciaTrie.EMPTY_TRIE_NODE);
+    } else {
+      return keyValueStorage.get(nodeHash);
+    }
   }
 
   @Override
   public Optional<BytesValue> getNodeData(final Bytes32 hash) {
-    return getValue(hash, keyValueStorage::get);
-  }
-
-  private Optional<BytesValue> getTrieValue(
-      final Bytes32 hash, final Function<Bytes32, Optional<BytesValue>> getter) {
     if (hash.equals(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH)) {
-      return Optional.of(RLP.NULL);
-    } else {
-      return getter.apply(hash);
-    }
-  }
-
-  private Optional<BytesValue> getCodeValue(
-      final Bytes32 hash, final Function<Bytes32, Optional<BytesValue>> getter) {
-    if (hash.equals(Hash.EMPTY)) {
+      return Optional.of(MerklePatriciaTrie.EMPTY_TRIE_NODE);
+    } else if (hash.equals(Hash.EMPTY)) {
       return Optional.of(BytesValue.EMPTY);
     } else {
-      return getter.apply(hash);
+      return keyValueStorage.get(hash);
     }
-  }
-
-  private Optional<BytesValue> getValue(
-      final Bytes32 hash, final Function<Bytes32, Optional<BytesValue>> getter) {
-    return getTrieValue(hash, (h) -> getCodeValue(h, getter));
   }
 
   @Override
