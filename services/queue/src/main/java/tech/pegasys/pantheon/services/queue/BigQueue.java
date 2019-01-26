@@ -17,7 +17,7 @@ import java.io.Closeable;
 /**
  * Represents a very large thread-safe queue that may exceed memory limits.
  *
- * @param <T>
+ * @param <T> the type of data held in the queue
  */
 public interface BigQueue<T> extends Closeable {
 
