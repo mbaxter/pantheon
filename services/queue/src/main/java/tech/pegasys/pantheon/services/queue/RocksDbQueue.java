@@ -1,19 +1,31 @@
+/*
+ * Copyright 2019 ConsenSys AG.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package tech.pegasys.pantheon.services.queue;
 
-import com.google.common.primitives.Longs;
-import java.nio.file.Path;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.rocksdb.Options;
-import org.rocksdb.ReadOptions;
-import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
-import org.rocksdb.RocksIterator;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.InvalidConfigurationException;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
+
+import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
+import com.google.common.primitives.Longs;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.rocksdb.Options;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
 
 public class RocksDbQueue implements BigQueue<BytesValue> {
 
@@ -21,8 +33,7 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
 
   private final Options options;
   private final RocksDB db;
-  private final ReadOptions iteratorOptions;
-  private final RocksIterator iterator;
+
   private final AtomicLong lastEnqueuedKey = new AtomicLong(0);
   private final AtomicLong lastDequeuedKey = new AtomicLong(0);
   private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -34,7 +45,7 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
       if (e.getCause() instanceof UnsupportedOperationException) {
         LOG.info("Unable to load RocksDB library", e);
         throw new InvalidConfigurationException(
-          "Unsupported platform detected. On Windows, ensure you have 64bit Java installed.");
+            "Unsupported platform detected. On Windows, ensure you have 64bit Java installed.");
       } else {
         throw e;
       }
@@ -44,22 +55,19 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
   private RocksDbQueue(final Path storageDirectory, final MetricsSystem metricsSystem) {
     try {
       loadNativeLibrary();
-      options = new Options()
-        .setCreateIfMissing(true)
-        // TODO: Support restoration from a previously persisted queue
-        .setErrorIfExists(true);
+      options =
+          new Options()
+              .setCreateIfMissing(true)
+              // TODO: Support restoration from a previously persisted queue
+              .setErrorIfExists(true);
       db = RocksDB.open(options, storageDirectory.toString());
-
-      iteratorOptions = new ReadOptions()
-        .setTailing(true);
-      iterator = db.newIterator(iteratorOptions);
-      iterator.seekToFirst();
     } catch (final RocksDBException e) {
       throw new StorageException(e);
     }
   }
 
-  public static RocksDbQueue create(final Path storageDirectory, final MetricsSystem metricsSystem) {
+  public static RocksDbQueue create(
+      final Path storageDirectory, final MetricsSystem metricsSystem) {
     return new RocksDbQueue(storageDirectory, metricsSystem);
   }
 
@@ -81,31 +89,17 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
       return null;
     }
     try {
-      iterator.status();
-    } catch (final RocksDBException e) {
-      LOG.error("RocksDB encountered a problem while iterating.", e);
-    }
-    if (!iterator.isValid()) {
-      return null;
-    }
+      byte[] key = Longs.toByteArray(lastDequeuedKey.incrementAndGet());
+      byte[] value = db.get(key);
+      if (value == null) {
+        throw new IllegalStateException("Next expected value is missing");
+      }
+      db.delete(key);
 
-    // Get next value
-    final byte[] keyBytes = iterator.key();
-    final long key = Longs.fromByteArray(iterator.key());
-    final BytesValue value = BytesValue.wrap(iterator.value());
-    iterator.next();
-
-    boolean nextIsSequential = lastDequeuedKey.compareAndSet(key - 1L, key);
-    if (!nextIsSequential) {
-      // The implementation has a bug if we get here.
-      throw new IllegalStateException("Non-sequential dequeue detected");
-    }
-    try {
-      db.delete(keyBytes);
+      return BytesValue.of(value);
     } catch (RocksDBException e) {
       throw new StorageException(e);
     }
-    return value;
   }
 
   @Override
@@ -117,8 +111,6 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
   @Override
   public void close() {
     if (closed.compareAndSet(false, true)) {
-      iteratorOptions.close();
-      iterator.close();
       options.close();
       db.close();
     }
@@ -126,7 +118,8 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
 
   private void assertNotClosed() {
     if (closed.get()) {
-      throw new IllegalStateException("Attempt to access closed " + RocksDbQueue.class.getSimpleName());
+      throw new IllegalStateException(
+          "Attempt to access closed " + RocksDbQueue.class.getSimpleName());
     }
   }
 
