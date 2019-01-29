@@ -20,7 +20,8 @@ public enum MetricCategory {
   BLOCKCHAIN("blockchain"),
   SYNCHRONIZER("synchronizer"),
   NETWORK("network"),
-  ROCKSDB("rocksdb");
+  ROCKSDB("rocksdb"),
+  BIG_QUEUE("big_queue");
 
   private final String name;
   private final boolean pantheonSpecific;
