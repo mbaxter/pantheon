@@ -12,7 +12,6 @@
  */
 package tech.pegasys.pantheon.services.queue;
 
-import tech.pegasys.pantheon.metrics.LabelledMetric;
 import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.OperationTimer;
@@ -42,8 +41,8 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   private final String classLabel = getClass().getSimpleName();
-  private final LabelledMetric<OperationTimer> enqueueLatency;
-  private final LabelledMetric<OperationTimer> dequeueLatency;
+  private final OperationTimer enqueueLatency;
+  private final OperationTimer dequeueLatency;
 
   private static void loadNativeLibrary() {
     try {
@@ -69,19 +68,16 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
               .setErrorIfExists(true);
       db = RocksDB.open(options, storageDirectory.toString());
 
-      final String classLabelName = "class";
       enqueueLatency =
-          metricsSystem.createLabelledTimer(
+          metricsSystem.createTimer(
               MetricCategory.BIG_QUEUE,
               "enqueue_latency_seconds",
-              "Latency for enqueuing an item.",
-              classLabelName);
+              "Latency for enqueuing an item.");
       dequeueLatency =
-          metricsSystem.createLabelledTimer(
+          metricsSystem.createTimer(
               MetricCategory.BIG_QUEUE,
               "dequeue_latency_seconds",
-              "Latency for dequeuing an item.",
-              classLabelName);
+              "Latency for dequeuing an item.");
     } catch (final RocksDBException e) {
       throw new StorageException(e);
     }
@@ -95,8 +91,7 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
   @Override
   public synchronized void enqueue(final BytesValue value) {
     assertNotClosed();
-    try (final OperationTimer.TimingContext ignored =
-        enqueueLatency.labels(classLabel).startTimer()) {
+    try (final OperationTimer.TimingContext ignored = enqueueLatency.startTimer()) {
       byte[] key = Longs.toByteArray(lastEnqueuedKey.incrementAndGet());
       db.put(key, value.getArrayUnsafe());
     } catch (RocksDBException e) {
@@ -110,8 +105,7 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
     if (size() == 0) {
       return null;
     }
-    try (final OperationTimer.TimingContext ignored =
-        dequeueLatency.labels(classLabel).startTimer()) {
+    try (final OperationTimer.TimingContext ignored = dequeueLatency.startTimer()) {
       byte[] key = Longs.toByteArray(lastDequeuedKey.incrementAndGet());
       byte[] value = db.get(key);
       if (value == null) {
