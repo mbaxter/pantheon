@@ -93,7 +93,7 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
   }
 
   @Override
-  public synchronized void enqueue(BytesValue value) {
+  public synchronized void enqueue(final BytesValue value) {
     assertNotClosed();
     try (final OperationTimer.TimingContext ignored =
         enqueueLatency.labels(classLabel).startTimer()) {
