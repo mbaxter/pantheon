@@ -15,7 +15,7 @@ package tech.pegasys.pantheon.services.queue;
 import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.OperationTimer;
-import tech.pegasys.pantheon.util.InvalidConfigurationException;
+import tech.pegasys.pantheon.services.util.RocksDbUtil;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.nio.file.Path;
@@ -40,27 +40,12 @@ public class RocksDbQueue implements BigQueue<BytesValue> {
   private final AtomicLong lastDequeuedKey = new AtomicLong(0);
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
-  private final String classLabel = getClass().getSimpleName();
   private final OperationTimer enqueueLatency;
   private final OperationTimer dequeueLatency;
 
-  private static void loadNativeLibrary() {
-    try {
-      RocksDB.loadLibrary();
-    } catch (final ExceptionInInitializerError e) {
-      if (e.getCause() instanceof UnsupportedOperationException) {
-        LOG.info("Unable to load RocksDB library", e);
-        throw new InvalidConfigurationException(
-            "Unsupported platform detected. On Windows, ensure you have 64bit Java installed.");
-      } else {
-        throw e;
-      }
-    }
-  }
-
   private RocksDbQueue(final Path storageDirectory, final MetricsSystem metricsSystem) {
     try {
-      loadNativeLibrary();
+      RocksDbUtil.loadNativeLibrary();
       options =
           new Options()
               .setCreateIfMissing(true)
