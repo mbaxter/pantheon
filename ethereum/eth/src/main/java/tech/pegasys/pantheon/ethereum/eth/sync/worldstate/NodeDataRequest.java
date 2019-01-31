@@ -44,11 +44,11 @@ public abstract class NodeDataRequest {
     return new CodeNodeDataRequest(hash);
   }
 
-  public static BytesValue serialize(NodeDataRequest request) {
+  public static BytesValue serialize(final NodeDataRequest request) {
     return RLP.encode(request::writeTo);
   }
 
-  public static NodeDataRequest deserialize(BytesValue encoded) {
+  public static NodeDataRequest deserialize(final BytesValue encoded) {
     RLPInput in = RLP.input(encoded);
     in.enterList();
     RequestType requestType = RequestType.fromValue(in.readByte());
@@ -63,11 +63,13 @@ public abstract class NodeDataRequest {
       case CODE:
         return createCodeRequest(hash);
       default:
-        throw new IllegalArgumentException("Unable to deserialize provided data into a valid " + NodeDataRequest.class.getSimpleName());
+        throw new IllegalArgumentException(
+            "Unable to deserialize provided data into a valid "
+                + NodeDataRequest.class.getSimpleName());
     }
   }
 
-  private void writeTo(RLPOutput out) {
+  private void writeTo(final RLPOutput out) {
     out.startList();
     out.writeByte(requestType.getValue());
     out.writeBytesValue(hash);
