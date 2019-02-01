@@ -59,7 +59,7 @@ public class DefaultSynchronizer<C> implements Synchronizer {
   private final BlockPropagationManager<C> blockPropagationManager;
   private final FullSyncDownloader<C> fullSyncDownloader;
   private final Optional<FastSyncDownloader<C>> fastSyncDownloader;
-  private final Optional<Path> stateQueueDirectory;
+  private final Path stateQueueDirectory;
 
   public DefaultSynchronizer(
       final SynchronizerConfiguration syncConfig,
@@ -95,12 +95,12 @@ public class DefaultSynchronizer<C> implements Synchronizer {
 
     if (syncConfig.syncMode() == SyncMode.FAST) {
       LOG.info("Fast sync enabled.");
-      this.stateQueueDirectory = Optional.of(getStateQueueDirectory(dataDirectory));
+      this.stateQueueDirectory = getStateQueueDirectory(dataDirectory);
       final WorldStateDownloader worldStateDownloader =
           new WorldStateDownloader(
               ethContext,
               worldStateStorage,
-              createWorldStateDownloaderQueue(stateQueueDirectory.get(), metricsSystem),
+              createWorldStateDownloaderQueue(stateQueueDirectory, metricsSystem),
               syncConfig.getWorldStateHashCountPerRequest(),
               syncConfig.getWorldStateRequestParallelism(),
               ethTasksTimer);
@@ -117,7 +117,7 @@ public class DefaultSynchronizer<C> implements Synchronizer {
                   worldStateDownloader));
     } else {
       this.fastSyncDownloader = Optional.empty();
-      this.stateQueueDirectory = Optional.empty();
+      this.stateQueueDirectory = null;
     }
   }
 
@@ -165,14 +165,12 @@ public class DefaultSynchronizer<C> implements Synchronizer {
           result.getPivotBlockNumber().getAsLong());
     }
     // Clean up fast sync data
-    stateQueueDirectory.ifPresent(
-        d -> {
-          try {
-            MoreFiles.deleteRecursively(d, RecursiveDeleteOption.ALLOW_INSECURE);
-          } catch (IOException e) {
-            LOG.error("Unable to clean up fast sync state queue", e);
-          }
-        });
+    try {
+      MoreFiles.deleteRecursively(stateQueueDirectory, RecursiveDeleteOption.ALLOW_INSECURE);
+    } catch (IOException e) {
+      LOG.error("Unable to clean up fast sync state queue", e);
+    }
+
     startFullSync();
   }
 
