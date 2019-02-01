@@ -88,7 +88,8 @@ public final class RunnerTest {
   }
 
   private void syncFromGenesis(final SyncMode mode) throws Exception {
-    final Path dbAhead = temp.newFolder().toPath();
+    final Path dataDirAhead = temp.newFolder().toPath();
+    final Path dbAhead = dataDirAhead.resolve("database");
     final int blockCount = 500;
     final KeyPair aheadDbNodeKeys = loadKeyPair(dbAhead);
     final SynchronizerConfiguration fastSyncConfig =
@@ -110,8 +111,9 @@ public final class RunnerTest {
             fastSyncConfig,
             new MiningParametersTestBuilder().enabled(false).build(),
             aheadDbNodeKeys,
-            noOpMetricsSystem,
-            PrivacyParameters.noPrivacy())) {
+            PrivacyParameters.noPrivacy(),
+            dataDirAhead,
+            noOpMetricsSystem)) {
       setupState(blockCount, controller.getProtocolSchedule(), controller.getProtocolContext());
     }
 
@@ -124,8 +126,9 @@ public final class RunnerTest {
             fastSyncConfig,
             new MiningParametersTestBuilder().enabled(false).build(),
             aheadDbNodeKeys,
-            noOpMetricsSystem,
-            PrivacyParameters.noPrivacy());
+            PrivacyParameters.noPrivacy(),
+            dataDirAhead,
+            noOpMetricsSystem);
     final String listenHost = InetAddress.getLoopbackAddress().getHostAddress();
     final ExecutorService executorService = Executors.newFixedThreadPool(2);
     final JsonRpcConfiguration aheadJsonRpcConfiguration = jsonRpcConfiguration();
@@ -155,6 +158,8 @@ public final class RunnerTest {
     try {
 
       executorService.submit(runnerAhead::execute);
+
+      final Path dataDirBehind = temp.newFolder().toPath();
       final JsonRpcConfiguration behindJsonRpcConfiguration = jsonRpcConfiguration();
       final WebSocketConfiguration behindWebSocketConfiguration = wsRpcConfiguration();
       final MetricsConfiguration behindMetricsConfiguration = metricsConfiguration();
@@ -168,8 +173,9 @@ public final class RunnerTest {
               fastSyncConfig,
               new MiningParametersTestBuilder().enabled(false).build(),
               KeyPair.generate(),
-              noOpMetricsSystem,
-              PrivacyParameters.noPrivacy());
+              PrivacyParameters.noPrivacy(),
+              dataDirBehind,
+              noOpMetricsSystem);
       final Runner runnerBehind =
           runnerBuilder
               .pantheonController(controllerBehind)
