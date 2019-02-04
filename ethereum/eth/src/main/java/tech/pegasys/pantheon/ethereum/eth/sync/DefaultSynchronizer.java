@@ -94,8 +94,8 @@ public class DefaultSynchronizer<C> implements Synchronizer {
             syncConfig, protocolSchedule, protocolContext, ethContext, syncState, ethTasksTimer);
 
     if (syncConfig.syncMode() == SyncMode.FAST) {
-      LOG.info("Fast sync enabled.");
       this.stateQueueDirectory = getStateQueueDirectory(dataDirectory);
+      setupShutdownHook(this.stateQueueDirectory);
       final WorldStateDownloader worldStateDownloader =
           new WorldStateDownloader(
               ethContext,
@@ -121,6 +121,18 @@ public class DefaultSynchronizer<C> implements Synchronizer {
     }
   }
 
+  private void setupShutdownHook(Path stateQueueDirectory) {
+    Runtime.getRuntime()
+      .addShutdownHook(new Thread(() -> {
+        try {
+          // Clean up this data for now (until fast sync resume functionality is in place)
+          MoreFiles.deleteRecursively(stateQueueDirectory, RecursiveDeleteOption.ALLOW_INSECURE);
+        } catch (IOException e) {
+          LOG.error("Unable to clean up fast sync files: {}", stateQueueDirectory, e);
+        }
+      }));
+  }
+
   @Override
   public void start() {
     if (started.compareAndSet(false, true)) {
@@ -135,12 +147,9 @@ public class DefaultSynchronizer<C> implements Synchronizer {
   }
 
   private Path getStateQueueDirectory(final Path dataDirectory) {
-    Path queueDataDirectory = dataDirectory.resolve("fastsync/statequeue");
-    File queueDataFile = queueDataDirectory.toFile();
-    queueDataFile.mkdirs();
-    // Clean up this data for now (until fast sync resume functionality is in place)
-    queueDataFile.deleteOnExit();
-    return queueDataDirectory;
+    Path queueDataDir = dataDirectory.resolve("fastsync/statequeue");
+    queueDataDir.toFile().mkdirs();
+    return queueDataDir;
   }
 
   private BigQueue<NodeDataRequest> createWorldStateDownloaderQueue(
