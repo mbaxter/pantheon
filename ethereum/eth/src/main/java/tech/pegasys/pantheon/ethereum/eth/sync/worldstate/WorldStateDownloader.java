@@ -99,21 +99,7 @@ public class WorldStateDownloader {
       requestNodeData(header);
     }
 
-    scheduleLogs();
     return future;
-  }
-
-  private void scheduleLogs() {
-    ethContext
-        .getScheduler()
-        .scheduleFutureTask(
-            () -> {
-              if (status == Status.RUNNING) {
-                LOG.info("{} node data requests queued for download", pendingRequests.size());
-                scheduleLogs();
-              }
-            },
-            Duration.ofMinutes(2));
   }
 
   private void requestNodeData(final BlockHeader header) {
