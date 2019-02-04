@@ -37,7 +37,6 @@ import tech.pegasys.pantheon.services.queue.BytesQueueAdapter;
 import tech.pegasys.pantheon.services.queue.RocksDbQueue;
 import tech.pegasys.pantheon.util.ExceptionUtils;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -123,14 +122,17 @@ public class DefaultSynchronizer<C> implements Synchronizer {
 
   private void setupShutdownHook(Path stateQueueDirectory) {
     Runtime.getRuntime()
-      .addShutdownHook(new Thread(() -> {
-        try {
-          // Clean up this data for now (until fast sync resume functionality is in place)
-          MoreFiles.deleteRecursively(stateQueueDirectory, RecursiveDeleteOption.ALLOW_INSECURE);
-        } catch (IOException e) {
-          LOG.error("Unable to clean up fast sync files: {}", stateQueueDirectory, e);
-        }
-      }));
+        .addShutdownHook(
+            new Thread(
+                () -> {
+                  try {
+                    // Clean up this data for now (until fast sync resume functionality is in place)
+                    MoreFiles.deleteRecursively(
+                        stateQueueDirectory, RecursiveDeleteOption.ALLOW_INSECURE);
+                  } catch (IOException e) {
+                    LOG.error("Unable to clean up fast sync files: {}", stateQueueDirectory, e);
+                  }
+                }));
   }
 
   @Override
