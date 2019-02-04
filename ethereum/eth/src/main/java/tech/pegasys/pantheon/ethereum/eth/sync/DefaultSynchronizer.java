@@ -120,7 +120,7 @@ public class DefaultSynchronizer<C> implements Synchronizer {
     }
   }
 
-  private void setupShutdownHook(Path stateQueueDirectory) {
+  private void setupShutdownHook(final Path stateQueueDirectory) {
     Runtime.getRuntime()
         .addShutdownHook(
             new Thread(
