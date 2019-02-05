@@ -204,6 +204,14 @@ public class RespondingEthPeer {
     };
   }
 
+  public static Responder wrapResponderWithCollector(
+      Responder responder, List<MessageData> messageCollector) {
+    return (cap, msg) -> {
+      messageCollector.add(msg);
+      return responder.respond(cap, msg);
+    };
+  }
+
   /**
    * Create a responder that only responds with a fixed portion of the available data.
    *
