@@ -59,6 +59,8 @@ public class DefaultSynchronizer<C> implements Synchronizer {
   private final FullSyncDownloader<C> fullSyncDownloader;
   private final Optional<FastSyncDownloader<C>> fastSyncDownloader;
   private final Path stateQueueDirectory;
+  private final BigQueue<NodeDataRequest> stateQueue;
+  private final WorldStateDownloader worldStateDownloader;
 
   public DefaultSynchronizer(
       final SynchronizerConfiguration syncConfig,
@@ -94,12 +96,12 @@ public class DefaultSynchronizer<C> implements Synchronizer {
 
     if (syncConfig.syncMode() == SyncMode.FAST) {
       this.stateQueueDirectory = getStateQueueDirectory(dataDirectory);
-      setupShutdownHook(this.stateQueueDirectory);
-      final WorldStateDownloader worldStateDownloader =
+      this.stateQueue = createWorldStateDownloaderQueue(stateQueueDirectory, metricsSystem);
+      this.worldStateDownloader =
           new WorldStateDownloader(
               ethContext,
               worldStateStorage,
-              createWorldStateDownloaderQueue(stateQueueDirectory, metricsSystem),
+              stateQueue,
               syncConfig.getWorldStateHashCountPerRequest(),
               syncConfig.getWorldStateRequestParallelism(),
               ethTasksTimer);
@@ -116,23 +118,10 @@ public class DefaultSynchronizer<C> implements Synchronizer {
                   worldStateDownloader));
     } else {
       this.fastSyncDownloader = Optional.empty();
+      this.worldStateDownloader = null;
       this.stateQueueDirectory = null;
+      this.stateQueue = null;
     }
-  }
-
-  private void setupShutdownHook(final Path stateQueueDirectory) {
-    Runtime.getRuntime()
-        .addShutdownHook(
-            new Thread(
-                () -> {
-                  try {
-                    // Clean up this data for now (until fast sync resume functionality is in place)
-                    MoreFiles.deleteRecursively(
-                        stateQueueDirectory, RecursiveDeleteOption.ALLOW_INSECURE);
-                  } catch (IOException e) {
-                    LOG.error("Unable to clean up fast sync files: {}", stateQueueDirectory, e);
-                  }
-                }));
   }
 
   @Override
@@ -145,6 +134,30 @@ public class DefaultSynchronizer<C> implements Synchronizer {
       }
     } else {
       throw new IllegalStateException("Attempt to start an already started synchronizer.");
+    }
+  }
+
+  @Override
+  public void stop() {
+    cleanupFastSync();
+  }
+
+  private void cleanupFastSync() {
+    if (!fastSyncDownloader.isPresent()) {
+      // We're not fast syncing - nothing to do
+      return;
+    }
+
+    // Make sure downloader is stopped before we start cleaning up its dependencies
+    worldStateDownloader.cancel();
+    try {
+      stateQueue.close();
+      if (stateQueueDirectory.toFile().exists()) {
+        // Clean up this data for now (until fast sync resume functionality is in place)
+        MoreFiles.deleteRecursively(stateQueueDirectory, RecursiveDeleteOption.ALLOW_INSECURE);
+      }
+    } catch (IOException e) {
+      LOG.error("Unable to clean up fast sync state", e);
     }
   }
 
@@ -175,12 +188,7 @@ public class DefaultSynchronizer<C> implements Synchronizer {
           "Fast sync completed successfully with pivot block {}",
           result.getPivotBlockNumber().getAsLong());
     }
-    // Clean up fast sync data
-    try {
-      MoreFiles.deleteRecursively(stateQueueDirectory, RecursiveDeleteOption.ALLOW_INSECURE);
-    } catch (IOException e) {
-      LOG.error("Unable to clean up fast sync state queue", e);
-    }
+    cleanupFastSync();
 
     startFullSync();
   }

@@ -102,6 +102,10 @@ public class WorldStateDownloader {
     return future;
   }
 
+  public void cancel() {
+    // TODO
+  }
+
   private void requestNodeData(final BlockHeader header) {
     if (sendingRequests.compareAndSet(false, true)) {
       while (shouldRequestNodeData()) {
