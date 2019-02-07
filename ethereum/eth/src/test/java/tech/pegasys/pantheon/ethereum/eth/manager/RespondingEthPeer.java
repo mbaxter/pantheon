@@ -205,7 +205,7 @@ public class RespondingEthPeer {
   }
 
   public static Responder wrapResponderWithCollector(
-      Responder responder, List<MessageData> messageCollector) {
+      final Responder responder, final List<MessageData> messageCollector) {
     return (cap, msg) -> {
       messageCollector.add(msg);
       return responder.respond(cap, msg);

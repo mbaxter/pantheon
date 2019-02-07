@@ -451,7 +451,7 @@ public class WorldStateDownloaderTest {
    * @return A list of hash-node pairs
    */
   private Map<Bytes32, BytesValue> collectTrieNodesToBeRequested(
-      WorldStateStorage storage, Bytes32 rootHash, int maxNodes) {
+      final WorldStateStorage storage, final Bytes32 rootHash, final int maxNodes) {
     Map<Bytes32, BytesValue> trieNodes = new HashMap<>();
 
     TrieNodeDecoder decoder = TrieNodeDecoder.create();
