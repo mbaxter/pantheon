@@ -251,8 +251,7 @@ public class WorldStateDownloaderTest {
 
     // Check that known code was not requested
     List<Bytes32> requestedHashes =
-        sentMessages
-            .stream()
+        sentMessages.stream()
             .filter(m -> m.getCode() == EthPV63.GET_NODE_DATA)
             .map(GetNodeDataMessage::readFrom)
             .flatMap(m -> StreamSupport.stream(m.hashes().spliterator(), true))
@@ -330,8 +329,7 @@ public class WorldStateDownloaderTest {
 
     // Check that known trie nodes were requested
     List<Bytes32> requestedHashes =
-        sentMessages
-            .stream()
+        sentMessages.stream()
             .filter(m -> m.getCode() == EthPV63.GET_NODE_DATA)
             .map(GetNodeDataMessage::readFrom)
             .flatMap(m -> StreamSupport.stream(m.hashes().spliterator(), true))
@@ -382,13 +380,11 @@ public class WorldStateDownloaderTest {
                 remoteWorldState.rootHash(),
                 Function.identity(),
                 Function.identity())
-            .entriesFrom(Bytes32.ZERO, 5)
-            .values()
-            .stream()
-            .map(RLP::input)
-            .map(StateTrieAccountValue::readFrom)
-            .map(StateTrieAccountValue::getStorageRoot)
-            .collect(Collectors.toList());
+            .entriesFrom(Bytes32.ZERO, 5).values().stream()
+                .map(RLP::input)
+                .map(StateTrieAccountValue::readFrom)
+                .map(StateTrieAccountValue::getStorageRoot)
+                .collect(Collectors.toList());
     Map<Bytes32, BytesValue> knownTrieNodes = new HashMap<>();
     for (Bytes32 storageRootHash : storageRootHashes) {
       knownTrieNodes.putAll(collectTrieNodesToBeRequested(remoteStorage, storageRootHash, 5));
@@ -424,8 +420,7 @@ public class WorldStateDownloaderTest {
 
     // Check that known trie nodes were requested
     List<Bytes32> requestedHashes =
-        sentMessages
-            .stream()
+        sentMessages.stream()
             .filter(m -> m.getCode() == EthPV63.GET_NODE_DATA)
             .map(GetNodeDataMessage::readFrom)
             .flatMap(m -> StreamSupport.stream(m.hashes().spliterator(), true))
