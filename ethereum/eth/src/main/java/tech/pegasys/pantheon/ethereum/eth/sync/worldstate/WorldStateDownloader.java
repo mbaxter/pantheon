@@ -193,12 +193,18 @@ public class WorldStateDownloader {
                   // Queue child requests
                   request
                       .getChildRequests()
-                      .filter(n -> !worldStateStorage.contains(n.getHash()))
+                      .filter(this::filterChildRequests)
                       .forEach(pendingRequests::enqueue);
                 }
               }
               storageUpdater.commit();
             });
+  }
+
+  private boolean filterChildRequests(final NodeDataRequest request) {
+    // For now, just filter out requests for code that we already know about
+    return !(request.getRequestType() == RequestType.CODE
+        && worldStateStorage.contains(request.getHash()));
   }
 
   private Map<Hash, BytesValue> mapNodeDataByHash(final List<BytesValue> data) {
