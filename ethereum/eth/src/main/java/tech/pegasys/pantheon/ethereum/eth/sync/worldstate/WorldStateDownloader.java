@@ -30,7 +30,6 @@ import tech.pegasys.pantheon.services.queue.BigQueue;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -140,17 +139,14 @@ public class WorldStateDownloader {
           EthPeer peer = maybePeer.get();
 
           // Collect data to be requested
-          List<NodeDataRequest> toRequest = new ArrayList<>();
-          for (int i = 0; i < hashCountPerRequest; i++) {
-            NodeDataRequest pendingRequest = pendingRequests.dequeue();
-            if (pendingRequest == null) {
-              break;
-            }
-            toRequest.add(pendingRequest);
-          }
+          List<NodeDataRequest> toRequest = pendingRequests.peek(hashCountPerRequest);
 
-          // Request and process node data
+          // Track request we'll be dispatching
           outstandingRequests.incrementAndGet();
+          // And then clear requested data from queue
+          pendingRequests.dequeue(toRequest.size());
+
+          // Send request and process response
           sendAndProcessRequests(peer, toRequest, header)
               .whenComplete(
                   (res, error) -> {
