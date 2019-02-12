@@ -15,7 +15,9 @@ package tech.pegasys.pantheon.services.queue;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class BytesQueueAdapter<T> implements BigQueue<T> {
 
@@ -41,6 +43,22 @@ public class BytesQueueAdapter<T> implements BigQueue<T> {
   public T dequeue() {
     BytesValue value = queue.dequeue();
     return value == null ? null : deserializer.apply(value);
+  }
+
+  @Override
+  public List<T> dequeue(final int count) {
+    return queue.dequeue(count).stream().map(deserializer::apply).collect(Collectors.toList());
+  }
+
+  @Override
+  public T peek() {
+    BytesValue value = queue.peek();
+    return value == null ? null : deserializer.apply(value);
+  }
+
+  @Override
+  public List<T> peek(final int count) {
+    return queue.peek(count).stream().map(deserializer::apply).collect(Collectors.toList());
   }
 
   @Override

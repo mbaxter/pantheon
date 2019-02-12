@@ -17,6 +17,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
@@ -49,6 +51,90 @@ abstract class AbstractBigQueueTest<T extends BigQueue<BytesValue>> {
 
       queue.enqueue(three);
       assertThat(queue.dequeue()).isEqualTo(three);
+    }
+  }
+
+  @Test
+  public void dequeueSeveralElements() throws Exception {
+    try (T queue = createQueue()) {
+      BytesValue one = BytesValue.of(1);
+      BytesValue two = BytesValue.of(2);
+      BytesValue three = BytesValue.of(3);
+
+      queue.enqueue(one);
+      queue.enqueue(two);
+      queue.enqueue(three);
+
+      List<BytesValue> elements = queue.dequeue(2);
+      assertThat(elements).isEqualTo(Arrays.asList(one, two));
+
+      elements = queue.dequeue(2);
+      assertThat(elements).isEqualTo(Collections.singletonList(three));
+
+      elements = queue.dequeue(2);
+      assertThat(elements).isEqualTo(Collections.emptyList());
+    }
+  }
+
+  @Test
+  public void peek() throws Exception {
+    try (T queue = createQueue()) {
+      BytesValue one = BytesValue.of(1);
+      BytesValue two = BytesValue.of(2);
+      BytesValue three = BytesValue.of(3);
+
+      queue.enqueue(one);
+      queue.enqueue(two);
+      queue.enqueue(three);
+
+      assertThat(queue.peek()).isEqualTo(one);
+      assertThat(queue.peek()).isEqualTo(one);
+      assertThat(queue.dequeue()).isEqualTo(one);
+
+      assertThat(queue.peek()).isEqualTo(two);
+      assertThat(queue.peek()).isEqualTo(two);
+      assertThat(queue.dequeue()).isEqualTo(two);
+
+      assertThat(queue.peek()).isEqualTo(three);
+      assertThat(queue.peek()).isEqualTo(three);
+      assertThat(queue.dequeue()).isEqualTo(three);
+
+      assertThat(queue.peek()).isNull();
+      assertThat(queue.peek()).isNull();
+      assertThat(queue.dequeue()).isNull();
+    }
+  }
+
+  @Test
+  public void peekMultiple() throws Exception {
+    try (T queue = createQueue()) {
+      BytesValue one = BytesValue.of(1);
+      BytesValue two = BytesValue.of(2);
+      BytesValue three = BytesValue.of(3);
+
+      queue.enqueue(one);
+      queue.enqueue(two);
+      queue.enqueue(three);
+
+      assertThat(queue.peek(0)).isEqualTo(Collections.emptyList());
+      assertThat(queue.peek(1)).isEqualTo(Collections.singletonList(one));
+      assertThat(queue.peek(2)).isEqualTo(Arrays.asList(one, two));
+      assertThat(queue.peek(3)).isEqualTo(Arrays.asList(one, two, three));
+      assertThat(queue.peek(4)).isEqualTo(Arrays.asList(one, two, three));
+      assertThat(queue.dequeue()).isEqualTo(one);
+
+      assertThat(queue.peek(0)).isEqualTo(Collections.emptyList());
+      assertThat(queue.peek(1)).isEqualTo(Collections.singletonList(two));
+      assertThat(queue.peek(2)).isEqualTo(Arrays.asList(two, three));
+      assertThat(queue.peek(3)).isEqualTo(Arrays.asList(two, three));
+      assertThat(queue.peek(4)).isEqualTo(Arrays.asList(two, three));
+
+      assertThat(queue.dequeue()).isEqualTo(two);
+      assertThat(queue.dequeue()).isEqualTo(three);
+
+      assertThat(queue.peek(0)).isEqualTo(Collections.emptyList());
+      assertThat(queue.peek(1)).isEqualTo(Collections.emptyList());
+      assertThat(queue.peek(2)).isEqualTo(Collections.emptyList());
     }
   }
 

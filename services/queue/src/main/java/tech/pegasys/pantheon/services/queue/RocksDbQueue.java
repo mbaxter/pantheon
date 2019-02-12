@@ -19,6 +19,8 @@ import tech.pegasys.pantheon.services.util.RocksDbUtil;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -102,6 +104,54 @@ public class RocksDbQueue implements BytesQueue {
     } catch (RocksDBException e) {
       throw new StorageException(e);
     }
+  }
+
+  @Override
+  public synchronized List<BytesValue> dequeue(final int count) {
+    ArrayList<BytesValue> elements = new ArrayList<>(count);
+    while (elements.size() < count) {
+      BytesValue nextElement = dequeue();
+      if (nextElement == null) {
+        break;
+      }
+      elements.add(nextElement);
+    }
+    return elements;
+  }
+
+  @Override
+  public synchronized BytesValue peek() {
+    if (size() == 0) {
+      return null;
+    }
+    try {
+      byte[] key = Longs.toByteArray(lastDequeuedKey.get() + 1);
+      return BytesValue.of(db.get(key));
+    } catch (RocksDBException e) {
+      throw new StorageException(e);
+    }
+  }
+
+  @Override
+  public synchronized List<BytesValue> peek(final int count) {
+    int listSize = count;
+    final long size = size();
+    if (size < listSize) {
+      listSize = (int) size;
+    }
+
+    List<BytesValue> elements = new ArrayList<>(listSize);
+    for (int i = 0; i < listSize; i++) {
+      byte[] nextKey = Longs.toByteArray(lastDequeuedKey.get() + i + 1);
+      try {
+        BytesValue nextEl = BytesValue.of(db.get(nextKey));
+        elements.add(nextEl);
+      } catch (RocksDBException e) {
+        throw new StorageException(e);
+      }
+    }
+
+    return elements;
   }
 
   @Override

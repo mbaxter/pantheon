@@ -12,29 +12,59 @@
  */
 package tech.pegasys.pantheon.services.queue;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.ArrayList;
+import java.util.List;
 
 public class InMemoryBigQueue<T> implements BigQueue<T> {
-  private final Queue<T> internalQueue = new ConcurrentLinkedQueue<>();
+  private final List<T> internalQueue = new ArrayList<>();
 
   @Override
-  public void enqueue(final T value) {
+  public synchronized void enqueue(final T value) {
     internalQueue.add(value);
   }
 
   @Override
-  public T dequeue() {
-    return internalQueue.poll();
+  public synchronized T dequeue() {
+    if (internalQueue.size() == 0) {
+      return null;
+    }
+    return internalQueue.remove(0);
   }
 
   @Override
-  public long size() {
+  public synchronized List<T> dequeue(final int count) {
+    ArrayList<T> elements = new ArrayList<>(count);
+    while (elements.size() < count) {
+      T nextElement = dequeue();
+      if (nextElement == null) {
+        break;
+      }
+      elements.add(nextElement);
+    }
+    return elements;
+  }
+
+  @Override
+  public synchronized T peek() {
+    if (internalQueue.size() == 0) {
+      return null;
+    }
+    return internalQueue.get(0);
+  }
+
+  @Override
+  public synchronized List<T> peek(final int count) {
+    int listSize = Math.min(count, internalQueue.size());
+    return new ArrayList<>(internalQueue.subList(0, listSize));
+  }
+
+  @Override
+  public synchronized long size() {
     return internalQueue.size();
   }
 
   @Override
-  public void close() {
+  public synchronized void close() {
     internalQueue.clear();
   }
 }

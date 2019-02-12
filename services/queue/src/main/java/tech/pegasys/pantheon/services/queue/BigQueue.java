@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.services.queue;
 
 import java.io.Closeable;
+import java.util.List;
 
 /**
  * Represents a very large thread-safe queue that may exceed memory limits.
@@ -21,12 +22,51 @@ import java.io.Closeable;
  */
 public interface BigQueue<T> extends Closeable {
 
-  void enqueue(T value);
+  /**
+   * Enqueues an element.
+   *
+   * @param value The element to add to the queue.
+   */
+  void enqueue(final T value);
 
+  /**
+   * Dequeue the next element.
+   *
+   * @return The next element or null if the queue is empty.
+   */
   T dequeue();
 
+  /**
+   * Dequeue {@code count} elements.
+   *
+   * @param count The number of elements to dequeue.
+   * @return A list of at most {@code count} elements, with the element at index 0 corresponding to
+   *     the first dequeue operation.
+   */
+  List<T> dequeue(final int count);
+
+  /**
+   * Peek at the next element in the queue. Returns the next element (or null if the queue is
+   * empty), but does not remove the element from the queue.
+   *
+   * @return The next element or null if the queue is empty.
+   */
+  T peek();
+
+  /**
+   * Peek at the next {@code count} elements. Will return a list containing up to {@code count}
+   * elements, but does not remove these elements from the queue.
+   *
+   * @param count The number of elements to return.
+   * @return A list of at most {@code count} elements, with the element at index 0 corresponding to
+   *     the next element that would be returned from a {@code dequeue} operation.
+   */
+  List<T> peek(final int count);
+
+  /** @return The number of elements in the queue. */
   long size();
 
+  /** @return True if the queue is empty. */
   default boolean isEmpty() {
     return size() == 0;
   }
