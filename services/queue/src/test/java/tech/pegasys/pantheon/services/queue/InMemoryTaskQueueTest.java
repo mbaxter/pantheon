@@ -14,7 +14,7 @@ package tech.pegasys.pantheon.services.queue;
 
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
-public class InMemoryBigQueueTest extends AbstractBigQueueTest<InMemoryTaskQueue<BytesValue>> {
+public class InMemoryTaskQueueTest extends AbstractTaskQueueTest<InMemoryTaskQueue<BytesValue>> {
 
   @Override
   protected InMemoryTaskQueue<BytesValue> createQueue() throws Exception {

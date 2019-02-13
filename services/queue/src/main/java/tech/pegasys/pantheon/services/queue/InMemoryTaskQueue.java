@@ -56,7 +56,7 @@ public class InMemoryTaskQueue<T> implements TaskQueue<T> {
     internalQueue.clear();
   }
 
-  private synchronized void handleFailedTask(InMemoryTask<T> task) {
+  private synchronized void handleFailedTask(final InMemoryTask<T> task) {
     enqueue(task.getData());
     markTaskCompleted();
   }
@@ -70,7 +70,7 @@ public class InMemoryTaskQueue<T> implements TaskQueue<T> {
     private final InMemoryTaskQueue<T> queue;
     private final AtomicBoolean completed = new AtomicBoolean(false);
 
-    public InMemoryTask(InMemoryTaskQueue<T> queue, T data) {
+    public InMemoryTask(final InMemoryTaskQueue<T> queue, final T data) {
       this.queue = queue;
       this.data = data;
     }

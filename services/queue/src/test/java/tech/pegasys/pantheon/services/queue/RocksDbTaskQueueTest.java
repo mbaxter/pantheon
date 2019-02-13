@@ -19,7 +19,7 @@ import java.io.IOException;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
-public class RocksDbQueueTest extends AbstractBigQueueTest<RocksDbQueue> {
+public class RocksDbTaskQueueTest extends AbstractTaskQueueTest<RocksDbQueue> {
 
   @Rule public final TemporaryFolder folder = new TemporaryFolder();
 

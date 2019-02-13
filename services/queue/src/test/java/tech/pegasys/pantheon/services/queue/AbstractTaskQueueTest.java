@@ -25,7 +25,7 @@ import java.util.function.Function;
 
 import org.junit.Test;
 
-abstract class AbstractBigQueueTest<T extends TaskQueue<BytesValue>> {
+abstract class AbstractTaskQueueTest<T extends TaskQueue<BytesValue>> {
 
   protected abstract T createQueue() throws Exception;
 

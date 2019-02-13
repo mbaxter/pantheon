@@ -27,6 +27,7 @@ import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.OperationTimer;
 import tech.pegasys.pantheon.services.queue.TaskQueue;
+import tech.pegasys.pantheon.services.queue.TaskQueue.Task;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.time.Duration;
@@ -140,9 +141,9 @@ public class WorldStateDownloader {
           EthPeer peer = maybePeer.get();
 
           // Collect data to be requested
-          List<NodeDataRequest> toRequest = new ArrayList<>();
+          List<Task<NodeDataRequest>> toRequest = new ArrayList<>();
           for (int i = 0; i < hashCountPerRequest; i++) {
-            NodeDataRequest pendingRequest = pendingRequests.dequeue();
+            Task<NodeDataRequest> pendingRequest = pendingRequests.dequeue();
             if (pendingRequest == null) {
               break;
             }
@@ -154,7 +155,8 @@ public class WorldStateDownloader {
           sendAndProcessRequests(peer, toRequest, header)
               .whenComplete(
                   (res, error) -> {
-                    if (outstandingRequests.decrementAndGet() == 0 && pendingRequests.isEmpty()) {
+                    if (outstandingRequests.decrementAndGet() == 0
+                        && pendingRequests.allTasksCompleted()) {
                       // We're done
                       final Updater updater = worldStateStorage.updater();
                       updater.putAccountStateTrieNode(header.getStateRoot(), rootNode);
@@ -194,9 +196,15 @@ public class WorldStateDownloader {
   }
 
   private CompletableFuture<?> sendAndProcessRequests(
-      final EthPeer peer, final List<NodeDataRequest> requests, final BlockHeader blockHeader) {
+      final EthPeer peer,
+      final List<Task<NodeDataRequest>> requestTasks,
+      final BlockHeader blockHeader) {
     List<Hash> hashes =
-        requests.stream().map(NodeDataRequest::getHash).distinct().collect(Collectors.toList());
+        requestTasks.stream()
+            .map(Task::getData)
+            .map(NodeDataRequest::getHash)
+            .distinct()
+            .collect(Collectors.toList());
     return GetNodeDataFromPeerTask.forHashes(ethContext, hashes, ethTasksTimer)
         .assignPeer(peer)
         .run()
@@ -206,11 +214,12 @@ public class WorldStateDownloader {
             (data, err) -> {
               boolean requestFailed = err != null;
               Updater storageUpdater = worldStateStorage.updater();
-              for (NodeDataRequest request : requests) {
+              for (Task<NodeDataRequest> task : requestTasks) {
+                NodeDataRequest request = task.getData();
                 BytesValue matchingData = requestFailed ? null : data.get(request.getHash());
                 if (matchingData == null) {
                   retriedRequestsTotal.inc();
-                  pendingRequests.enqueue(request);
+                  task.markFailed();
                 } else {
                   completedRequestsCounter.inc();
                   // Persist request data
@@ -221,11 +230,12 @@ public class WorldStateDownloader {
                     request.persist(storageUpdater);
                   }
 
-                  // Queue child requests
+                  // Queue child requestTasks
                   request
                       .getChildRequests()
                       .filter(this::filterChildRequests)
                       .forEach(pendingRequests::enqueue);
+                  task.markCompleted();
                 }
               }
               storageUpdater.commit();

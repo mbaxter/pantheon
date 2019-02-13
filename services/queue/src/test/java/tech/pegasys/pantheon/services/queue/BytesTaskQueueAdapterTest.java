@@ -20,7 +20,7 @@ import java.util.function.Function;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
-public class BytesQueueAdapterTest extends AbstractBigQueueTest<TaskQueue<BytesValue>> {
+public class BytesTaskQueueAdapterTest extends AbstractTaskQueueTest<TaskQueue<BytesValue>> {
 
   @Rule public final TemporaryFolder folder = new TemporaryFolder();
 

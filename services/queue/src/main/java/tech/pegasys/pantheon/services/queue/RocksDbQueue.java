@@ -42,7 +42,7 @@ public class RocksDbQueue implements BytesTaskQueue {
   private final AtomicLong lastEnqueuedKey = new AtomicLong(0);
   private final AtomicLong lastDequeuedKey = new AtomicLong(0);
   private final AtomicLong lastDeletedKey = new AtomicLong(0);
-  private final Set<RocksDBTask> outstandingTasks = new HashSet<>();
+  private final Set<RocksDbTask> outstandingTasks = new HashSet<>();
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -104,7 +104,7 @@ public class RocksDbQueue implements BytesTaskQueue {
       }
 
       BytesValue data = BytesValue.of(value);
-      RocksDBTask task = new RocksDBTask(this, data, key);
+      RocksDbTask task = new RocksDbTask(this, data, key);
       outstandingTasks.add(task);
       return task;
     } catch (RocksDBException e) {
@@ -129,8 +129,8 @@ public class RocksDbQueue implements BytesTaskQueue {
   }
 
   private synchronized void deleteCompletedTasks() {
-    RocksDBTask oldestOutstandingTask =
-        outstandingTasks.stream().min(Comparator.comparingLong(RocksDBTask::getKey)).orElse(null);
+    RocksDbTask oldestOutstandingTask =
+        outstandingTasks.stream().min(Comparator.comparingLong(RocksDbTask::getKey)).orElse(null);
     if (oldestOutstandingTask == null) {
       return;
     }
@@ -164,12 +164,12 @@ public class RocksDbQueue implements BytesTaskQueue {
     }
   }
 
-  private synchronized void markTaskCompleted(RocksDBTask task) {
+  private synchronized void markTaskCompleted(final RocksDbTask task) {
     outstandingTasks.remove(task);
     deleteCompletedTasks();
   }
 
-  private synchronized void handleFailedTask(RocksDBTask task) {
+  private synchronized void handleFailedTask(final RocksDbTask task) {
     enqueue(task.getData());
     markTaskCompleted(task);
   }
@@ -180,13 +180,13 @@ public class RocksDbQueue implements BytesTaskQueue {
     }
   }
 
-  private static class RocksDBTask implements Task<BytesValue> {
+  private static class RocksDbTask implements Task<BytesValue> {
     private final AtomicBoolean completed = new AtomicBoolean(false);
     private final RocksDbQueue parentQueue;
     private final BytesValue data;
     private final long key;
 
-    private RocksDBTask(RocksDbQueue parentQueue, BytesValue data, long key) {
+    private RocksDbTask(final RocksDbQueue parentQueue, final BytesValue data, final long key) {
       this.parentQueue = parentQueue;
       this.data = data;
       this.key = key;

@@ -72,7 +72,7 @@ public class BytesTaskQueueAdapter<T> implements TaskQueue<T> {
     private final Task<BytesValue> wrappedTask;
     private final T data;
 
-    public AdapterTask(Task<BytesValue> wrappedTask, T data) {
+    public AdapterTask(final Task<BytesValue> wrappedTask, final T data) {
       this.wrappedTask = wrappedTask;
       this.data = data;
     }
