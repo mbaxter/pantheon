@@ -36,27 +36,22 @@ public interface TaskQueue<T> extends Closeable {
    */
   Task<T> dequeue();
 
-  /** @return The number of tasks queued for processing. */
-  long queuedTasksCount();
+  /** @return The number of tasks in the queue. */
+  long size();
 
-  /** @return The number of tasks that have been dequeued, but not yet marked as completed. */
-  long pendingTasksCount();
+  /** @return True if all tasks have been dequeued. */
+  boolean isEmpty();
 
-  /** @return The total number of tasks queued or pending completion. */
-  default long size() {
-    return queuedTasksCount() + pendingTasksCount();
-  }
-
-  /** @return True if all tasks have been processed. */
-  default boolean isEmpty() {
-    return size() == 0;
-  }
+  /** @return True if all tasks have been dequeued and processed. */
+  boolean allTasksCompleted();
 
   interface Task<T> {
     T getData();
 
+    /** Mark this task as completed. */
     void markCompleted();
 
-    void requeue();
+    /** Mark this task as failed and requeue. */
+    void markFailed();
   }
 }

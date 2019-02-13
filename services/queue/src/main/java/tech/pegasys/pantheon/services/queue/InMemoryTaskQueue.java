@@ -37,18 +37,18 @@ public class InMemoryTaskQueue<T> implements TaskQueue<T> {
   }
 
   @Override
-  public synchronized long queuedTasksCount() {
+  public synchronized long size() {
     return internalQueue.size();
   }
 
   @Override
-  public synchronized long pendingTasksCount() {
-    return unfinishedOutstandingTasks.get();
+  public synchronized boolean isEmpty() {
+    return size() == 0;
   }
 
   @Override
-  public synchronized long size() {
-    return TaskQueue.super.size();
+  public boolean allTasksCompleted() {
+    return isEmpty() && unfinishedOutstandingTasks.get() == 0;
   }
 
   @Override
@@ -56,8 +56,12 @@ public class InMemoryTaskQueue<T> implements TaskQueue<T> {
     internalQueue.clear();
   }
 
-  private synchronized void requeueTask(InMemoryTask<T> task) {
+  private synchronized void handleFailedTask(InMemoryTask<T> task) {
     enqueue(task.getData());
+    markTaskCompleted();
+  }
+
+  private synchronized void markTaskCompleted() {
     unfinishedOutstandingTasks.decrementAndGet();
   }
 
@@ -79,14 +83,14 @@ public class InMemoryTaskQueue<T> implements TaskQueue<T> {
     @Override
     public void markCompleted() {
       if (completed.compareAndSet(false, true)) {
-        queue.unfinishedOutstandingTasks.decrementAndGet();
+        queue.markTaskCompleted();
       }
     }
 
     @Override
-    public void requeue() {
+    public void markFailed() {
       if (completed.compareAndSet(false, true)) {
-        queue.requeueTask(this);
+        queue.handleFailedTask(this);
       }
     }
   }

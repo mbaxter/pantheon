@@ -54,37 +54,62 @@ abstract class AbstractBigQueueTest<T extends TaskQueue<BytesValue>> {
   }
 
   @Test
-  public void isEmptyWhenAllTasksCompleted() throws Exception {
+  public void markTaskFailed() throws Exception {
     try (T queue = createQueue()) {
-      BytesValue one = BytesValue.of(1);
-      BytesValue two = BytesValue.of(2);
-      BytesValue three = BytesValue.of(3);
+      BytesValue value = BytesValue.of(1);
 
       assertThat(queue.isEmpty()).isTrue();
+      assertThat(queue.allTasksCompleted()).isTrue();
 
-      queue.enqueue(one);
-      assertThat(queue.isEmpty()).isFalse();
-      queue.enqueue(two);
-      assertThat(queue.isEmpty()).isFalse();
-      queue.enqueue(three);
-      assertThat(queue.isEmpty()).isFalse();
-
-      final Task<BytesValue> taskOne = queue.dequeue();
-      final Task<BytesValue> taskTwo = queue.dequeue();
-      final Task<BytesValue> taskThree = queue.dequeue();
+      queue.enqueue(value);
 
       assertThat(queue.isEmpty()).isFalse();
+      assertThat(queue.allTasksCompleted()).isFalse();
 
-      taskOne.markCompleted();
-      taskTwo.requeue();
-      taskThree.markCompleted();
-      assertThat(queue.isEmpty()).isFalse();
-
-      final Task<BytesValue> requeued = queue.dequeue();
-      assertThat(requeued).isNotNull();
-      assertThat(requeued.getData()).isEqualTo(two);
-      requeued.markCompleted();
+      Task<BytesValue> task = queue.dequeue();
+      assertThat(task).isNotNull();
+      assertThat(task.getData()).isEqualTo(value);
       assertThat(queue.isEmpty()).isTrue();
+      assertThat(queue.allTasksCompleted()).isFalse();
+
+      task.markFailed();
+      assertThat(queue.isEmpty()).isFalse();
+      assertThat(queue.allTasksCompleted()).isFalse();
+
+      // Subsequent mark completed should do nothing
+      task.markCompleted();
+      assertThat(queue.isEmpty()).isFalse();
+      assertThat(queue.allTasksCompleted()).isFalse();
+    }
+  }
+
+  @Test
+  public void markTaskCompleted() throws Exception {
+    try (T queue = createQueue()) {
+      BytesValue value = BytesValue.of(1);
+
+      assertThat(queue.isEmpty()).isTrue();
+      assertThat(queue.allTasksCompleted()).isTrue();
+
+      queue.enqueue(value);
+
+      assertThat(queue.isEmpty()).isFalse();
+      assertThat(queue.allTasksCompleted()).isFalse();
+
+      Task<BytesValue> task = queue.dequeue();
+      assertThat(task).isNotNull();
+      assertThat(task.getData()).isEqualTo(value);
+      assertThat(queue.isEmpty()).isTrue();
+      assertThat(queue.allTasksCompleted()).isFalse();
+
+      task.markCompleted();
+      assertThat(queue.isEmpty()).isTrue();
+      assertThat(queue.allTasksCompleted()).isTrue();
+
+      // Subsequent mark failed should do nothing
+      task.markFailed();
+      assertThat(queue.isEmpty()).isTrue();
+      assertThat(queue.allTasksCompleted()).isTrue();
     }
   }
 

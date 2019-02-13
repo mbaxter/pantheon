@@ -49,18 +49,18 @@ public class BytesTaskQueueAdapter<T> implements TaskQueue<T> {
   }
 
   @Override
-  public long queuedTasksCount() {
-    return queue.queuedTasksCount();
-  }
-
-  @Override
-  public long pendingTasksCount() {
-    return queue.pendingTasksCount();
-  }
-
-  @Override
   public long size() {
     return queue.size();
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return queue.isEmpty();
+  }
+
+  @Override
+  public boolean allTasksCompleted() {
+    return queue.allTasksCompleted();
   }
 
   @Override
@@ -88,8 +88,8 @@ public class BytesTaskQueueAdapter<T> implements TaskQueue<T> {
     }
 
     @Override
-    public void requeue() {
-      wrappedTask.requeue();
+    public void markFailed() {
+      wrappedTask.markFailed();
     }
   }
 }

@@ -93,7 +93,7 @@ public class RocksDbQueue implements BytesTaskQueue {
   @Override
   public synchronized Task<BytesValue> dequeue() {
     assertNotClosed();
-    if (queuedTasksCount() == 0) {
+    if (isEmpty()) {
       return null;
     }
     try (final OperationTimer.TimingContext ignored = dequeueLatency.startTimer()) {
@@ -113,15 +113,19 @@ public class RocksDbQueue implements BytesTaskQueue {
   }
 
   @Override
-  public synchronized long queuedTasksCount() {
+  public synchronized long size() {
     assertNotClosed();
     return lastEnqueuedKey.get() - lastDequeuedKey.get();
   }
 
   @Override
-  public synchronized long pendingTasksCount() {
-    assertNotClosed();
-    return outstandingTasks.size();
+  public synchronized boolean isEmpty() {
+    return size() == 0;
+  }
+
+  @Override
+  public synchronized boolean allTasksCompleted() {
+    return isEmpty() && outstandingTasks.isEmpty();
   }
 
   private synchronized void deleteCompletedTasks() {
@@ -146,12 +150,6 @@ public class RocksDbQueue implements BytesTaskQueue {
   }
 
   @Override
-  public synchronized long size() {
-    assertNotClosed();
-    return BytesTaskQueue.super.size();
-  }
-
-  @Override
   public void close() {
     if (closed.compareAndSet(false, true)) {
       options.close();
@@ -171,10 +169,9 @@ public class RocksDbQueue implements BytesTaskQueue {
     deleteCompletedTasks();
   }
 
-  private synchronized void requeueTask(RocksDBTask task) {
-    outstandingTasks.remove(task);
-    deleteCompletedTasks();
+  private synchronized void handleFailedTask(RocksDBTask task) {
     enqueue(task.getData());
+    markTaskCompleted(task);
   }
 
   public static class StorageException extends RuntimeException {
@@ -212,9 +209,9 @@ public class RocksDbQueue implements BytesTaskQueue {
     }
 
     @Override
-    public void requeue() {
+    public void markFailed() {
       if (completed.compareAndSet(false, true)) {
-        parentQueue.requeueTask(this);
+        parentQueue.handleFailedTask(this);
       }
     }
   }
