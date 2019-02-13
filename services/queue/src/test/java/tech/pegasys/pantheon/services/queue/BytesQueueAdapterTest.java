@@ -20,13 +20,14 @@ import java.util.function.Function;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
-public class BytesQueueAdapterTest extends AbstractBigQueueTest<BigQueue<BytesValue>> {
+public class BytesQueueAdapterTest extends AbstractBigQueueTest<TaskQueue<BytesValue>> {
 
   @Rule public final TemporaryFolder folder = new TemporaryFolder();
 
   @Override
-  protected BigQueue<BytesValue> createQueue() throws Exception {
-    BytesQueue queue = RocksDbQueue.create(folder.newFolder().toPath(), new NoOpMetricsSystem());
-    return new BytesQueueAdapter<>(queue, Function.identity(), Function.identity());
+  protected TaskQueue<BytesValue> createQueue() throws Exception {
+    BytesTaskQueue queue =
+        RocksDbQueue.create(folder.newFolder().toPath(), new NoOpMetricsSystem());
+    return new BytesTaskQueueAdapter<>(queue, Function.identity(), Function.identity());
   }
 }

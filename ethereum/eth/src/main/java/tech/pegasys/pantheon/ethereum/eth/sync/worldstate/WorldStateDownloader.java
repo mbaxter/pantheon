@@ -26,7 +26,7 @@ import tech.pegasys.pantheon.metrics.LabelledMetric;
 import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.OperationTimer;
-import tech.pegasys.pantheon.services.queue.BigQueue;
+import tech.pegasys.pantheon.services.queue.TaskQueue;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.time.Duration;
@@ -55,7 +55,7 @@ public class WorldStateDownloader {
   }
 
   private final EthContext ethContext;
-  private final BigQueue<NodeDataRequest> pendingRequests;
+  private final TaskQueue<NodeDataRequest> pendingRequests;
   private final int hashCountPerRequest;
   private final int maxOutstandingRequests;
   private final AtomicInteger outstandingRequests = new AtomicInteger(0);
@@ -69,7 +69,7 @@ public class WorldStateDownloader {
   public WorldStateDownloader(
       final EthContext ethContext,
       final WorldStateStorage worldStateStorage,
-      final BigQueue<NodeDataRequest> pendingRequests,
+      final TaskQueue<NodeDataRequest> pendingRequests,
       final int hashCountPerRequest,
       final int maxOutstandingRequests,
       final LabelledMetric<OperationTimer> ethTasksTimer,
