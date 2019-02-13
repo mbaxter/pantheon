@@ -16,18 +16,22 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import sun.plugin.dom.exception.InvalidStateException;
 
 public class InMemoryTaskQueue<T> implements TaskQueue<T> {
   private final Queue<T> internalQueue = new ArrayDeque<>();
   private final AtomicInteger unfinishedOutstandingTasks = new AtomicInteger(0);
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   @Override
   public synchronized void enqueue(final T taskData) {
+    assertNotClosed();
     internalQueue.add(taskData);
   }
 
   @Override
   public synchronized Task<T> dequeue() {
+    assertNotClosed();
     T data = internalQueue.poll();
     if (data == null) {
       return null;
@@ -38,22 +42,33 @@ public class InMemoryTaskQueue<T> implements TaskQueue<T> {
 
   @Override
   public synchronized long size() {
+    assertNotClosed();
     return internalQueue.size();
   }
 
   @Override
   public synchronized boolean isEmpty() {
+    assertNotClosed();
     return size() == 0;
   }
 
   @Override
   public boolean allTasksCompleted() {
+    assertNotClosed();
     return isEmpty() && unfinishedOutstandingTasks.get() == 0;
   }
 
   @Override
   public synchronized void close() {
+    closed.set(true);
     internalQueue.clear();
+  }
+
+  private void assertNotClosed() {
+    if (closed.get()) {
+      throw new IllegalStateException(
+        "Attempt to access closed " + RocksDbQueue.class.getSimpleName());
+    }
   }
 
   private synchronized void handleFailedTask(final InMemoryTask<T> task) {
