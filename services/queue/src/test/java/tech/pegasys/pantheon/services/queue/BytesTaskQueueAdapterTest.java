@@ -27,7 +27,7 @@ public class BytesTaskQueueAdapterTest extends AbstractTaskQueueTest<TaskQueue<B
   @Override
   protected TaskQueue<BytesValue> createQueue() throws Exception {
     BytesTaskQueue queue =
-        RocksDbQueue.create(folder.newFolder().toPath(), new NoOpMetricsSystem());
+        RocksDbTaskQueue.create(folder.newFolder().toPath(), new NoOpMetricsSystem());
     return new BytesTaskQueueAdapter<>(queue, Function.identity(), Function.identity());
   }
 }

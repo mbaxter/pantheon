@@ -30,7 +30,7 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.OperationTimer;
 import tech.pegasys.pantheon.services.queue.BytesTaskQueue;
 import tech.pegasys.pantheon.services.queue.BytesTaskQueueAdapter;
-import tech.pegasys.pantheon.services.queue.RocksDbQueue;
+import tech.pegasys.pantheon.services.queue.RocksDbTaskQueue;
 import tech.pegasys.pantheon.services.queue.TaskQueue;
 
 import java.io.File;
@@ -157,7 +157,7 @@ class FastSynchronizer<C> {
 
   private static TaskQueue<NodeDataRequest> createWorldStateDownloaderQueue(
       final Path dataDirectory, final MetricsSystem metricsSystem) {
-    final BytesTaskQueue bytesQueue = RocksDbQueue.create(dataDirectory, metricsSystem);
+    final BytesTaskQueue bytesQueue = RocksDbTaskQueue.create(dataDirectory, metricsSystem);
     return new BytesTaskQueueAdapter<>(
         bytesQueue, NodeDataRequest::serialize, NodeDataRequest::deserialize);
   }

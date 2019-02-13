@@ -19,12 +19,12 @@ import java.io.IOException;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
-public class RocksDbTaskQueueTest extends AbstractTaskQueueTest<RocksDbQueue> {
+public class RocksDbTaskQueueTest extends AbstractTaskQueueTest<RocksDbTaskQueue> {
 
   @Rule public final TemporaryFolder folder = new TemporaryFolder();
 
   @Override
-  protected RocksDbQueue createQueue() throws IOException {
-    return RocksDbQueue.create(folder.newFolder().toPath(), new NoOpMetricsSystem());
+  protected RocksDbTaskQueue createQueue() throws IOException {
+    return RocksDbTaskQueue.create(folder.newFolder().toPath(), new NoOpMetricsSystem());
   }
 }

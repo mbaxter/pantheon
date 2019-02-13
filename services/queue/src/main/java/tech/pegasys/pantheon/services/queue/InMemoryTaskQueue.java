@@ -16,7 +16,6 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import sun.plugin.dom.exception.InvalidStateException;
 
 public class InMemoryTaskQueue<T> implements TaskQueue<T> {
   private final Queue<T> internalQueue = new ArrayDeque<>();
@@ -66,8 +65,7 @@ public class InMemoryTaskQueue<T> implements TaskQueue<T> {
 
   private void assertNotClosed() {
     if (closed.get()) {
-      throw new IllegalStateException(
-        "Attempt to access closed " + RocksDbQueue.class.getSimpleName());
+      throw new IllegalStateException("Attempt to access closed " + getClass().getSimpleName());
     }
   }
 

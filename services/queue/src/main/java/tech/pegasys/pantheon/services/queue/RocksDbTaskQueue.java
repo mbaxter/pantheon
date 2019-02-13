@@ -32,7 +32,7 @@ import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
-public class RocksDbQueue implements BytesTaskQueue {
+public class RocksDbTaskQueue implements BytesTaskQueue {
 
   private static final Logger LOG = LogManager.getLogger();
 
@@ -41,7 +41,7 @@ public class RocksDbQueue implements BytesTaskQueue {
 
   private final AtomicLong lastEnqueuedKey = new AtomicLong(0);
   private final AtomicLong lastDequeuedKey = new AtomicLong(0);
-  private final AtomicLong lastDeletedKey = new AtomicLong(0);
+  private final AtomicLong oldestKey = new AtomicLong(0);
   private final Set<RocksDbTask> outstandingTasks = new HashSet<>();
 
   private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -49,7 +49,7 @@ public class RocksDbQueue implements BytesTaskQueue {
   private final OperationTimer enqueueLatency;
   private final OperationTimer dequeueLatency;
 
-  private RocksDbQueue(final Path storageDirectory, final MetricsSystem metricsSystem) {
+  private RocksDbTaskQueue(final Path storageDirectory, final MetricsSystem metricsSystem) {
     try {
       RocksDbUtil.loadNativeLibrary();
       options =
@@ -74,9 +74,9 @@ public class RocksDbQueue implements BytesTaskQueue {
     }
   }
 
-  public static RocksDbQueue create(
+  public static RocksDbTaskQueue create(
       final Path storageDirectory, final MetricsSystem metricsSystem) {
-    return new RocksDbQueue(storageDirectory, metricsSystem);
+    return new RocksDbTaskQueue(storageDirectory, metricsSystem);
   }
 
   @Override
@@ -129,20 +129,19 @@ public class RocksDbQueue implements BytesTaskQueue {
   }
 
   private synchronized void deleteCompletedTasks() {
-    RocksDbTask oldestOutstandingTask =
-        outstandingTasks.stream().min(Comparator.comparingLong(RocksDbTask::getKey)).orElse(null);
-    if (oldestOutstandingTask == null) {
-      return;
-    }
+    long oldestOutstandingKey =
+        outstandingTasks.stream()
+            .min(Comparator.comparingLong(RocksDbTask::getKey))
+            .map(RocksDbTask::getKey)
+            .orElse(lastDequeuedKey.get() + 1);
 
-    long oldestKey = oldestOutstandingTask.getKey();
-    if (lastDeletedKey.get() < oldestKey) {
-      // Delete all contiguous completed tasks
-      byte[] fromKey = Longs.toByteArray(lastDeletedKey.get());
-      byte[] toKey = Longs.toByteArray(oldestKey);
+    if (oldestKey.get() < oldestOutstandingKey) {
+      // Delete all contiguous completed task keys
+      byte[] fromKey = Longs.toByteArray(oldestKey.get());
+      byte[] toKey = Longs.toByteArray(oldestOutstandingKey);
       try {
         db.deleteRange(fromKey, toKey);
-        lastDeletedKey.set(oldestKey);
+        oldestKey.set(oldestOutstandingKey);
       } catch (RocksDBException e) {
         throw new StorageException(e);
       }
@@ -159,8 +158,7 @@ public class RocksDbQueue implements BytesTaskQueue {
 
   private void assertNotClosed() {
     if (closed.get()) {
-      throw new IllegalStateException(
-          "Attempt to access closed " + RocksDbQueue.class.getSimpleName());
+      throw new IllegalStateException("Attempt to access closed " + getClass().getSimpleName());
     }
   }
 
@@ -182,11 +180,11 @@ public class RocksDbQueue implements BytesTaskQueue {
 
   private static class RocksDbTask implements Task<BytesValue> {
     private final AtomicBoolean completed = new AtomicBoolean(false);
-    private final RocksDbQueue parentQueue;
+    private final RocksDbTaskQueue parentQueue;
     private final BytesValue data;
     private final long key;
 
-    private RocksDbTask(final RocksDbQueue parentQueue, final BytesValue data, final long key) {
+    private RocksDbTask(final RocksDbTaskQueue parentQueue, final BytesValue data, final long key) {
       this.parentQueue = parentQueue;
       this.data = data;
       this.key = key;
