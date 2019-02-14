@@ -56,7 +56,8 @@ public class WorldStateDownloader {
   private enum Status {
     IDLE,
     RUNNING,
-    DONE
+    CANCELLED,
+    COMPLETED
   }
 
   private final EthContext ethContext;
@@ -110,27 +111,27 @@ public class WorldStateDownloader {
         header.getNumber(),
         header.getHash());
     synchronized (this) {
-      if (status == Status.DONE || status == Status.RUNNING) {
+      if (status != Status.IDLE) {
         return future;
       }
       status = Status.RUNNING;
-      future = new CompletableFuture<>();
+      future = createFuture();
+
+      Hash stateRoot = header.getStateRoot();
+      if (worldStateStorage.isWorldStateAvailable(stateRoot)) {
+        // If we're requesting data for an existing world state, we're already done
+        markDone();
+      } else {
+        pendingRequests.enqueue(NodeDataRequest.createAccountDataRequest(stateRoot));
+      }
     }
 
-    Hash stateRoot = header.getStateRoot();
-    if (worldStateStorage.isWorldStateAvailable(stateRoot)) {
-      // If we're requesting data for an existing world state, we're already done
-      markDone();
-    } else {
-      pendingRequests.enqueue(NodeDataRequest.createAccountDataRequest(stateRoot));
-      requestNodeData(header);
-    }
-
+    requestNodeData(header);
     return future;
   }
 
   public void cancel() {
-    // TODO
+    getFuture().cancel(true);
   }
 
   private void requestNodeData(final BlockHeader header) {
@@ -169,9 +170,12 @@ public class WorldStateDownloader {
               .whenComplete(
                   (task, error) -> {
                     boolean done;
-                    synchronized (outstandingRequests) {
+                    synchronized (this) {
                       outstandingRequests.remove(task);
-                      done = outstandingRequests.size() == 0 && pendingRequests.allTasksCompleted();
+                      done =
+                          status == Status.RUNNING
+                              && outstandingRequests.size() == 0
+                              && pendingRequests.allTasksCompleted();
                     }
                     if (done) {
                       // We're done
@@ -188,16 +192,6 @@ public class WorldStateDownloader {
       }
       sendingRequests.set(false);
     }
-  }
-
-  private synchronized void markDone() {
-    LOG.info("Finished downloading world state from peers");
-    if (future == null) {
-      future = CompletableFuture.completedFuture(null);
-    } else {
-      future.complete(null);
-    }
-    status = Status.DONE;
   }
 
   private boolean shouldRequestNodeData() {
@@ -258,8 +252,46 @@ public class WorldStateDownloader {
             });
   }
 
-  private void queueChildRequests(final NodeDataRequest request) {
-    request.getChildRequests().forEach(pendingRequests::enqueue);
+  private synchronized void queueChildRequests(final NodeDataRequest request) {
+    if (status == Status.RUNNING) {
+      request.getChildRequests().forEach(pendingRequests::enqueue);
+    }
+  }
+
+  private synchronized CompletableFuture<Void> getFuture() {
+    if (future == null) {
+      future = createFuture();
+    }
+    return future;
+  }
+
+  private CompletableFuture<Void> createFuture() {
+    CompletableFuture<Void> future = new CompletableFuture<>();
+    future.whenComplete(
+        (res, err) -> {
+          // Handle cancellations
+          if (future.isCancelled()) {
+            handleCancellation();
+          }
+        });
+    return future;
+  }
+
+  private synchronized void handleCancellation() {
+    LOG.info("World state download cancelled");
+    status = Status.CANCELLED;
+    pendingRequests.clear();
+    for (EthTask<?> outstandingRequest : outstandingRequests) {
+      outstandingRequest.cancel();
+    }
+  }
+
+  private synchronized void markDone() {
+    final boolean completed = getFuture().complete(null);
+    if (completed) {
+      LOG.info("Finished downloading world state from peers");
+      status = Status.COMPLETED;
+    }
   }
 
   private boolean isRootState(final BlockHeader blockHeader, final NodeDataRequest request) {
