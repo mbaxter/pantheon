@@ -144,10 +144,10 @@ public class WorldStateDownloader {
           List<Task<NodeDataRequest>> toRequest = new ArrayList<>();
           while (toRequest.size() < hashCountPerRequest) {
             Task<NodeDataRequest> pendingRequestTask = pendingRequests.dequeue();
-            NodeDataRequest pendingRequest = pendingRequestTask.getData();
-            if (pendingRequest == null) {
+            if (pendingRequestTask == null) {
               break;
             }
+            NodeDataRequest pendingRequest = pendingRequestTask.getData();
             final Optional<BytesValue> existingData =
                 pendingRequest.getExistingData(worldStateStorage);
             if (existingData.isPresent()) {
