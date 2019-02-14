@@ -14,9 +14,11 @@ package tech.pegasys.pantheon.ethereum.eth.sync.worldstate;
 
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.Hash;
+import tech.pegasys.pantheon.ethereum.eth.manager.AbstractPeerTask;
 import tech.pegasys.pantheon.ethereum.eth.manager.AbstractPeerTask.PeerTaskResult;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthContext;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
+import tech.pegasys.pantheon.ethereum.eth.manager.EthTask;
 import tech.pegasys.pantheon.ethereum.eth.sync.tasks.GetNodeDataFromPeerTask;
 import tech.pegasys.pantheon.ethereum.eth.sync.tasks.WaitForPeerTask;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
@@ -32,13 +34,15 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -59,7 +63,8 @@ public class WorldStateDownloader {
   private final TaskQueue<NodeDataRequest> pendingRequests;
   private final int hashCountPerRequest;
   private final int maxOutstandingRequests;
-  private final AtomicInteger outstandingRequests = new AtomicInteger(0);
+  private final Set<EthTask<?>> outstandingRequests =
+      Collections.newSetFromMap(new ConcurrentHashMap<>());
   private final LabelledMetric<OperationTimer> ethTasksTimer;
   private final WorldStateStorage worldStateStorage;
   private final AtomicBoolean sendingRequests = new AtomicBoolean(false);
@@ -160,12 +165,15 @@ public class WorldStateDownloader {
           }
 
           // Request and process node data
-          outstandingRequests.incrementAndGet();
           sendAndProcessRequests(peer, toRequest, header)
               .whenComplete(
-                  (res, error) -> {
-                    if (outstandingRequests.decrementAndGet() == 0
-                        && pendingRequests.allTasksCompleted()) {
+                  (task, error) -> {
+                    boolean done;
+                    synchronized (outstandingRequests) {
+                      outstandingRequests.remove(task);
+                      done = outstandingRequests.size() == 0 && pendingRequests.allTasksCompleted();
+                    }
+                    if (done) {
                       // We're done
                       final Updater updater = worldStateStorage.updater();
                       updater.putAccountStateTrieNode(header.getStateRoot(), rootNode);
@@ -194,7 +202,7 @@ public class WorldStateDownloader {
 
   private boolean shouldRequestNodeData() {
     return !future.isDone()
-        && outstandingRequests.get() < maxOutstandingRequests
+        && outstandingRequests.size() < maxOutstandingRequests
         && !pendingRequests.isEmpty();
   }
 
@@ -204,7 +212,7 @@ public class WorldStateDownloader {
         .timeout(WaitForPeerTask.create(ethContext, ethTasksTimer), Duration.ofSeconds(5));
   }
 
-  private CompletableFuture<?> sendAndProcessRequests(
+  private CompletableFuture<AbstractPeerTask<List<BytesValue>>> sendAndProcessRequests(
       final EthPeer peer,
       final List<Task<NodeDataRequest>> requestTasks,
       final BlockHeader blockHeader) {
@@ -214,12 +222,14 @@ public class WorldStateDownloader {
             .map(NodeDataRequest::getHash)
             .distinct()
             .collect(Collectors.toList());
-    return GetNodeDataFromPeerTask.forHashes(ethContext, hashes, ethTasksTimer)
-        .assignPeer(peer)
+    AbstractPeerTask<List<BytesValue>> ethTask =
+        GetNodeDataFromPeerTask.forHashes(ethContext, hashes, ethTasksTimer).assignPeer(peer);
+    outstandingRequests.add(ethTask);
+    return ethTask
         .run()
         .thenApply(PeerTaskResult::getResult)
         .thenApply(this::mapNodeDataByHash)
-        .whenComplete(
+        .handle(
             (data, err) -> {
               boolean requestFailed = err != null;
               Updater storageUpdater = worldStateStorage.updater();
@@ -244,6 +254,7 @@ public class WorldStateDownloader {
                 }
               }
               storageUpdater.commit();
+              return ethTask;
             });
   }
 
