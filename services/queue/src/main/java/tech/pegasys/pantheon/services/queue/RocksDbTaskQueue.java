@@ -26,15 +26,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.primitives.Longs;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
 public class RocksDbTaskQueue implements BytesTaskQueue {
-
-  private static final Logger LOG = LogManager.getLogger();
 
   private final Options options;
   private final RocksDB db;
@@ -52,11 +48,7 @@ public class RocksDbTaskQueue implements BytesTaskQueue {
   private RocksDbTaskQueue(final Path storageDirectory, final MetricsSystem metricsSystem) {
     try {
       RocksDbUtil.loadNativeLibrary();
-      options =
-          new Options()
-              .setCreateIfMissing(true)
-              // TODO: Support restoration from a previously persisted queue
-              .setErrorIfExists(true);
+      options = new Options().setCreateIfMissing(true);
       db = RocksDB.open(options, storageDirectory.toString());
 
       enqueueLatency =

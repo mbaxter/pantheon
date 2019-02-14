@@ -142,12 +142,20 @@ public class WorldStateDownloader {
 
           // Collect data to be requested
           List<Task<NodeDataRequest>> toRequest = new ArrayList<>();
-          for (int i = 0; i < hashCountPerRequest; i++) {
-            Task<NodeDataRequest> pendingRequest = pendingRequests.dequeue();
+          while (toRequest.size() < hashCountPerRequest) {
+            Task<NodeDataRequest> pendingRequestTask = pendingRequests.dequeue();
+            NodeDataRequest pendingRequest = pendingRequestTask.getData();
             if (pendingRequest == null) {
               break;
             }
-            toRequest.add(pendingRequest);
+            final Optional<BytesValue> existingData =
+                pendingRequest.getExistingData(worldStateStorage);
+            if (existingData.isPresent()) {
+              pendingRequest.setData(existingData.get());
+              queueChildRequests(pendingRequest);
+              continue;
+            }
+            toRequest.add(pendingRequestTask);
           }
 
           // Request and process node data
@@ -230,11 +238,7 @@ public class WorldStateDownloader {
                     request.persist(storageUpdater);
                   }
 
-                  // Queue child requestTasks
-                  request
-                      .getChildRequests()
-                      .filter(this::filterChildRequests)
-                      .forEach(pendingRequests::enqueue);
+                  queueChildRequests(request);
                   task.markCompleted();
                 }
               }
@@ -242,14 +246,12 @@ public class WorldStateDownloader {
             });
   }
 
-  private boolean isRootState(final BlockHeader blockHeader, final NodeDataRequest request) {
-    return request.getHash().equals(blockHeader.getStateRoot());
+  private void queueChildRequests(final NodeDataRequest request) {
+    request.getChildRequests().forEach(pendingRequests::enqueue);
   }
 
-  private boolean filterChildRequests(final NodeDataRequest request) {
-    // For now, just filter out requests for code that we already know about
-    return !(request.getRequestType() == RequestType.CODE
-        && worldStateStorage.contains(request.getHash()));
+  private boolean isRootState(final BlockHeader blockHeader, final NodeDataRequest request) {
+    return request.getHash().equals(blockHeader.getStateRoot());
   }
 
   private Map<Hash, BytesValue> mapNodeDataByHash(final List<BytesValue> data) {
