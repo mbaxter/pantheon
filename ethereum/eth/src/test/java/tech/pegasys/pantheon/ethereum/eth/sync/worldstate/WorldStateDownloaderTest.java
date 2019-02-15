@@ -30,12 +30,14 @@ import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
 import tech.pegasys.pantheon.ethereum.core.WorldState;
 import tech.pegasys.pantheon.ethereum.eth.manager.DeterministicEthScheduler.TimeoutPolicy;
+import tech.pegasys.pantheon.ethereum.eth.manager.EthContext;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManager;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManagerTestUtil;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer.Responder;
 import tech.pegasys.pantheon.ethereum.eth.messages.EthPV63;
 import tech.pegasys.pantheon.ethereum.eth.messages.GetNodeDataMessage;
+import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
 import tech.pegasys.pantheon.ethereum.mainnet.MainnetProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.rlp.RLP;
@@ -127,14 +129,7 @@ public class WorldStateDownloaderTest {
     WorldStateStorage localStorage =
         new KeyValueStorageWorldStateStorage(new InMemoryKeyValueStorage());
     WorldStateDownloader downloader =
-        new WorldStateDownloader(
-            ethProtocolManager.ethContext(),
-            localStorage,
-            queue,
-            10,
-            10,
-            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
-            new NoOpMetricsSystem());
+        createDownloader(ethProtocolManager.ethContext(), localStorage, queue);
 
     CompletableFuture<Void> future = downloader.run(header);
     assertThat(future).isDone();
@@ -172,14 +167,7 @@ public class WorldStateDownloaderTest {
 
     TaskQueue<NodeDataRequest> queue = new InMemoryTaskQueue<>();
     WorldStateDownloader downloader =
-        new WorldStateDownloader(
-            ethProtocolManager.ethContext(),
-            storage,
-            queue,
-            10,
-            10,
-            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
-            new NoOpMetricsSystem());
+        createDownloader(ethProtocolManager.ethContext(), storage, queue);
 
     CompletableFuture<Void> future = downloader.run(header);
     assertThat(future).isDone();
@@ -220,14 +208,7 @@ public class WorldStateDownloaderTest {
     WorldStateStorage localStorage =
         new KeyValueStorageWorldStateStorage(new InMemoryKeyValueStorage());
     WorldStateDownloader downloader =
-        new WorldStateDownloader(
-            ethProtocolManager.ethContext(),
-            localStorage,
-            queue,
-            10,
-            10,
-            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
-            new NoOpMetricsSystem());
+        createDownloader(ethProtocolManager.ethContext(), localStorage, queue);
 
     CompletableFuture<Void> result = downloader.run(header);
 
@@ -289,14 +270,7 @@ public class WorldStateDownloaderTest {
     localStorageUpdater.commit();
 
     WorldStateDownloader downloader =
-        new WorldStateDownloader(
-            ethProtocolManager.ethContext(),
-            localStorage,
-            queue,
-            10,
-            10,
-            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
-            new NoOpMetricsSystem());
+        createDownloader(ethProtocolManager.ethContext(), localStorage, queue);
 
     CompletableFuture<Void> result = downloader.run(header);
 
@@ -369,14 +343,7 @@ public class WorldStateDownloaderTest {
         new KeyValueStorageWorldStateStorage(new InMemoryKeyValueStorage());
 
     WorldStateDownloader downloader =
-        new WorldStateDownloader(
-            ethProtocolManager.ethContext(),
-            localStorage,
-            queue,
-            10,
-            10,
-            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
-            new NoOpMetricsSystem());
+        createDownloader(ethProtocolManager.ethContext(), localStorage, queue);
 
     CompletableFuture<Void> result = downloader.run(header);
 
@@ -464,14 +431,7 @@ public class WorldStateDownloaderTest {
     localStorageUpdater.commit();
 
     WorldStateDownloader downloader =
-        new WorldStateDownloader(
-            ethProtocolManager.ethContext(),
-            localStorage,
-            queue,
-            10,
-            10,
-            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
-            new NoOpMetricsSystem());
+        createDownloader(ethProtocolManager.ethContext(), localStorage, queue);
 
     CompletableFuture<Void> result = downloader.run(header);
 
@@ -570,14 +530,7 @@ public class WorldStateDownloaderTest {
     localStorageUpdater.commit();
 
     WorldStateDownloader downloader =
-        new WorldStateDownloader(
-            ethProtocolManager.ethContext(),
-            localStorage,
-            queue,
-            10,
-            10,
-            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
-            new NoOpMetricsSystem());
+        createDownloader(ethProtocolManager.ethContext(), localStorage, queue);
 
     CompletableFuture<Void> result = downloader.run(header);
 
@@ -700,15 +653,13 @@ public class WorldStateDownloaderTest {
     WorldStateStorage localStorage =
         new KeyValueStorageWorldStateStorage(new InMemoryKeyValueStorage());
     WorldStateArchive localWorldStateArchive = new WorldStateArchive(localStorage);
+    SynchronizerConfiguration syncConfig =
+        SynchronizerConfiguration.builder()
+            .worldStateHashCountPerRequest(hashesPerRequest)
+            .worldStateRequestParallelism(maxOutstandingRequests)
+            .build();
     WorldStateDownloader downloader =
-        new WorldStateDownloader(
-            ethProtocolManager.ethContext(),
-            localStorage,
-            queue,
-            hashesPerRequest,
-            maxOutstandingRequests,
-            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
-            new NoOpMetricsSystem());
+        createDownloader(syncConfig, ethProtocolManager.ethContext(), localStorage, queue);
 
     // Create some peers that can respond
     List<RespondingEthPeer> usefulPeers =
@@ -826,6 +777,29 @@ public class WorldStateDownloaderTest {
       Map<Bytes32, UInt256> expectedStorage = expectedAccount.storageEntriesFrom(Bytes32.ZERO, 500);
       assertThat(actualStorage).isEqualTo(expectedStorage);
     }
+  }
+
+  private WorldStateDownloader createDownloader(
+      final EthContext context,
+      final WorldStateStorage storage,
+      final TaskQueue<NodeDataRequest> queue) {
+    return createDownloader(SynchronizerConfiguration.builder().build(), context, storage, queue);
+  }
+
+  private WorldStateDownloader createDownloader(
+      final SynchronizerConfiguration config,
+      final EthContext context,
+      final WorldStateStorage storage,
+      final TaskQueue<NodeDataRequest> queue) {
+    return new WorldStateDownloader(
+        context,
+        storage,
+        queue,
+        config.getWorldStateHashCountPerRequest(),
+        config.getWorldStateRequestParallelism(),
+        config.getWorldStateRequestMaxRetries(),
+        NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
+        new NoOpMetricsSystem());
   }
 
   @FunctionalInterface

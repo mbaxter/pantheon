@@ -64,6 +64,7 @@ public class WorldStateDownloader {
   private final TaskQueue<NodeDataRequest> pendingRequests;
   private final int hashCountPerRequest;
   private final int maxOutstandingRequests;
+  private final int maxNodeRequestRetries;
   private final Set<EthTask<?>> outstandingRequests =
       Collections.newSetFromMap(new ConcurrentHashMap<>());
   private final LabelledMetric<OperationTimer> ethTasksTimer;
@@ -79,6 +80,7 @@ public class WorldStateDownloader {
       final TaskQueue<NodeDataRequest> pendingRequests,
       final int hashCountPerRequest,
       final int maxOutstandingRequests,
+      final int maxNodeRequestRetries,
       final LabelledMetric<OperationTimer> ethTasksTimer,
       final MetricsSystem metricsSystem) {
     this.ethContext = ethContext;
@@ -86,6 +88,7 @@ public class WorldStateDownloader {
     this.pendingRequests = pendingRequests;
     this.hashCountPerRequest = hashCountPerRequest;
     this.maxOutstandingRequests = maxOutstandingRequests;
+    this.maxNodeRequestRetries = maxNodeRequestRetries;
     this.ethTasksTimer = ethTasksTimer;
     metricsSystem.createGauge(
         MetricCategory.SYNCHRONIZER,
