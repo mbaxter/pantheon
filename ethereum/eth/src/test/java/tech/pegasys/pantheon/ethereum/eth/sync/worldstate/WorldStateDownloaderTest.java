@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.ethereum.eth.sync.worldstate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -567,6 +568,70 @@ public class WorldStateDownloaderTest {
     final WorldState localWorldState = localWorldStateArchive.get(stateRoot).get();
     assertThat(result).isDone();
     assertAccountsMatch(localWorldState, accounts);
+  }
+
+  @Test
+  public void stalledDownloader() {
+    simulateStalledDownload(10);
+  }
+
+  @Test
+  public void stalledDownloaderWithOneRetry() {
+    simulateStalledDownload(1);
+  }
+
+  @Test
+  public void stalledDownloaderWithNoRetries() {
+    simulateStalledDownload(0);
+  }
+
+  private void simulateStalledDownload(final int maxRetries) {
+    final EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
+    BlockDataGenerator dataGen = new BlockDataGenerator(1);
+
+    // Setup "remote" state
+    final WorldStateStorage remoteStorage =
+        new KeyValueStorageWorldStateStorage(new InMemoryKeyValueStorage());
+    final WorldStateArchive remoteWorldStateArchive = new WorldStateArchive(remoteStorage);
+    final MutableWorldState remoteWorldState = remoteWorldStateArchive.getMutable();
+
+    // Generate accounts and save corresponding state root
+    dataGen.createRandomAccounts(remoteWorldState, 10);
+    final Hash stateRoot = remoteWorldState.rootHash();
+    assertThat(stateRoot).isNotEqualTo(EMPTY_TRIE_ROOT); // Sanity check
+    final BlockHeader header =
+        dataGen.block(BlockOptions.create().setStateRoot(stateRoot).setBlockNumber(10)).getHeader();
+
+    TaskQueue<NodeDataRequest> queue = new InMemoryTaskQueue<>();
+    WorldStateStorage localStorage =
+        new KeyValueStorageWorldStateStorage(new InMemoryKeyValueStorage());
+    SynchronizerConfiguration syncConfig =
+        SynchronizerConfiguration.builder().worldStateRequestMaxRetries(maxRetries).build();
+    WorldStateDownloader downloader =
+        createDownloader(syncConfig, ethProtocolManager.ethContext(), localStorage, queue);
+
+    // Create a peer that can respond
+    RespondingEthPeer peer =
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, header.getNumber());
+
+    // Start downloader
+    CompletableFuture<?> result = downloader.run(header);
+    // A second run should return an error without impacting the first result
+    CompletableFuture<?> secondResult = downloader.run(header);
+    assertThat(secondResult).isCompletedExceptionally();
+    assertThat(result).isNotCompletedExceptionally();
+
+    Responder emptyResponder = RespondingEthPeer.emptyResponder();
+    for (int i = 0; i < maxRetries; i++) {
+      peer.respond(emptyResponder);
+    }
+    // Downloader should not be done yet
+    assertThat(result).isNotDone();
+
+    // One more empty response should trigger a failure
+    peer.respond(emptyResponder);
+    assertThat(result).isCompletedExceptionally();
+    assertThatThrownBy(result::get).hasCauseInstanceOf(StalledDownloadException.class);
   }
 
   /**

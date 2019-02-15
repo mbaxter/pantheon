@@ -29,7 +29,7 @@ public class SynchronizerConfiguration {
   private static final Duration DEFAULT_FAST_SYNC_MAXIMUM_PEER_WAIT_TIME = Duration.ofMinutes(5);
   private static final int DEFAULT_WORLD_STATE_HASH_COUNT_PER_REQUEST = 384;
   private static final int DEFAULT_WORLD_STATE_REQUEST_PARALLELISM = 10;
-  private static final int DEFAULT_WORLD_STATE_REQUEST_MAX_RETRIES = 50;
+  private static final int DEFAULT_WORLD_STATE_REQUEST_MAX_RETRIES = 25;
 
   // Fast sync config
   private final int fastSyncPivotDistance;

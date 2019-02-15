@@ -30,6 +30,7 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.OperationTimer;
 import tech.pegasys.pantheon.services.queue.TaskQueue;
 import tech.pegasys.pantheon.services.queue.TaskQueue.Task;
+import tech.pegasys.pantheon.util.ExceptionUtils;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.time.Duration;
@@ -239,6 +240,10 @@ public class WorldStateDownloader {
                 BytesValue matchingData = requestFailed ? null : data.get(request.getHash());
                 if (matchingData == null) {
                   retriedRequestsTotal.inc();
+                  int requestFailures = request.trackFailure();
+                  if (requestFailures > maxNodeRequestRetries) {
+                    handleStalledDownload();
+                  }
                   task.markFailed();
                 } else {
                   completedRequestsCounter.inc();
@@ -278,14 +283,27 @@ public class WorldStateDownloader {
         (res, err) -> {
           // Handle cancellations
           if (future.isCancelled()) {
-            handleCancellation();
+            LOG.info("World state download cancelled");
+            doCancelDownload();
+          } else if (err != null) {
+            Throwable cause = ExceptionUtils.rootCause(err);
+            LOG.info("World state download failed. ", cause.toString());
+            doCancelDownload();
           }
         });
     return future;
   }
 
-  private synchronized void handleCancellation() {
-    LOG.info("World state download cancelled");
+  private synchronized void handleStalledDownload() {
+    final String message =
+        "Download stalled due to too many failures to retrieve node data (>"
+            + maxNodeRequestRetries
+            + " failures)";
+    WorldStateDownloaderException e = new StalledDownloadException(message);
+    future.completeExceptionally(e);
+  }
+
+  private synchronized void doCancelDownload() {
     status = Status.CANCELLED;
     pendingRequests.clear();
     for (EthTask<?> outstandingRequest : outstandingRequests) {
