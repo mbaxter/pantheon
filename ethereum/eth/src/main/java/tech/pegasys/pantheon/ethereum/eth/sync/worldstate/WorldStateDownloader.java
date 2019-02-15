@@ -30,7 +30,6 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.OperationTimer;
 import tech.pegasys.pantheon.services.queue.TaskQueue;
 import tech.pegasys.pantheon.services.queue.TaskQueue.Task;
-import tech.pegasys.pantheon.util.ExceptionUtils;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.time.Duration;
@@ -286,8 +285,7 @@ public class WorldStateDownloader {
             LOG.info("World state download cancelled");
             doCancelDownload();
           } else if (err != null) {
-            Throwable cause = ExceptionUtils.rootCause(err);
-            LOG.info("World state download failed. ", cause.toString());
+            LOG.info("World state download failed. ", err);
             doCancelDownload();
           }
         });
