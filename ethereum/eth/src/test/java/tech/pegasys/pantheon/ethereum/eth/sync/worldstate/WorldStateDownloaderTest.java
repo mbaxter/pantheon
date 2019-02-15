@@ -412,8 +412,6 @@ public class WorldStateDownloaderTest {
     verify(queue, never()).enqueue(any());
     // Target world state should not be available
     assertThat(localStorage.isWorldStateAvailable(header.getStateRoot())).isFalse();
-
-    assertThat(downloader.run(header)).isCancelled();
   }
 
   @Test
@@ -729,6 +727,10 @@ public class WorldStateDownloaderTest {
 
     // Start downloader
     CompletableFuture<?> result = downloader.run(header);
+    // A second run should return an error without impacting the first result
+    CompletableFuture<?> secondResult = downloader.run(header);
+    assertThat(secondResult).isCompletedExceptionally();
+    assertThat(result).isNotCompletedExceptionally();
 
     // Respond to node data requests
     // Send one round of full responses, so that we can get multiple requests queued up

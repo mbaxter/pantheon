@@ -111,8 +111,12 @@ public class WorldStateDownloader {
         header.getNumber(),
         header.getHash());
     synchronized (this) {
-      if (status != Status.IDLE) {
-        return future;
+      if (status == Status.RUNNING) {
+        CompletableFuture<Void> failed = new CompletableFuture<>();
+        failed.completeExceptionally(
+            new IllegalStateException(
+                "Cannot run an already running " + this.getClass().getSimpleName()));
+        return failed;
       }
       status = Status.RUNNING;
       future = createFuture();
