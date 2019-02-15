@@ -53,6 +53,13 @@ public class WorldStateDownloader {
   private final Counter completedRequestsCounter;
   private final Counter retriedRequestsTotal;
 
+  private enum Status {
+    IDLE,
+    RUNNING,
+    CANCELLED,
+    COMPLETED
+  }
+
   private final EthContext ethContext;
   private final TaskQueue<NodeDataRequest> pendingRequests;
   private final int hashCountPerRequest;
@@ -63,6 +70,7 @@ public class WorldStateDownloader {
   private final WorldStateStorage worldStateStorage;
   private final AtomicBoolean sendingRequests = new AtomicBoolean(false);
   private volatile CompletableFuture<Void> future;
+  private volatile Status status = Status.IDLE;
   private volatile BytesValue rootNode;
 
   public WorldStateDownloader(
@@ -98,18 +106,15 @@ public class WorldStateDownloader {
   }
 
   public CompletableFuture<Void> run(final BlockHeader header) {
+    LOG.info(
+        "Begin downloading world state from peers for block {} ({})",
+        header.getNumber(),
+        header.getHash());
     synchronized (this) {
-      if (isRunning()) {
-        CompletableFuture<Void> failed = new CompletableFuture<>();
-        failed.completeExceptionally(
-            new IllegalStateException(
-                "Cannot run an already running " + this.getClass().getSimpleName()));
-        return failed;
+      if (status != Status.IDLE) {
+        return future;
       }
-      LOG.info(
-          "Begin downloading world state from peers for block {} ({})",
-          header.getNumber(),
-          header.getHash());
+      status = Status.RUNNING;
       future = createFuture();
 
       Hash stateRoot = header.getStateRoot();
@@ -168,7 +173,7 @@ public class WorldStateDownloader {
                     synchronized (this) {
                       outstandingRequests.remove(task);
                       done =
-                          isRunning()
+                          status == Status.RUNNING
                               && outstandingRequests.size() == 0
                               && pendingRequests.allTasksCompleted();
                     }
@@ -248,13 +253,9 @@ public class WorldStateDownloader {
   }
 
   private synchronized void queueChildRequests(final NodeDataRequest request) {
-    if (isRunning()) {
+    if (status == Status.RUNNING) {
       request.getChildRequests().forEach(pendingRequests::enqueue);
     }
-  }
-
-  private boolean isRunning() {
-    return future != null && !future.isDone();
   }
 
   private synchronized CompletableFuture<Void> getFuture() {
@@ -278,6 +279,7 @@ public class WorldStateDownloader {
 
   private synchronized void handleCancellation() {
     LOG.info("World state download cancelled");
+    status = Status.CANCELLED;
     pendingRequests.clear();
     for (EthTask<?> outstandingRequest : outstandingRequests) {
       outstandingRequest.cancel();
@@ -288,6 +290,7 @@ public class WorldStateDownloader {
     final boolean completed = getFuture().complete(null);
     if (completed) {
       LOG.info("Finished downloading world state from peers");
+      status = Status.COMPLETED;
     }
   }
 
