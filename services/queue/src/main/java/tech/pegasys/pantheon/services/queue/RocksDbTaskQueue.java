@@ -126,6 +126,7 @@ public class RocksDbTaskQueue implements BytesTaskQueue {
       db.deleteRange(from, to);
       lastDequeuedKey.set(0);
       lastEnqueuedKey.set(0);
+      oldestKey.set(0);
     } catch (RocksDBException e) {
       throw new StorageException(e);
     }
@@ -144,7 +145,7 @@ public class RocksDbTaskQueue implements BytesTaskQueue {
             .orElse(lastDequeuedKey.get() + 1);
 
     if (oldestKey.get() < oldestOutstandingKey) {
-      // Delete all contiguous completed task keys
+      // Delete all contiguous completed tasks
       byte[] fromKey = Longs.toByteArray(oldestKey.get());
       byte[] toKey = Longs.toByteArray(oldestOutstandingKey);
       try {
