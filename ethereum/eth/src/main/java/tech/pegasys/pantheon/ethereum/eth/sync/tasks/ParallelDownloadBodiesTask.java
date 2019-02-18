@@ -17,8 +17,7 @@ import tech.pegasys.pantheon.ethereum.eth.manager.AbstractPipelinedPeerTask;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthContext;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
 import tech.pegasys.pantheon.ethereum.eth.sync.BlockHandler;
-import tech.pegasys.pantheon.metrics.LabelledMetric;
-import tech.pegasys.pantheon.metrics.OperationTimer;
+import tech.pegasys.pantheon.metrics.MetricsSystem;
 
 import java.util.List;
 import java.util.Optional;
@@ -39,8 +38,8 @@ public class ParallelDownloadBodiesTask<B>
       final BlockingQueue<List<BlockHeader>> inboundQueue,
       final int outboundBacklogSize,
       final EthContext ethContext,
-      final LabelledMetric<OperationTimer> ethTasksTimer) {
-    super(inboundQueue, outboundBacklogSize, ethContext, ethTasksTimer);
+      final MetricsSystem metricsSystem) {
+    super(inboundQueue, outboundBacklogSize, ethContext, metricsSystem);
 
     this.blockHandler = blockHandler;
   }

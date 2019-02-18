@@ -26,8 +26,7 @@ import tech.pegasys.pantheon.ethereum.eth.manager.AbstractRetryingPeerTask;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthContext;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
-import tech.pegasys.pantheon.metrics.LabelledMetric;
-import tech.pegasys.pantheon.metrics.OperationTimer;
+import tech.pegasys.pantheon.metrics.MetricsSystem;
 
 import java.util.Collection;
 import java.util.List;
@@ -54,17 +53,19 @@ public class CompleteBlocksTask<C> extends AbstractRetryingPeerTask<List<Block>>
 
   private final List<BlockHeader> headers;
   private final Map<Long, Block> blocks;
+  private final MetricsSystem metricsSystem;
 
   private CompleteBlocksTask(
       final ProtocolSchedule<C> protocolSchedule,
       final EthContext ethContext,
       final List<BlockHeader> headers,
       final int maxRetries,
-      final LabelledMetric<OperationTimer> ethTasksTimer) {
-    super(ethContext, maxRetries, ethTasksTimer, Collection::isEmpty);
+      final MetricsSystem metricsSystem) {
+    super(ethContext, maxRetries, Collection::isEmpty, metricsSystem);
     checkArgument(headers.size() > 0, "Must supply a non-empty headers list");
     this.protocolSchedule = protocolSchedule;
     this.ethContext = ethContext;
+    this.metricsSystem = metricsSystem;
 
     this.headers = headers;
     this.blocks =
@@ -83,18 +84,18 @@ public class CompleteBlocksTask<C> extends AbstractRetryingPeerTask<List<Block>>
       final EthContext ethContext,
       final List<BlockHeader> headers,
       final int maxRetries,
-      final LabelledMetric<OperationTimer> ethTasksTimer) {
+      final MetricsSystem metricsSystem) {
     return new CompleteBlocksTask<>(
-        protocolSchedule, ethContext, headers, maxRetries, ethTasksTimer);
+        protocolSchedule, ethContext, headers, maxRetries, metricsSystem);
   }
 
   public static <C> CompleteBlocksTask<C> forHeaders(
       final ProtocolSchedule<C> protocolSchedule,
       final EthContext ethContext,
       final List<BlockHeader> headers,
-      final LabelledMetric<OperationTimer> ethTasksTimer) {
+      final MetricsSystem metricsSystem) {
     return new CompleteBlocksTask<>(
-        protocolSchedule, ethContext, headers, DEFAULT_RETRIES, ethTasksTimer);
+        protocolSchedule, ethContext, headers, DEFAULT_RETRIES, metricsSystem);
   }
 
   @Override
@@ -115,7 +116,7 @@ public class CompleteBlocksTask<C> extends AbstractRetryingPeerTask<List<Block>>
         () -> {
           final GetBodiesFromPeerTask<C> task =
               GetBodiesFromPeerTask.forHeaders(
-                  protocolSchedule, ethContext, incompleteHeaders, ethTasksTimer);
+                  protocolSchedule, ethContext, incompleteHeaders, metricsSystem);
           assignedPeer.ifPresent(task::assignPeer);
           return task.run().thenApply(PeerTaskResult::getResult);
         });

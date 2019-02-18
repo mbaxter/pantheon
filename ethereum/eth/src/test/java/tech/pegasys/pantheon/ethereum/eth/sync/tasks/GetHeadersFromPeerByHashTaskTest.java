@@ -62,7 +62,7 @@ public class GetHeadersFromPeerByHashTaskTest extends PeerMessageTaskTest<List<B
         firstHeader.getHash(),
         firstHeader.getNumber(),
         requestedData.size(),
-        ethTasksTimer);
+        metricsSystem);
   }
 
   @Test
@@ -110,7 +110,7 @@ public class GetHeadersFromPeerByHashTaskTest extends PeerMessageTaskTest<List<B
             count,
             skip,
             reverse,
-            ethTasksTimer);
+            metricsSystem);
     final AtomicReference<PeerTaskResult<List<BlockHeader>>> actualResult = new AtomicReference<>();
     final AtomicBoolean done = new AtomicBoolean(false);
     final CompletableFuture<PeerTaskResult<List<BlockHeader>>> future = task.run();

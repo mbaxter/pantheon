@@ -24,10 +24,8 @@ import tech.pegasys.pantheon.ethereum.eth.sync.tasks.WaitForPeerTask;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage.Updater;
 import tech.pegasys.pantheon.metrics.Counter;
-import tech.pegasys.pantheon.metrics.LabelledMetric;
 import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
-import tech.pegasys.pantheon.metrics.OperationTimer;
 import tech.pegasys.pantheon.services.queue.TaskQueue;
 import tech.pegasys.pantheon.services.queue.TaskQueue.Task;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -67,7 +65,7 @@ public class WorldStateDownloader {
   private final int maxNodeRequestRetries;
   private final Set<EthTask<?>> outstandingRequests =
       Collections.newSetFromMap(new ConcurrentHashMap<>());
-  private final LabelledMetric<OperationTimer> ethTasksTimer;
+  private final MetricsSystem metricsSystem;
   private final WorldStateStorage worldStateStorage;
   private final AtomicBoolean sendingRequests = new AtomicBoolean(false);
   private volatile CompletableFuture<Void> future;
@@ -81,7 +79,6 @@ public class WorldStateDownloader {
       final int hashCountPerRequest,
       final int maxOutstandingRequests,
       final int maxNodeRequestRetries,
-      final LabelledMetric<OperationTimer> ethTasksTimer,
       final MetricsSystem metricsSystem) {
     this.ethContext = ethContext;
     this.worldStateStorage = worldStateStorage;
@@ -89,7 +86,7 @@ public class WorldStateDownloader {
     this.hashCountPerRequest = hashCountPerRequest;
     this.maxOutstandingRequests = maxOutstandingRequests;
     this.maxNodeRequestRetries = maxNodeRequestRetries;
-    this.ethTasksTimer = ethTasksTimer;
+    this.metricsSystem = metricsSystem;
     metricsSystem.createGauge(
         MetricCategory.SYNCHRONIZER,
         "world_state_pending_requests_current",
@@ -210,7 +207,7 @@ public class WorldStateDownloader {
   private CompletableFuture<?> waitForNewPeer() {
     return ethContext
         .getScheduler()
-        .timeout(WaitForPeerTask.create(ethContext, ethTasksTimer), Duration.ofSeconds(5));
+        .timeout(WaitForPeerTask.create(ethContext, metricsSystem), Duration.ofSeconds(5));
   }
 
   private CompletableFuture<AbstractPeerTask<List<BytesValue>>> sendAndProcessRequests(
@@ -224,7 +221,7 @@ public class WorldStateDownloader {
             .distinct()
             .collect(Collectors.toList());
     AbstractPeerTask<List<BytesValue>> ethTask =
-        GetNodeDataFromPeerTask.forHashes(ethContext, hashes, ethTasksTimer).assignPeer(peer);
+        GetNodeDataFromPeerTask.forHashes(ethContext, hashes, metricsSystem).assignPeer(peer);
     outstandingRequests.add(ethTask);
     return ethTask
         .run()

@@ -23,8 +23,7 @@ import tech.pegasys.pantheon.ethereum.eth.messages.EthPV63;
 import tech.pegasys.pantheon.ethereum.eth.messages.NodeDataMessage;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection.PeerNotConnected;
-import tech.pegasys.pantheon.metrics.LabelledMetric;
-import tech.pegasys.pantheon.metrics.OperationTimer;
+import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Collection;
@@ -45,16 +44,16 @@ public class GetNodeDataFromPeerTask extends AbstractPeerRequestTask<List<BytesV
   private GetNodeDataFromPeerTask(
       final EthContext ethContext,
       final Collection<Hash> hashes,
-      final LabelledMetric<OperationTimer> ethTasksTimer) {
-    super(ethContext, EthPV63.GET_NODE_DATA, ethTasksTimer);
+      final MetricsSystem metricsSystem) {
+    super(ethContext, EthPV63.GET_NODE_DATA, metricsSystem);
     this.hashes = new HashSet<>(hashes);
   }
 
   public static GetNodeDataFromPeerTask forHashes(
       final EthContext ethContext,
       final Collection<Hash> hashes,
-      final LabelledMetric<OperationTimer> ethTasksTimer) {
-    return new GetNodeDataFromPeerTask(ethContext, hashes, ethTasksTimer);
+      final MetricsSystem metricsSystem) {
+    return new GetNodeDataFromPeerTask(ethContext, hashes, metricsSystem);
   }
 
   @Override

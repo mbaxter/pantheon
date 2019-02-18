@@ -42,7 +42,7 @@ public class GetReceiptsFromPeerTaskTest
   @Override
   protected EthTask<PeerTaskResult<Map<BlockHeader, List<TransactionReceipt>>>> createTask(
       final Map<BlockHeader, List<TransactionReceipt>> requestedData) {
-    return GetReceiptsFromPeerTask.forHeaders(ethContext, requestedData.keySet(), ethTasksTimer);
+    return GetReceiptsFromPeerTask.forHeaders(ethContext, requestedData.keySet(), metricsSystem);
   }
 
   @Override

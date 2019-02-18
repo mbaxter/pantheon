@@ -18,8 +18,7 @@ import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection.PeerNotConnected;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.rlp.RLPException;
-import tech.pegasys.pantheon.metrics.LabelledMetric;
-import tech.pegasys.pantheon.metrics.OperationTimer;
+import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.ExceptionUtils;
 
 import java.util.Optional;
@@ -32,10 +31,8 @@ public abstract class AbstractPeerRequestTask<R> extends AbstractPeerTask<R> {
   private volatile ResponseStream responseStream;
 
   protected AbstractPeerRequestTask(
-      final EthContext ethContext,
-      final int requestCode,
-      final LabelledMetric<OperationTimer> ethTasksTimer) {
-    super(ethContext, ethTasksTimer);
+      final EthContext ethContext, final int requestCode, final MetricsSystem metricsSystem) {
+    super(ethContext, metricsSystem);
     this.requestCode = requestCode;
   }
 
