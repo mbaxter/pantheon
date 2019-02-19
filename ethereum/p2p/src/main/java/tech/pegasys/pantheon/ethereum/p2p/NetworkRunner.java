@@ -92,6 +92,8 @@ public class NetworkRunner implements AutoCloseable {
       networkExecutor.submit(network);
       networkCheckExecutor.scheduleWithFixedDelay(
           network::checkMaintainedConnectionPeers, 60, 60, TimeUnit.SECONDS);
+      networkCheckExecutor.scheduleWithFixedDelay(
+          network::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
     } else {
       LOG.error("Attempted to start already running network.");
     }

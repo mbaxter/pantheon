@@ -24,6 +24,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerRequirement;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
@@ -43,6 +44,7 @@ import tech.pegasys.pantheon.util.Subscribers;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +56,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.netty.bootstrap.Bootstrap;
@@ -335,6 +339,32 @@ public class NettyP2PNetwork implements P2PNetwork {
     }
   }
 
+  @Override
+  public void attemptPeerConnections() {
+    // Start more connections until either we reach max peers or half our max peers quota is spent
+    // on pending connections. The limit on pending connections is to allow room for
+    // additional incoming connections
+    final int availablePeerSlots =
+        Math.min(maxPeers - connectionCount(), (maxPeers / 2) - pendingConnections.size());
+    if (availablePeerSlots > 0) {
+      final List<DiscoveryPeer> peers =
+          peerDiscoveryAgent
+              .getPeers()
+              .filter(peer -> peer.getEndpoint().getTcpPort().isPresent())
+              .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED)
+              .filter(peer -> !isConnected(peer) && !isConnecting(peer))
+              .collect(Collectors.toList());
+      Collections.shuffle(peers);
+      LOG.info("Initiating connection to {} peers from the peer table", availablePeerSlots);
+      peers.stream().limit(availablePeerSlots).forEach(this::connect);
+      LOG.info(
+          "Connection count {} (pending: {}, connected: {})",
+          this.connectionCount(),
+          pendingConnections.size(),
+          connections.size());
+    }
+  }
+
   private int connectionCount() {
     return pendingConnections.size() + connections.size();
   }
@@ -506,7 +536,7 @@ public class NettyP2PNetwork implements P2PNetwork {
   }
 
   @VisibleForTesting
-  public Collection<DiscoveryPeer> getDiscoveryPeers() {
+  public Stream<DiscoveryPeer> getDiscoveryPeers() {
     return peerDiscoveryAgent.getPeers();
   }
 

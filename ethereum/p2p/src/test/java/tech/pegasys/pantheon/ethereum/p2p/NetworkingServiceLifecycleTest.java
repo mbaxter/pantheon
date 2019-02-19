@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.ethereum.p2p;
 
 import static java.util.Collections.emptyList;
+import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -249,7 +250,7 @@ public class NetworkingServiceLifecycleTest {
             new PeerBlacklist(),
             new NoOpMetricsSystem(),
             Optional.empty())) {
-      assertTrue(agent.getDiscoveryPeers().isEmpty());
+      assertTrue(agent.getDiscoveryPeers().collect(toList()).isEmpty());
       assertEquals(0, agent.getPeers().size());
     }
   }

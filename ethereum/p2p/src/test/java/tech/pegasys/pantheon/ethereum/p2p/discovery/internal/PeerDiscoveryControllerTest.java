@@ -229,9 +229,7 @@ public class PeerDiscoveryControllerTest {
 
     controller.start();
 
-    assertThat(
-            controller.getPeers().stream()
-                .filter(p -> p.getStatus() == PeerDiscoveryStatus.BONDING))
+    assertThat(controller.getPeers().filter(p -> p.getStatus() == PeerDiscoveryStatus.BONDING))
         .hasSize(3);
 
     // Simulate PONG messages from all peers
@@ -255,12 +253,9 @@ public class PeerDiscoveryControllerTest {
           .send(eq(peers.get(i)), matchPacketOfType(PacketType.FIND_NEIGHBORS));
     }
 
-    assertThat(
-            controller.getPeers().stream()
-                .filter(p -> p.getStatus() == PeerDiscoveryStatus.BONDING))
+    assertThat(controller.getPeers().filter(p -> p.getStatus() == PeerDiscoveryStatus.BONDING))
         .hasSize(0);
-    assertThat(
-            controller.getPeers().stream().filter(p -> p.getStatus() == PeerDiscoveryStatus.BONDED))
+    assertThat(controller.getPeers().filter(p -> p.getStatus() == PeerDiscoveryStatus.BONDED))
         .hasSize(3);
   }
 
@@ -285,9 +280,7 @@ public class PeerDiscoveryControllerTest {
 
     controller.start();
 
-    assertThat(
-            controller.getPeers().stream()
-                .filter(p -> p.getStatus() == PeerDiscoveryStatus.BONDING))
+    assertThat(controller.getPeers().filter(p -> p.getStatus() == PeerDiscoveryStatus.BONDING))
         .hasSize(3);
 
     // Send a PONG packet from peer 1, with an incorrect hash.
@@ -300,9 +293,7 @@ public class PeerDiscoveryControllerTest {
     verify(outboundMessageHandler, never())
         .send(eq(peers.get(1)), matchPacketOfType(PacketType.FIND_NEIGHBORS));
 
-    assertThat(
-            controller.getPeers().stream()
-                .filter(p -> p.getStatus() == PeerDiscoveryStatus.BONDING))
+    assertThat(controller.getPeers().filter(p -> p.getStatus() == PeerDiscoveryStatus.BONDING))
         .hasSize(3);
   }
 
@@ -355,7 +346,7 @@ public class PeerDiscoveryControllerTest {
     assertThat(data.getTarget()).isEqualTo(localPeer.getId());
 
     assertThat(controller.getPeers()).hasSize(1);
-    assertThat(controller.getPeers().stream().findFirst().get().getStatus())
+    assertThat(controller.getPeers().findFirst().get().getStatus())
         .isEqualTo(PeerDiscoveryStatus.BONDED);
   }
 
@@ -895,14 +886,14 @@ public class PeerDiscoveryControllerTest {
     controller.onMessage(pongPacket16, peers.get(16));
 
     assertThat(controller.getPeers()).contains(peers.get(16));
-    assertThat(controller.getPeers().size()).isEqualTo(16);
+    assertThat(controller.getPeers().collect(Collectors.toList())).hasSize(16);
     assertThat(evictedPeerFromBucket(bootstrapPeers, controller)).isTrue();
   }
 
   private boolean evictedPeerFromBucket(
       final List<DiscoveryPeer> peers, final PeerDiscoveryController controller) {
     for (final DiscoveryPeer peer : peers) {
-      if (!controller.getPeers().contains(peer)) {
+      if (controller.getPeers().noneMatch(candidate -> candidate.equals(peer))) {
         return true;
       }
     }

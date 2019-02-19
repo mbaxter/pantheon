@@ -81,6 +81,9 @@ public interface P2PNetwork extends Closeable, Runnable {
    */
   void checkMaintainedConnectionPeers();
 
+  /** Attempt to connect to additional peers from the peer table. */
+  void attemptPeerConnections();
+
   /** Stops the P2P network layer. */
   void stop();
 
