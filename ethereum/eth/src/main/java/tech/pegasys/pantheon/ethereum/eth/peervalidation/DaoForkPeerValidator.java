@@ -1,0 +1,91 @@
+/*
+ * Copyright 2019 ConsenSys AG.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+package tech.pegasys.pantheon.ethereum.eth.peervalidation;
+
+import static com.google.common.base.Preconditions.checkArgument;
+
+import tech.pegasys.pantheon.ethereum.core.BlockHeader;
+import tech.pegasys.pantheon.ethereum.eth.manager.EthContext;
+import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
+import tech.pegasys.pantheon.ethereum.eth.manager.task.AbstractGetHeadersFromPeerTask;
+import tech.pegasys.pantheon.ethereum.eth.manager.task.GetHeadersFromPeerByNumberTask;
+import tech.pegasys.pantheon.ethereum.mainnet.MainnetBlockHeaderValidator;
+import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
+import tech.pegasys.pantheon.metrics.LabelledMetric;
+import tech.pegasys.pantheon.metrics.OperationTimer;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+public class DaoForkPeerValidator extends PeerValidator {
+  private final ProtocolSchedule<?> protocolSchedule;
+  private final LabelledMetric<OperationTimer> ethTasksTimer;
+
+  private final long daoBlockNumber;
+  // Wait for peer's chainhead to advance some distance beyond daoBlockNumber before validating
+  private final long chainHeightEstimationBuffer;
+
+  public DaoForkPeerValidator(
+      final EthContext ethContext,
+      final ProtocolSchedule<?> protocolSchedule,
+      final LabelledMetric<OperationTimer> ethTasksTimer,
+      final long daoBlockNumber,
+      final long chainHeightEstimationBuffer) {
+    super(ethContext);
+    checkArgument(chainHeightEstimationBuffer >= 0);
+    this.protocolSchedule = protocolSchedule;
+    this.ethTasksTimer = ethTasksTimer;
+    this.daoBlockNumber = daoBlockNumber;
+    this.chainHeightEstimationBuffer = chainHeightEstimationBuffer;
+  }
+
+  @Override
+  protected CompletableFuture<Boolean> validatePeer(final EthPeer ethPeer) {
+    AbstractGetHeadersFromPeerTask getHeaderTask =
+        GetHeadersFromPeerByNumberTask.forSingleNumber(
+            protocolSchedule, ethContext, daoBlockNumber, ethTasksTimer);
+    return ethContext
+        .getScheduler()
+        .timeout(getHeaderTask, Duration.ofSeconds(20))
+        .thenApply(
+            (res) -> {
+              List<BlockHeader> headers = res.getResult();
+              if (headers.size() == 0) {
+                // If no headers are returned, fail
+                return false;
+              }
+              BlockHeader header = headers.get(0);
+              return MainnetBlockHeaderValidator.validateHeaderForDaoFork(header);
+            });
+  }
+
+  @Override
+  protected boolean canBeValidated(final EthPeer ethPeer) {
+    return ethPeer.chainState().getEstimatedHeight()
+        >= (daoBlockNumber + chainHeightEstimationBuffer);
+  }
+
+  @Override
+  protected Duration nextCheckTimeout(final EthPeer ethPeer) {
+    if (!ethPeer.chainState().hasEstimatedHeight()) {
+      return Duration.ofSeconds(30);
+    }
+    long distanceToDaoBlock = daoBlockNumber - ethPeer.chainState().getEstimatedHeight();
+    if (distanceToDaoBlock < 100_000L) {
+      return Duration.ofSeconds(30);
+    }
+    // If the peer is trailing behind, give it some time to catch up before trying again.
+    return Duration.ofMinutes(10);
+  }
+}
