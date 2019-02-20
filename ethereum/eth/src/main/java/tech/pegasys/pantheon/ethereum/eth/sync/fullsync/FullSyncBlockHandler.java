@@ -78,16 +78,21 @@ public class FullSyncBlockHandler<C> implements BlockHandler<Block> {
   }
 
   private CompletableFuture<List<Block>> extractTransactionSenders(final List<Block> blocks) {
-    LOG.debug(
-        "Extracting sender {} to {}",
-        blocks.get(0).getHeader().getNumber(),
-        blocks.get(blocks.size() - 1).getHeader().getNumber());
-    for (final Block block : blocks) {
-      for (final Transaction transaction : block.getBody().getTransactions()) {
-        // This method internally performs the transaction sender extraction.
-        transaction.getSender();
-      }
-    }
-    return CompletableFuture.completedFuture(blocks);
+    return ethContext
+        .getScheduler()
+        .scheduleSyncWorkerTask(
+            () -> {
+              LOG.debug(
+                  "Extracting sender {} to {}",
+                  blocks.get(0).getHeader().getNumber(),
+                  blocks.get(blocks.size() - 1).getHeader().getNumber());
+              for (final Block block : blocks) {
+                for (final Transaction transaction : block.getBody().getTransactions()) {
+                  // This method internally performs the transaction sender extraction.
+                  transaction.getSender();
+                }
+              }
+              return CompletableFuture.completedFuture(blocks);
+            });
   }
 }
