@@ -73,7 +73,7 @@ public abstract class AbstractGetHeadersFromPeerTask
 
     final BlockHeadersMessage headersMessage = BlockHeadersMessage.readFrom(message);
     final List<BlockHeader> headers = headersMessage.getHeaders(protocolSchedule);
-    if (headers.size() == 0) {
+    if (headers.isEmpty()) {
       // Message contains no data - nothing to do
       return Optional.empty();
     }
