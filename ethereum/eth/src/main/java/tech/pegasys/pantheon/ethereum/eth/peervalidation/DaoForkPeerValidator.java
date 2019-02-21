@@ -75,10 +75,10 @@ public class DaoForkPeerValidator implements PeerValidator {
     AbstractPeerTask<List<BlockHeader>> getHeaderTask =
         GetHeadersFromPeerByNumberTask.forSingleNumber(
                 protocolSchedule, ethContext, daoBlockNumber, ethTasksTimer)
+            .setTimeout(Duration.ofSeconds(20))
             .assignPeer(ethPeer);
-    return ethContext
-        .getScheduler()
-        .timeout(getHeaderTask, Duration.ofSeconds(20))
+    return getHeaderTask
+        .run()
         .handle(
             (res, err) -> {
               if (err != null) {
