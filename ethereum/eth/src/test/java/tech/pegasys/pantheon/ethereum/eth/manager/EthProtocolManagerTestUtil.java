@@ -79,7 +79,7 @@ public class EthProtocolManagerTestUtil {
         scheduler instanceof DeterministicEthScheduler,
         "EthProtocolManager must be set up with "
             + DeterministicEthScheduler.class.getSimpleName()
-            + " in order to force timeouts");
+            + " in order to disable auto run.");
     ((DeterministicEthScheduler) scheduler).disableAutoRun();
   }
 
@@ -92,7 +92,7 @@ public class EthProtocolManagerTestUtil {
         scheduler instanceof DeterministicEthScheduler,
         "EthProtocolManager must be set up with "
             + DeterministicEthScheduler.class.getSimpleName()
-            + " in order to force timeouts");
+            + " in order to manually run pending futures.");
     ((DeterministicEthScheduler) scheduler).runPendingFutures();
   }
 

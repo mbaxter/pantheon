@@ -32,7 +32,7 @@ class MockExecutorService implements ExecutorService {
   private boolean autoRun = true;
   private final List<ExecutorTask<?>> tasks = new ArrayList<>();
 
-  // Test utility for inspecting exectutor's futures
+  // Test utility for inspecting executor's futures
   public List<Future<?>> getFutures() {
     return tasks.stream().map(ExecutorTask::getFuture).collect(Collectors.toList());
   }
