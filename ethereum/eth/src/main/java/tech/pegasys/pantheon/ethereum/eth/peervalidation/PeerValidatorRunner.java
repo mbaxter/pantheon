@@ -47,7 +47,7 @@ public class PeerValidatorRunner {
                   disconnectPeer(ethPeer);
                 }
               });
-    } else {
+    } else if (!ethPeer.isDisconnected()) {
       scheduleNextCheck(ethPeer);
     }
   }

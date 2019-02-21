@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManager;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManagerTestUtil;
+import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -56,6 +57,27 @@ public class PeerValidatorRunnerTest {
     verify(validator, never()).validatePeer(eq(peer));
     verify(runner, never()).disconnectPeer(eq(peer));
     verify(runner, times(2)).scheduleNextCheck(eq(peer));
+  }
+
+  @Test
+  public void checkPeer_doesNotScheduleFutureCheckWhenPeerNotReadyAndDisconnected() {
+    EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
+    EthProtocolManagerTestUtil.disableEthSchedulerAutoRun(ethProtocolManager);
+    EthPeer peer = EthProtocolManagerTestUtil.createPeer(ethProtocolManager).getEthPeer();
+    peer.disconnect(DisconnectReason.SUBPROTOCOL_TRIGGERED);
+
+    PeerValidator validator = mock(PeerValidator.class);
+    when(validator.canBeValidated(eq(peer))).thenReturn(false);
+    when(validator.nextValidationCheckTimeout(eq(peer))).thenReturn(Duration.ofSeconds(30));
+
+    PeerValidatorRunner runner =
+        spy(new PeerValidatorRunner(ethProtocolManager.ethContext(), validator));
+    runner.checkPeer(peer);
+
+    verify(runner, times(1)).checkPeer(eq(peer));
+    verify(validator, never()).validatePeer(eq(peer));
+    verify(runner, never()).disconnectPeer(eq(peer));
+    verify(runner, times(0)).scheduleNextCheck(eq(peer));
   }
 
   @Test
