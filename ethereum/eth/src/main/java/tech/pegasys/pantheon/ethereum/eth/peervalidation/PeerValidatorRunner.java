@@ -17,7 +17,11 @@ import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
 
 import java.time.Duration;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class PeerValidatorRunner {
+  private static final Logger LOG = LogManager.getLogger();
   protected final EthContext ethContext;
   private final PeerValidator peerValidator;
 
@@ -26,6 +30,10 @@ public class PeerValidatorRunner {
     this.peerValidator = peerValidator;
 
     ethContext.getEthPeers().subscribeConnect(this::checkPeer);
+  }
+
+  public static void runValidator(final EthContext ethContext, final PeerValidator peerValidator) {
+    new PeerValidatorRunner(ethContext, peerValidator);
   }
 
   public void checkPeer(final EthPeer ethPeer) {
@@ -45,6 +53,10 @@ public class PeerValidatorRunner {
   }
 
   protected void disconnectPeer(final EthPeer ethPeer) {
+    LOG.debug(
+        "Disconnecting from peer {} marked invalid by {}",
+        ethPeer,
+        peerValidator.getClass().getSimpleName());
     ethPeer.disconnect(peerValidator.getDisconnectReason(ethPeer));
   }
 

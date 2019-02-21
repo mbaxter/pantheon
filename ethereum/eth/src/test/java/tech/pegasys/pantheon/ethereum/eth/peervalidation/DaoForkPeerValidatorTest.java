@@ -31,8 +31,11 @@ import tech.pegasys.pantheon.ethereum.mainnet.MainnetProtocolSchedule;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.Test;
 
@@ -125,6 +128,49 @@ public class DaoForkPeerValidatorTest {
     // Request should timeout immediately
     assertThat(result).isDone();
     assertThat(result).isCompletedWithValue(false);
+  }
+
+  @Test
+  public void validatePeer_requestBlockFromPeerBeingTested() {
+    EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
+    BlockDataGenerator gen = new BlockDataGenerator(1);
+    long daoBlockNumber = 500;
+    Block daoBlock =
+        gen.block(
+            BlockOptions.create()
+                .setBlockNumber(daoBlockNumber)
+                .setExtraData(MainnetBlockHeaderValidator.DAO_EXTRA_DATA));
+
+    PeerValidator validator =
+        new DaoForkPeerValidator(
+            ethProtocolManager.ethContext(),
+            MainnetProtocolSchedule.create(),
+            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
+            daoBlockNumber,
+            0);
+
+    int peerCount = 1000;
+    List<RespondingEthPeer> otherPeers =
+        Stream.generate(
+                () -> EthProtocolManagerTestUtil.createPeer(ethProtocolManager, daoBlockNumber))
+            .limit(peerCount)
+            .collect(Collectors.toList());
+    RespondingEthPeer targetPeer =
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, daoBlockNumber);
+
+    CompletableFuture<Boolean> result = validator.validatePeer(targetPeer.getEthPeer());
+
+    assertThat(result).isNotDone();
+
+    // Other peers should not receive request for dao block
+    for (RespondingEthPeer otherPeer : otherPeers) {
+      AtomicBoolean daoBlockRequestedForOtherPeer = respondToDaoBlockRequest(otherPeer, daoBlock);
+      assertThat(daoBlockRequestedForOtherPeer).isFalse();
+    }
+
+    // Target peer should receive request for dao block
+    final AtomicBoolean daoBlockRequested = respondToDaoBlockRequest(targetPeer, daoBlock);
+    assertThat(daoBlockRequested).isTrue();
   }
 
   @Test

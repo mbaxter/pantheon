@@ -17,7 +17,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthContext;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
-import tech.pegasys.pantheon.ethereum.eth.manager.task.AbstractGetHeadersFromPeerTask;
+import tech.pegasys.pantheon.ethereum.eth.manager.task.AbstractPeerTask;
 import tech.pegasys.pantheon.ethereum.eth.manager.task.GetHeadersFromPeerByNumberTask;
 import tech.pegasys.pantheon.ethereum.mainnet.MainnetBlockHeaderValidator;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
@@ -28,7 +28,13 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class DaoForkPeerValidator implements PeerValidator {
+  private static final Logger LOG = LogManager.getLogger();
+  private static long DEFAULT_CHAIN_HEIGHT_ESTIMATION_BUFFER = 10L;
+
   private final EthContext ethContext;
   private final ProtocolSchedule<?> protocolSchedule;
   private final LabelledMetric<OperationTimer> ethTasksTimer;
@@ -51,11 +57,25 @@ public class DaoForkPeerValidator implements PeerValidator {
     this.chainHeightEstimationBuffer = chainHeightEstimationBuffer;
   }
 
+  public DaoForkPeerValidator(
+      final EthContext ethContext,
+      final ProtocolSchedule<?> protocolSchedule,
+      final LabelledMetric<OperationTimer> ethTasksTimer,
+      final long daoBlockNumber) {
+    this(
+        ethContext,
+        protocolSchedule,
+        ethTasksTimer,
+        daoBlockNumber,
+        DEFAULT_CHAIN_HEIGHT_ESTIMATION_BUFFER);
+  }
+
   @Override
   public CompletableFuture<Boolean> validatePeer(final EthPeer ethPeer) {
-    AbstractGetHeadersFromPeerTask getHeaderTask =
+    AbstractPeerTask<List<BlockHeader>> getHeaderTask =
         GetHeadersFromPeerByNumberTask.forSingleNumber(
-            protocolSchedule, ethContext, daoBlockNumber, ethTasksTimer);
+                protocolSchedule, ethContext, daoBlockNumber, ethTasksTimer)
+            .assignPeer(ethPeer);
     return ethContext
         .getScheduler()
         .timeout(getHeaderTask, Duration.ofSeconds(20))
@@ -63,15 +83,31 @@ public class DaoForkPeerValidator implements PeerValidator {
             (res, err) -> {
               if (err != null) {
                 // Mark peer as invalid on error
+                LOG.debug(
+                    "Peer {} is invalid because DAO block ({}) is unavailable: {}",
+                    ethPeer,
+                    daoBlockNumber,
+                    err.toString());
                 return false;
               }
               List<BlockHeader> headers = res.getResult();
               if (headers.size() == 0) {
                 // If no headers are returned, fail
+                LOG.debug(
+                    "Peer {} is invalid because DAO block ({}) is unavailable.",
+                    ethPeer,
+                    daoBlockNumber);
                 return false;
               }
               BlockHeader header = headers.get(0);
-              return MainnetBlockHeaderValidator.validateHeaderForDaoFork(header);
+              boolean validDaoBlock = MainnetBlockHeaderValidator.validateHeaderForDaoFork(header);
+              if (!validDaoBlock) {
+                LOG.debug(
+                    "Peer {} is invalid because DAO block ({}) is invalid.",
+                    ethPeer,
+                    daoBlockNumber);
+              }
+              return validDaoBlock;
             });
   }
 
