@@ -82,6 +82,7 @@ public class DeterministicEthScheduler extends EthScheduler {
   @FunctionalInterface
   public interface TimeoutPolicy {
     TimeoutPolicy NEVER = () -> false;
+    TimeoutPolicy ALWAYS = () -> true;
 
     boolean shouldTimeout();
 

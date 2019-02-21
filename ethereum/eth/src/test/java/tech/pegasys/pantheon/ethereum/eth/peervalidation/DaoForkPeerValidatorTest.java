@@ -13,16 +13,12 @@
 package tech.pegasys.pantheon.ethereum.eth.peervalidation;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator;
 import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator.BlockOptions;
+import tech.pegasys.pantheon.ethereum.eth.manager.DeterministicEthScheduler.TimeoutPolicy;
+import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManager;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManagerTestUtil;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer;
@@ -35,168 +31,139 @@ import tech.pegasys.pantheon.ethereum.mainnet.MainnetProtocolSchedule;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.junit.Test;
 
 public class DaoForkPeerValidatorTest {
 
   @Test
-  public void validatesNewPeerOnRightSideOfDaoFork_noBuffer() {
-    validatesNewPeerOnRightSideOfDaoFork(0);
-  }
-
-  @Test
-  public void validatesNewPeerOnRightSideOfDaoFork_withBuffer() {
-    validatesNewPeerOnRightSideOfDaoFork(10);
-  }
-
-  private void validatesNewPeerOnRightSideOfDaoFork(final int chainHeightBuffer) {
+  public void validatePeer_responsivePeerOnRightSideOfFork() {
     EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
     BlockDataGenerator gen = new BlockDataGenerator(1);
-
     long daoBlockNumber = 500;
     Block daoBlock =
         gen.block(
             BlockOptions.create()
                 .setBlockNumber(daoBlockNumber)
                 .setExtraData(MainnetBlockHeaderValidator.DAO_EXTRA_DATA));
-    PeerValidator daoValidator =
-        spy(
-            new DaoForkPeerValidator(
-                ethProtocolManager.ethContext(),
-                MainnetProtocolSchedule.create(),
-                NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
-                daoBlockNumber,
-                0));
-    TrackablePeerValidator validator =
-        new TrackablePeerValidator(ethProtocolManager.ethContext(), daoValidator);
 
-    // Create new peer that should be validated
-    RespondingEthPeer peer =
-        spy(
-            EthProtocolManagerTestUtil.createPeer(
-                ethProtocolManager, daoBlockNumber + chainHeightBuffer));
-
-    // Validator should request the DAO block
-    // Setup responder to serve this request
-    Responder responder =
-        RespondingEthPeer.targetedResponder(
-            (cap, msg) -> {
-              if (msg.getCode() != EthPV62.GET_BLOCK_HEADERS) {
-                return false;
-              }
-              GetBlockHeadersMessage headersRequest = GetBlockHeadersMessage.readFrom(msg);
-              return headersRequest.blockNumber().isPresent()
-                  && headersRequest.blockNumber().getAsLong() == daoBlockNumber;
-            },
-            (cap, msg) -> BlockHeadersMessage.create(daoBlock.getHeader()));
-
-    // Respond
-    peer.respond(responder);
-
-    // Verify
-    verify(daoValidator, never()).disconnectPeer(any());
-    assertThat(validator.hasPeerBeenAccepted(peer.getEthPeer())).isTrue();
-  }
-
-  @Test
-  public void rejectsPeervOnWrongSideOfDaoFork_noBuffer() {
-    rejectsPeerOnWrongSideOfDaoFork(0);
-  }
-
-  @Test
-  public void rejectsPeervOnWrongSideOfDaoFork_withBuffer() {
-    rejectsPeerOnWrongSideOfDaoFork(10);
-  }
-
-  private void rejectsPeerOnWrongSideOfDaoFork(final int chainHeightBuffer) {
-    EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
-    BlockDataGenerator gen = new BlockDataGenerator(1);
-
-    long daoBlockNumber = 500;
-    Block daoBlock =
-        gen.block(
-            BlockOptions.create().setBlockNumber(daoBlockNumber).setExtraData(BytesValue.EMPTY));
-    PeerValidator daoValidator =
-        spy(
-            new DaoForkPeerValidator(
-                ethProtocolManager.ethContext(),
-                MainnetProtocolSchedule.create(),
-                NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
-                daoBlockNumber,
-                0));
-    TrackablePeerValidator validator =
-        new TrackablePeerValidator(ethProtocolManager.ethContext(), daoValidator);
-
-    // Create new peer that should be validated
-    RespondingEthPeer peer =
-        EthProtocolManagerTestUtil.createPeer(
-            ethProtocolManager, daoBlockNumber + chainHeightBuffer);
-
-    // Validator should request the DAO block
-    // Setup responder to serve this request
-    Responder responder =
-        RespondingEthPeer.targetedResponder(
-            (cap, msg) -> {
-              if (msg.getCode() != EthPV62.GET_BLOCK_HEADERS) {
-                return false;
-              }
-              GetBlockHeadersMessage headersRequest = GetBlockHeadersMessage.readFrom(msg);
-              return headersRequest.blockNumber().isPresent()
-                  && headersRequest.blockNumber().getAsLong() == daoBlockNumber;
-            },
-            (cap, msg) -> BlockHeadersMessage.create(daoBlock.getHeader()));
-
-    // Respond
-    peer.respond(responder);
-
-    // Verify
-    assertThat(validator.hasPeerBeenRejected(peer.getEthPeer())).isTrue();
-    verify(daoValidator, times(1)).disconnectPeer(eq(peer.getEthPeer()));
-  }
-
-  @Test
-  public void retriesTrailingPeer() {
-    EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
-    EthProtocolManagerTestUtil.disableEthSchedulerAutoRun(ethProtocolManager);
-    BlockDataGenerator gen = new BlockDataGenerator(1);
-
-    long daoBlockNumber = 500;
-    Block daoBlock =
-        gen.block(
-            BlockOptions.create().setBlockNumber(daoBlockNumber).setExtraData(BytesValue.EMPTY));
-    TrackablePeerValidator validator =
-        new TrackablePeerValidator(
+    PeerValidator validator =
+        new DaoForkPeerValidator(
             ethProtocolManager.ethContext(),
-            new DaoForkPeerValidator(
-                ethProtocolManager.ethContext(),
-                MainnetProtocolSchedule.create(),
-                NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
-                daoBlockNumber,
-                0));
+            MainnetProtocolSchedule.create(),
+            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
+            daoBlockNumber,
+            0);
 
-    // Create new peer that should be validated
     RespondingEthPeer peer =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, daoBlockNumber - 100);
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, daoBlockNumber);
 
-    assertThat(validator.peerValidationIsPending(peer.getEthPeer())).isTrue();
-    assertThat(validator.getNumberOfChecksForPeer(peer.getEthPeer())).isEqualTo(1);
+    CompletableFuture<Boolean> result = validator.validatePeer(peer.getEthPeer());
 
-    // Run pending futures
-    final int retries = 2;
-    for (int i = 0; i < retries; i++) {
-      EthProtocolManagerTestUtil.runPendingFutures(ethProtocolManager);
-    }
+    assertThat(result).isNotDone();
 
-    assertThat(validator.peerValidationIsPending(peer.getEthPeer())).isTrue();
-    assertThat(validator.getNumberOfChecksForPeer(peer.getEthPeer())).isEqualTo(1 + retries);
+    // Send response for dao block
+    AtomicBoolean daoBlockRequested = respondToDaoBlockRequest(peer, daoBlock);
 
-    // Now update peer stats
-    peer.getEthPeer().chainState().update(daoBlock.getHeader());
-    // Manually run scheduled tasks to trigger another check
-    EthProtocolManagerTestUtil.runPendingFutures(ethProtocolManager);
+    assertThat(daoBlockRequested).isTrue();
+    assertThat(result).isDone();
+    assertThat(result).isCompletedWithValue(true);
+  }
 
-    // Validator should request the DAO block
-    // Setup responder to serve this request
+  @Test
+  public void validatePeer_responsivePeerOnWrongSideOfFork() {
+    EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create();
+    BlockDataGenerator gen = new BlockDataGenerator(1);
+    long daoBlockNumber = 500;
+    Block daoBlock =
+        gen.block(
+            BlockOptions.create().setBlockNumber(daoBlockNumber).setExtraData(BytesValue.EMPTY));
+
+    PeerValidator validator =
+        new DaoForkPeerValidator(
+            ethProtocolManager.ethContext(),
+            MainnetProtocolSchedule.create(),
+            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
+            daoBlockNumber,
+            0);
+
+    RespondingEthPeer peer =
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, daoBlockNumber);
+
+    CompletableFuture<Boolean> result = validator.validatePeer(peer.getEthPeer());
+
+    assertThat(result).isNotDone();
+
+    // Send response for dao block
+    AtomicBoolean daoBlockRequested = respondToDaoBlockRequest(peer, daoBlock);
+
+    assertThat(daoBlockRequested).isTrue();
+    assertThat(result).isDone();
+    assertThat(result).isCompletedWithValue(false);
+  }
+
+  @Test
+  public void validatePeer_unresponsivePeer() {
+    EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create(TimeoutPolicy.ALWAYS);
+    long daoBlockNumber = 500;
+
+    PeerValidator validator =
+        new DaoForkPeerValidator(
+            ethProtocolManager.ethContext(),
+            MainnetProtocolSchedule.create(),
+            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
+            daoBlockNumber,
+            0);
+
+    RespondingEthPeer peer =
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, daoBlockNumber);
+
+    CompletableFuture<Boolean> result = validator.validatePeer(peer.getEthPeer());
+
+    // Request should timeout immediately
+    assertThat(result).isDone();
+    assertThat(result).isCompletedWithValue(false);
+  }
+
+  @Test
+  public void canBeValidated() {
+    BlockDataGenerator gen = new BlockDataGenerator(1);
+    EthProtocolManager ethProtocolManager = EthProtocolManagerTestUtil.create(TimeoutPolicy.ALWAYS);
+    long daoBlockNumber = 500;
+    long buffer = 10;
+
+    PeerValidator validator =
+        new DaoForkPeerValidator(
+            ethProtocolManager.ethContext(),
+            MainnetProtocolSchedule.create(),
+            NoOpMetricsSystem.NO_OP_LABELLED_TIMER,
+            daoBlockNumber,
+            buffer);
+
+    EthPeer peer = EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 0).getEthPeer();
+
+    peer.chainState().update(gen.hash(), daoBlockNumber - 10);
+    assertThat(validator.canBeValidated(peer)).isFalse();
+
+    peer.chainState().update(gen.hash(), daoBlockNumber);
+    assertThat(validator.canBeValidated(peer)).isFalse();
+
+    peer.chainState().update(gen.hash(), daoBlockNumber + buffer - 1);
+    assertThat(validator.canBeValidated(peer)).isFalse();
+
+    peer.chainState().update(gen.hash(), daoBlockNumber + buffer);
+    assertThat(validator.canBeValidated(peer)).isTrue();
+
+    peer.chainState().update(gen.hash(), daoBlockNumber + buffer + 10);
+    assertThat(validator.canBeValidated(peer)).isTrue();
+  }
+
+  private AtomicBoolean respondToDaoBlockRequest(
+      final RespondingEthPeer peer, final Block daoBlock) {
+    AtomicBoolean daoBlockRequested = new AtomicBoolean(false);
+
     Responder responder =
         RespondingEthPeer.targetedResponder(
             (cap, msg) -> {
@@ -204,16 +171,20 @@ public class DaoForkPeerValidatorTest {
                 return false;
               }
               GetBlockHeadersMessage headersRequest = GetBlockHeadersMessage.readFrom(msg);
-              return headersRequest.blockNumber().isPresent()
-                  && headersRequest.blockNumber().getAsLong() == daoBlockNumber;
+              boolean isDaoBlockRequest =
+                  headersRequest.blockNumber().isPresent()
+                      && headersRequest.blockNumber().getAsLong()
+                          == daoBlock.getHeader().getNumber();
+              if (isDaoBlockRequest) {
+                daoBlockRequested.set(true);
+              }
+              return isDaoBlockRequest;
             },
             (cap, msg) -> BlockHeadersMessage.create(daoBlock.getHeader()));
 
     // Respond
     peer.respond(responder);
 
-    assertThat(validator.peerValidationIsPending(peer.getEthPeer())).isFalse();
-    assertThat(validator.hasPeerBeenRejected(peer.getEthPeer())).isTrue();
-    assertThat(validator.getNumberOfChecksForPeer(peer.getEthPeer())).isEqualTo(2 + retries);
+    return daoBlockRequested;
   }
 }

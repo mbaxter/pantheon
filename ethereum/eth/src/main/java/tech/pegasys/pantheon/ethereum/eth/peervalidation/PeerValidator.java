@@ -12,58 +12,44 @@
  */
 package tech.pegasys.pantheon.ethereum.eth.peervalidation;
 
-import tech.pegasys.pantheon.ethereum.eth.manager.EthContext;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
-import com.google.common.annotations.VisibleForTesting;
+public interface PeerValidator {
 
-public abstract class PeerValidator {
-  protected final EthContext ethContext;
+  /**
+   * Whether the peer can currently be validated.
+   *
+   * @param ethPeer The peer that need validation.
+   * @return {@code} True if peer can be validated now.
+   */
+  boolean canBeValidated(final EthPeer ethPeer);
 
-  protected PeerValidator(final EthContext ethContext) {
-    this.ethContext = ethContext;
+  /**
+   * If the peer cannot currently be validated, returns a timeout indicating how long to wait.
+   * before trying to validate the peer again.
+   *
+   * @param ethPeer The peer to be validated.
+   * @return A duration representing how long to wait before trying to validate this peer again.
+   */
+  Duration nextValidationCheckTimeout(final EthPeer ethPeer);
 
-    ethContext.getEthPeers().subscribeConnect(this::checkPeer);
-  }
+  /**
+   * Validates the given peer.
+   *
+   * @param ethPeer The peer to be validated.
+   * @return True if the peer is valid, false otherwise.
+   */
+  CompletableFuture<Boolean> validatePeer(final EthPeer ethPeer);
 
-  void checkPeer(final EthPeer ethPeer) {
-    if (canBeValidated(ethPeer)) {
-      validatePeer(ethPeer)
-          .whenComplete(
-              (validated, err) -> {
-                if (err != null || !validated) {
-                  // Disconnect invalid peer
-                  disconnectPeer(ethPeer);
-                }
-              });
-    } else {
-      scheduleNextCheck(ethPeer);
-    }
-  }
-
-  @VisibleForTesting
-  void disconnectPeer(final EthPeer ethPeer) {
-    ethPeer.disconnect(getDisconnectReason());
-  }
-
-  @VisibleForTesting
-  void scheduleNextCheck(final EthPeer ethPeer) {
-    ethContext
-        .getScheduler()
-        .scheduleFutureTask(() -> checkPeer(ethPeer), nextCheckTimeout(ethPeer));
-  }
-
-  protected DisconnectReason getDisconnectReason() {
+  /**
+   * @param ethPeer The peer to be disconnected.
+   * @return The reason for disconnecting.
+   */
+  default DisconnectReason getDisconnectReason(final EthPeer ethPeer) {
     return DisconnectReason.SUBPROTOCOL_TRIGGERED;
   }
-
-  protected abstract CompletableFuture<Boolean> validatePeer(final EthPeer ethPeer);
-
-  protected abstract boolean canBeValidated(final EthPeer ethPeer);
-
-  protected abstract Duration nextCheckTimeout(final EthPeer ethPeer);
 }

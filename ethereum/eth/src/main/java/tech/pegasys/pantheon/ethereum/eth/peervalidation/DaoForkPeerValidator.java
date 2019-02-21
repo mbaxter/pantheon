@@ -28,7 +28,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public class DaoForkPeerValidator extends PeerValidator {
+public class DaoForkPeerValidator implements PeerValidator {
+  private final EthContext ethContext;
   private final ProtocolSchedule<?> protocolSchedule;
   private final LabelledMetric<OperationTimer> ethTasksTimer;
 
@@ -42,8 +43,8 @@ public class DaoForkPeerValidator extends PeerValidator {
       final LabelledMetric<OperationTimer> ethTasksTimer,
       final long daoBlockNumber,
       final long chainHeightEstimationBuffer) {
-    super(ethContext);
     checkArgument(chainHeightEstimationBuffer >= 0);
+    this.ethContext = ethContext;
     this.protocolSchedule = protocolSchedule;
     this.ethTasksTimer = ethTasksTimer;
     this.daoBlockNumber = daoBlockNumber;
@@ -51,15 +52,19 @@ public class DaoForkPeerValidator extends PeerValidator {
   }
 
   @Override
-  protected CompletableFuture<Boolean> validatePeer(final EthPeer ethPeer) {
+  public CompletableFuture<Boolean> validatePeer(final EthPeer ethPeer) {
     AbstractGetHeadersFromPeerTask getHeaderTask =
         GetHeadersFromPeerByNumberTask.forSingleNumber(
             protocolSchedule, ethContext, daoBlockNumber, ethTasksTimer);
     return ethContext
         .getScheduler()
         .timeout(getHeaderTask, Duration.ofSeconds(20))
-        .thenApply(
-            (res) -> {
+        .handle(
+            (res, err) -> {
+              if (err != null) {
+                // Mark peer as invalid on error
+                return false;
+              }
               List<BlockHeader> headers = res.getResult();
               if (headers.size() == 0) {
                 // If no headers are returned, fail
@@ -71,19 +76,19 @@ public class DaoForkPeerValidator extends PeerValidator {
   }
 
   @Override
-  protected boolean canBeValidated(final EthPeer ethPeer) {
+  public boolean canBeValidated(final EthPeer ethPeer) {
     return ethPeer.chainState().getEstimatedHeight()
         >= (daoBlockNumber + chainHeightEstimationBuffer);
   }
 
   @Override
-  protected Duration nextCheckTimeout(final EthPeer ethPeer) {
+  public Duration nextValidationCheckTimeout(final EthPeer ethPeer) {
     if (!ethPeer.chainState().hasEstimatedHeight()) {
       return Duration.ofSeconds(30);
     }
     long distanceToDaoBlock = daoBlockNumber - ethPeer.chainState().getEstimatedHeight();
     if (distanceToDaoBlock < 100_000L) {
-      return Duration.ofSeconds(30);
+      return Duration.ofMinutes(1);
     }
     // If the peer is trailing behind, give it some time to catch up before trying again.
     return Duration.ofMinutes(10);
