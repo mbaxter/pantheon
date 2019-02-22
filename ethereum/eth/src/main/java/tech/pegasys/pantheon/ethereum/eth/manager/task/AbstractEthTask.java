@@ -31,25 +31,17 @@ import java.util.function.Supplier;
 
 public abstract class AbstractEthTask<T> implements EthTask<T> {
 
-  static volatile LabelledMetric<OperationTimer> ethTasksTimer = null;
-
-  protected double taskTimeInSec = -1.0D;
-  protected final OperationTimer taskTimer;
+  private double taskTimeInSec = -1.0D;
+  private final LabelledMetric<OperationTimer> ethTasksTimer;
+  private final OperationTimer taskTimer;
   protected final AtomicReference<CompletableFuture<T>> result = new AtomicReference<>();
-  protected volatile Collection<CompletableFuture<?>> subTaskFutures =
-      new ConcurrentLinkedDeque<>();
+  private volatile Collection<CompletableFuture<?>> subTaskFutures = new ConcurrentLinkedDeque<>();
 
   protected AbstractEthTask(final MetricsSystem metricsSystem) {
-    setupTaskTimer(metricsSystem);
+    ethTasksTimer =
+        metricsSystem.createLabelledTimer(
+            MetricCategory.SYNCHRONIZER, "task", "Internal processing tasks", "taskName");
     taskTimer = ethTasksTimer.labels(getClass().getSimpleName());
-  }
-
-  private synchronized void setupTaskTimer(final MetricsSystem metricsSystem) {
-    if (ethTasksTimer == null) {
-      ethTasksTimer =
-          metricsSystem.createLabelledTimer(
-              MetricCategory.SYNCHRONIZER, "task", "Internal processing tasks", "taskName");
-    }
   }
 
   @Override
