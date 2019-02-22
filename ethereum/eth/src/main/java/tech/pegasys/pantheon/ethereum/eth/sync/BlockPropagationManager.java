@@ -109,7 +109,7 @@ public class BlockPropagationManager<C> {
         .subscribe(EthPV62.NEW_BLOCK_HASHES, this::handleNewBlockHashesFromNetwork);
   }
 
-  protected void validateAndBroadcastBlock(final Block block) {
+  private void validateAndBroadcastBlock(final Block block) {
     final ProtocolSpec<C> protocolSpec =
         protocolSchedule.getByBlockNumber(block.getHeader().getNumber());
     final BlockHeaderValidator<C> blockHeaderValidator = protocolSpec.getBlockHeaderValidator();
@@ -292,7 +292,7 @@ public class BlockPropagationManager<C> {
       return CompletableFuture.completedFuture(block);
     }
 
-    validateAndBroadcastBlock(block);
+    ethContext.getScheduler().scheduleSyncWorkerTask(() -> validateAndBroadcastBlock(block));
 
     // Import block
     final PersistBlockTask<C> importTask =

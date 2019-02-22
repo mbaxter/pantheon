@@ -14,9 +14,7 @@ package tech.pegasys.pantheon.ethereum.eth.sync.tasks;
 
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
-import tech.pegasys.pantheon.ethereum.eth.manager.EthContext;
-import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
-import tech.pegasys.pantheon.ethereum.eth.manager.task.AbstractPipelinedPeerTask;
+import tech.pegasys.pantheon.ethereum.eth.manager.task.AbstractPipelinedTask;
 import tech.pegasys.pantheon.ethereum.eth.sync.ValidationPolicy;
 import tech.pegasys.pantheon.ethereum.eth.sync.tasks.exceptions.InvalidBlockException;
 import tech.pegasys.pantheon.ethereum.mainnet.BlockHeaderValidator;
@@ -32,7 +30,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class ParallelValidateHeadersTask<C>
-    extends AbstractPipelinedPeerTask<List<BlockHeader>, List<BlockHeader>> {
+    extends AbstractPipelinedTask<List<BlockHeader>, List<BlockHeader>> {
   private static final Logger LOG = LogManager.getLogger();
 
   private final ProtocolSchedule<C> protocolSchedule;
@@ -45,9 +43,8 @@ public class ParallelValidateHeadersTask<C>
       final int outboundBacklogSize,
       final ProtocolSchedule<C> protocolSchedule,
       final ProtocolContext<C> protocolContext,
-      final EthContext ethContext,
       final MetricsSystem metricsSystem) {
-    super(inboundQueue, outboundBacklogSize, ethContext, metricsSystem);
+    super(inboundQueue, outboundBacklogSize, metricsSystem);
 
     this.protocolSchedule = protocolSchedule;
     this.protocolContext = protocolContext;
@@ -56,9 +53,7 @@ public class ParallelValidateHeadersTask<C>
 
   @Override
   protected Optional<List<BlockHeader>> processStep(
-      final List<BlockHeader> headers,
-      final Optional<List<BlockHeader>> previousHeaders,
-      final EthPeer peer) {
+      final List<BlockHeader> headers, final Optional<List<BlockHeader>> previousHeaders) {
     LOG.debug(
         "Validating Headers {} to {}",
         headers.get(0).getNumber(),

@@ -12,9 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.eth.sync.tasks;
 
-import tech.pegasys.pantheon.ethereum.eth.manager.EthContext;
-import tech.pegasys.pantheon.ethereum.eth.manager.EthPeer;
-import tech.pegasys.pantheon.ethereum.eth.manager.task.AbstractPipelinedPeerTask;
+import tech.pegasys.pantheon.ethereum.eth.manager.task.AbstractPipelinedTask;
 import tech.pegasys.pantheon.ethereum.eth.sync.BlockHandler;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 
@@ -28,7 +26,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class ParallelValidateAndImportBodiesTask<B>
-    extends AbstractPipelinedPeerTask<List<B>, List<B>> {
+    extends AbstractPipelinedTask<List<B>, List<B>> {
   private static final Logger LOG = LogManager.getLogger();
 
   private final BlockHandler<B> blockHandler;
@@ -37,16 +35,15 @@ public class ParallelValidateAndImportBodiesTask<B>
       final BlockHandler<B> blockHandler,
       final BlockingQueue<List<B>> inboundQueue,
       final int outboundBacklogSize,
-      final EthContext ethContext,
       final MetricsSystem metricsSystem) {
-    super(inboundQueue, outboundBacklogSize, ethContext, metricsSystem);
+    super(inboundQueue, outboundBacklogSize, metricsSystem);
 
     this.blockHandler = blockHandler;
   }
 
   @Override
   protected Optional<List<B>> processStep(
-      final List<B> blocks, final Optional<List<B>> previousBlocks, final EthPeer peer) {
+      final List<B> blocks, final Optional<List<B>> previousBlocks) {
     final long firstBlock = blockHandler.extractBlockNumber(blocks.get(0));
     final long lastBlock = blockHandler.extractBlockNumber(blocks.get(blocks.size() - 1));
     LOG.debug("Starting import of chain segment {} to {}", firstBlock, lastBlock);

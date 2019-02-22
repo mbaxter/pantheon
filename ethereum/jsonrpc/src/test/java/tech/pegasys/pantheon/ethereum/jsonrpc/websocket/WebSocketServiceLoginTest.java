@@ -22,6 +22,7 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.subscription.Subscriptio
 
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -70,6 +71,7 @@ public class WebSocketServiceLoginTest {
     websocketConfiguration.setPort(0);
     websocketConfiguration.setAuthenticationEnabled(true);
     websocketConfiguration.setAuthenticationCredentialsFile(authTomlPath);
+    websocketConfiguration.setHostsWhitelist(Collections.singleton("*"));
 
     final Map<String, JsonRpcMethod> websocketMethods =
         new WebSocketMethodsFactory(new SubscriptionManager(), new HashMap<>()).methods();
@@ -188,7 +190,7 @@ public class WebSocketServiceLoginTest {
     final MultiMap headers = new VertxHttpHeaders();
     String badtoken = "badtoken";
     if (badtoken != null) {
-      headers.add("Bearer", badtoken);
+      headers.add("Authorization", "Bearer " + badtoken);
     }
     httpClient.websocket(
         options,
@@ -225,7 +227,7 @@ public class WebSocketServiceLoginTest {
     options.setPort(websocketConfiguration.getPort());
     final MultiMap headers = new VertxHttpHeaders();
     if (goodToken != null) {
-      headers.add("Bearer", goodToken);
+      headers.add("Authorization", "Bearer " + goodToken);
     }
     httpClient.websocket(
         options,
