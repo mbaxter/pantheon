@@ -37,6 +37,7 @@ import org.apache.logging.log4j.Logger;
 class WorldDownloadState {
   private static final Logger LOG = LogManager.getLogger();
 
+  private final boolean downloadWasResumed;
   private final TaskQueue<NodeDataRequest> pendingRequests;
   private final ArrayBlockingQueue<Task<NodeDataRequest>> requestsToPersist;
   private final int maxOutstandingRequests;
@@ -53,6 +54,7 @@ class WorldDownloadState {
       final TaskQueue<NodeDataRequest> pendingRequests,
       final ArrayBlockingQueue<Task<NodeDataRequest>> requestsToPersist,
       final int maxOutstandingRequests) {
+    this.downloadWasResumed = !pendingRequests.isEmpty();
     this.pendingRequests = pendingRequests;
     this.requestsToPersist = requestsToPersist;
     this.maxOutstandingRequests = maxOutstandingRequests;
@@ -91,6 +93,10 @@ class WorldDownloadState {
     } else {
       downloadFuture.complete(result);
     }
+  }
+
+  public boolean downloadWasResumed() {
+    return downloadWasResumed;
   }
 
   public void whileAdditionalRequestsCanBeSent(final Runnable action) {

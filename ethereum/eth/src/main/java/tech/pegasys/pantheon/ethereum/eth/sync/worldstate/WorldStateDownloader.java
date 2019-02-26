@@ -316,7 +316,10 @@ public class WorldStateDownloader {
       } else {
         request.setData(matchingData);
         if (isRootState(blockHeader, request)) {
-          downloadState.enqueueRequests(request.getChildRequests());
+          if (!downloadState.downloadWasResumed()) {
+            // Only queue rootnode children if we're starting from scratch
+            downloadState.enqueueRequests(request.getChildRequests());
+          }
           downloadState.setRootNodeData(request.getData());
           task.markCompleted();
         } else {
