@@ -71,6 +71,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -460,7 +461,7 @@ public class WorldStateDownloaderTest {
     final Set<Bytes32> unknownNodes = new HashSet<>();
     assertThat(allNodes.size()).isGreaterThan(0); // Sanity check
     final Updater localStorageUpdater = localStorage.updater();
-    final AtomicBoolean storeNode = new AtomicBoolean(true);
+    final AtomicBoolean storeNode = new AtomicBoolean(false);
     allNodes.forEach(
         (nodeHash, node) -> {
           if (storeNode.get()) {
@@ -559,7 +560,7 @@ public class WorldStateDownloaderTest {
     }
     assertThat(allTrieNodes.size()).isGreaterThan(0); // Sanity check
     final Updater localStorageUpdater = localStorage.updater();
-    boolean storeNode = true;
+    boolean storeNode = false;
     for (final Entry<Bytes32, BytesValue> entry : allTrieNodes.entrySet()) {
       final Bytes32 hash = entry.getKey();
       final BytesValue data = entry.getValue();
@@ -687,12 +688,13 @@ public class WorldStateDownloaderTest {
 
     // Add some nodes to the queue
     final TaskQueue<NodeDataRequest> queue = spy(new InMemoryTaskQueue<>());
-    Map<Bytes32, BytesValue> queuedNodes = getFirstSetOfTrieNodeRequests(remoteStorage, stateRoot);
-    for (Bytes32 bytes32 : queuedNodes.keySet()) {
+    List<Bytes32> queuedHashes = getFirstSetOfChildNodeRequests(remoteStorage, stateRoot);
+    assertThat(queuedHashes.size()).isGreaterThan(0); // Sanity check
+    for (Bytes32 bytes32 : queuedHashes) {
       queue.enqueue(new AccountTrieNodeDataRequest(Hash.wrap(bytes32)));
     }
     // Sanity check
-    for (Bytes32 bytes32 : queuedNodes.keySet()) {
+    for (Bytes32 bytes32 : queuedHashes) {
       final Hash hash = Hash.wrap(bytes32);
       verify(queue, times(1)).enqueue(argThat((r) -> r.getHash().equals(hash)));
     }
@@ -720,7 +722,6 @@ public class WorldStateDownloaderTest {
       peer.respond(responder);
       giveOtherThreadsAGo();
     }
-    // World state should be available by the time the result is complete
     assertThat(localStorage.isWorldStateAvailable(stateRoot)).isTrue();
 
     // Check that already enqueued trie nodes were requested
@@ -731,10 +732,10 @@ public class WorldStateDownloaderTest {
             .flatMap(m -> StreamSupport.stream(m.hashes().spliterator(), true))
             .collect(Collectors.toList());
     assertThat(requestedHashes.size()).isGreaterThan(0);
-    assertThat(requestedHashes).containsAll(queuedNodes.keySet());
+    assertThat(requestedHashes).containsAll(queuedHashes);
 
     // Check that already enqueued requests were not enqueued more than once
-    for (Bytes32 bytes32 : queuedNodes.keySet()) {
+    for (Bytes32 bytes32 : queuedHashes) {
       final Hash hash = Hash.wrap(bytes32);
       verify(queue, times(1)).enqueue(argThat((r) -> r.getHash().equals(hash)));
     }
@@ -760,65 +761,35 @@ public class WorldStateDownloaderTest {
       final WorldStateStorage storage, final Bytes32 rootHash, final int maxNodes) {
     final Map<Bytes32, BytesValue> trieNodes = new HashMap<>();
 
-    final TrieNodeDecoder decoder = TrieNodeDecoder.create();
-    final BytesValue rootNode = storage.getNodeData(rootHash).get();
-
-    // Walk through hash-referenced nodes
-    final List<Node<BytesValue>> hashReferencedNodes = new ArrayList<>();
-    hashReferencedNodes.add(decoder.decode(rootNode));
-    while (!hashReferencedNodes.isEmpty() && trieNodes.size() < maxNodes) {
-      final Node<BytesValue> currentNode = hashReferencedNodes.remove(0);
-      final List<Node<BytesValue>> children = new ArrayList<>();
-      currentNode.getChildren().ifPresent(children::addAll);
-      while (!children.isEmpty() && trieNodes.size() < maxNodes) {
-        final Node<BytesValue> child = children.remove(0);
-        if (child.isReferencedByHash()) {
-          final BytesValue childNode = storage.getNodeData(child.getHash()).get();
-          trieNodes.put(child.getHash(), childNode);
-          hashReferencedNodes.add(decoder.decode(childNode));
-        } else {
-          child.getChildren().ifPresent(children::addAll);
-        }
-      }
-    }
+    final TrieNodeDecoder decoder = TrieNodeDecoder.create(storage::getNodeData);
+    decoder.breadthFirstDecode(rootHash, Integer.MAX_VALUE, maxNodes).stream()
+        .filter(Node::isReferencedByHash)
+        .forEach((n) -> trieNodes.put(n.getHash(), n.getRlp()));
 
     return trieNodes;
   }
 
   /**
-   * Walks through trie represented by the given rootHash and returns hash-node pairs that would
-   * need to be requested from the network in order to reconstruct this trie.
+   * Returns the first set of node hashes that would need to be requested from the network to
+   * rebuild the trie represented by the given rootHash and storage.
    *
    * @param storage Storage holding node data required to reconstitute the trie represented by
    *     rootHash
    * @param rootHash The hash of the root node of some trie
-   * @return A list of hash-node pairs
+   * @return A list of node hashes
    */
-  private Map<Bytes32, BytesValue> getFirstSetOfTrieNodeRequests(
+  private List<Bytes32> getFirstSetOfChildNodeRequests(
       final WorldStateStorage storage, final Bytes32 rootHash) {
-    final Map<Bytes32, BytesValue> trieNodes = new HashMap<>();
+    final List<Bytes32> hashesToRequest = new ArrayList<>();
 
     final TrieNodeDecoder decoder = TrieNodeDecoder.create();
-    final BytesValue rootNode = storage.getNodeData(rootHash).get();
+    BytesValue rootNodeRlp = storage.getNodeData(rootHash).get();
+    decoder.decodeNodes(rootNodeRlp).stream()
+        .filter(n -> !Objects.equals(n.getHash(), rootHash))
+        .filter(Node::isReferencedByHash)
+        .forEach((n) -> hashesToRequest.add(n.getHash()));
 
-    // Walk through hash-referenced nodes
-    final List<Node<BytesValue>> hashReferencedNodes = new ArrayList<>();
-    hashReferencedNodes.add(decoder.decode(rootNode));
-    final Node<BytesValue> currentNode = hashReferencedNodes.remove(0);
-    final List<Node<BytesValue>> children = new ArrayList<>();
-    currentNode.getChildren().ifPresent(children::addAll);
-    while (!children.isEmpty()) {
-      final Node<BytesValue> child = children.remove(0);
-      if (child.isReferencedByHash()) {
-        final BytesValue childNode = storage.getNodeData(child.getHash()).get();
-        trieNodes.put(child.getHash(), childNode);
-        hashReferencedNodes.add(decoder.decode(childNode));
-      } else {
-        child.getChildren().ifPresent(children::addAll);
-      }
-    }
-
-    return trieNodes;
+    return hashesToRequest;
   }
 
   private void downloadAvailableWorldStateFromPeers(
