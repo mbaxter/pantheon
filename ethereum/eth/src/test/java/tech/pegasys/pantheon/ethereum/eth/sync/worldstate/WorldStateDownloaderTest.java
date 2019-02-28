@@ -742,9 +742,9 @@ public class WorldStateDownloaderTest {
     }
 
     // Check that all expected account data was downloaded
+    assertThat(result).isDone();
     final WorldStateArchive localWorldStateArchive = new WorldStateArchive(localStorage);
     final WorldState localWorldState = localWorldStateArchive.get(stateRoot).get();
-    assertThat(result).isDone();
     assertAccountsMatch(localWorldState, accounts);
   }
 

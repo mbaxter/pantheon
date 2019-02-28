@@ -198,9 +198,14 @@ class WorldDownloadState {
     internalFuture.completeExceptionally(e);
   }
 
+  public synchronized boolean shouldRequestRootNode() {
+    // If we get to the end of the download and we don't have the root, request it
+    return !internalFuture.isDone() && pendingRequests.allTasksCompleted() && rootNodeData == null;
+  }
+
   public synchronized boolean checkCompletion(
       final WorldStateStorage worldStateStorage, final BlockHeader header) {
-    if (!internalFuture.isDone() && pendingRequests.allTasksCompleted()) {
+    if (!internalFuture.isDone() && pendingRequests.allTasksCompleted() && rootNodeData != null) {
       final Updater updater = worldStateStorage.updater();
       updater.putAccountStateTrieNode(header.getStateRoot(), rootNodeData);
       updater.commit();

@@ -167,7 +167,10 @@ public class WorldStateDownloader {
       this.downloadState.set(newDownloadState);
       highestRetryCount.set(0);
 
-      newDownloadState.enqueueRequest(NodeDataRequest.createAccountDataRequest(stateRoot));
+      if (!newDownloadState.downloadWasResumed()) {
+        // Only queue the root node if we're starting a new download from scratch
+        newDownloadState.enqueueRequest(NodeDataRequest.createAccountDataRequest(stateRoot));
+      }
 
       ethContext
           .getScheduler()
@@ -317,11 +320,12 @@ public class WorldStateDownloader {
         request.setData(matchingData);
         if (isRootState(blockHeader, request)) {
           if (!downloadState.downloadWasResumed()) {
-            // Only queue rootnode children if we're starting from scratch
+            // Only queue rootnode children if we started from scratch
             downloadState.enqueueRequests(request.getChildRequests());
           }
           downloadState.setRootNodeData(request.getData());
           task.markCompleted();
+          downloadState.checkCompletion(worldStateStorage, blockHeader);
         } else {
           downloadState.addToPersistenceQueue(task);
         }
@@ -376,6 +380,11 @@ public class WorldStateDownloader {
                   completedRequestsCounter.inc();
                 });
             storageUpdater.commit();
+
+            if (downloadState.shouldRequestRootNode()) {
+              downloadState.enqueueRequest(
+                  NodeDataRequest.createAccountDataRequest(header.getStateRoot()));
+            }
 
             if (downloadState.checkCompletion(worldStateStorage, header)) {
               result.get().complete(null);
