@@ -41,7 +41,7 @@ abstract class TrieNodeDataRequest extends NodeDataRequest {
     // Collect hash-referenced child nodes to be requested
     List<NodeDataRequest> requests =
         nodes.stream()
-            .filter(this::nodeIsHashReferencedDescendent)
+            .filter(this::nodeIsHashReferencedDescendant)
             .map(Node::getHash)
             .map(Hash::wrap)
             .map(this::createChildNodeDataRequest)
@@ -59,12 +59,12 @@ abstract class TrieNodeDataRequest extends NodeDataRequest {
     return requests;
   }
 
-  private boolean nodeIsHashReferencedDescendent(final Node<BytesValue> node) {
+  private boolean nodeIsHashReferencedDescendant(final Node<BytesValue> node) {
     return !Objects.equal(node.getHash(), getHash()) && node.isReferencedByHash();
   }
 
   private boolean canReadNodeValue(final Node<BytesValue> node) {
-    return !nodeIsHashReferencedDescendent(node);
+    return !nodeIsHashReferencedDescendant(node);
   }
 
   protected abstract NodeDataRequest createChildNodeDataRequest(final Hash childHash);
