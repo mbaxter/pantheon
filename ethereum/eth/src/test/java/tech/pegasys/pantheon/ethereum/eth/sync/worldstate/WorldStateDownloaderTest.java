@@ -426,7 +426,7 @@ public class WorldStateDownloaderTest {
   }
 
   @Test
-  public void doesRequestKnownAccountTrieNodesFromNetwork() {
+  public void doesNotRequestKnownAccountTrieNodesFromNetwork() {
     final EthProtocolManager ethProtocolManager =
         EthProtocolManagerTestUtil.create(new EthScheduler(1, 1, 1, new NoOpMetricsSystem()));
 
@@ -456,12 +456,12 @@ public class WorldStateDownloaderTest {
 
     // Seed local storage with some trie node values
     final Map<Bytes32, BytesValue> allNodes =
-        collectTrieNodesToBeRequested(remoteStorage, remoteWorldState.rootHash(), 5);
+        collectTrieNodesToBeRequestedAfterRoot(remoteStorage, remoteWorldState.rootHash(), 5);
     final Set<Bytes32> knownNodes = new HashSet<>();
     final Set<Bytes32> unknownNodes = new HashSet<>();
     assertThat(allNodes.size()).isGreaterThan(0); // Sanity check
     final Updater localStorageUpdater = localStorage.updater();
-    final AtomicBoolean storeNode = new AtomicBoolean(false);
+    final AtomicBoolean storeNode = new AtomicBoolean(true);
     allNodes.forEach(
         (nodeHash, node) -> {
           if (storeNode.get()) {
@@ -493,7 +493,7 @@ public class WorldStateDownloaderTest {
       giveOtherThreadsAGo();
     }
 
-    // Check that known trie nodes were requested
+    // Check that unknown trie nodes were requested
     final List<Bytes32> requestedHashes =
         sentMessages.stream()
             .filter(m -> m.getCode() == EthPV63.GET_NODE_DATA)
@@ -512,7 +512,7 @@ public class WorldStateDownloaderTest {
   }
 
   @Test
-  public void doesRequestKnownStorageTrieNodesFromNetwork() {
+  public void doesNotRequestKnownStorageTrieNodesFromNetwork() {
     final EthProtocolManager ethProtocolManager =
         EthProtocolManagerTestUtil.create(new EthScheduler(1, 1, 1, new NoOpMetricsSystem()));
 
@@ -556,11 +556,12 @@ public class WorldStateDownloaderTest {
     final Set<Bytes32> knownNodes = new HashSet<>();
     final Set<Bytes32> unknownNodes = new HashSet<>();
     for (final Bytes32 storageRootHash : storageRootHashes) {
-      allTrieNodes.putAll(collectTrieNodesToBeRequested(remoteStorage, storageRootHash, 5));
+      allTrieNodes.putAll(
+          collectTrieNodesToBeRequestedAfterRoot(remoteStorage, storageRootHash, 5));
     }
     assertThat(allTrieNodes.size()).isGreaterThan(0); // Sanity check
     final Updater localStorageUpdater = localStorage.updater();
-    boolean storeNode = false;
+    boolean storeNode = true;
     for (final Entry<Bytes32, BytesValue> entry : allTrieNodes.entrySet()) {
       final Bytes32 hash = entry.getKey();
       final BytesValue data = entry.getValue();
@@ -595,7 +596,7 @@ public class WorldStateDownloaderTest {
     // World state should be available by the time the result is complete
     assertThat(localStorage.isWorldStateAvailable(stateRoot)).isTrue();
 
-    // Check that known trie nodes were requested
+    // Check that unknown trie nodes were requested
     final List<Bytes32> requestedHashes =
         sentMessages.stream()
             .filter(m -> m.getCode() == EthPV63.GET_NODE_DATA)
@@ -749,7 +750,8 @@ public class WorldStateDownloaderTest {
 
   /**
    * Walks through trie represented by the given rootHash and returns hash-node pairs that would
-   * need to be requested from the network in order to reconstruct this trie.
+   * need to be requested from the network in order to reconstruct this trie, excluding the root
+   * node.
    *
    * @param storage Storage holding node data required to reconstitute the trie represented by
    *     rootHash
@@ -757,11 +759,12 @@ public class WorldStateDownloaderTest {
    * @param maxNodes The maximum number of values to collect before returning
    * @return A list of hash-node pairs
    */
-  private Map<Bytes32, BytesValue> collectTrieNodesToBeRequested(
+  private Map<Bytes32, BytesValue> collectTrieNodesToBeRequestedAfterRoot(
       final WorldStateStorage storage, final Bytes32 rootHash, final int maxNodes) {
     final Map<Bytes32, BytesValue> trieNodes = new HashMap<>();
 
     TrieNodeDecoder.breadthFirstDecoder(storage::getNodeData, rootHash)
+        .filter(n -> !Objects.equals(n.getHash(), rootHash))
         .filter(Node::isReferencedByHash)
         .limit(maxNodes)
         .forEach((n) -> trieNodes.put(n.getHash(), n.getRlp()));
@@ -770,8 +773,9 @@ public class WorldStateDownloaderTest {
   }
 
   /**
-   * Returns the first set of node hashes that would need to be requested from the network to
-   * rebuild the trie represented by the given rootHash and storage.
+   * Returns the first set of node hashes that would need to be requested from the network after
+   * retrieving the root node in order to rebuild the trie represented by the given rootHash and
+   * storage.
    *
    * @param storage Storage holding node data required to reconstitute the trie represented by
    *     rootHash
