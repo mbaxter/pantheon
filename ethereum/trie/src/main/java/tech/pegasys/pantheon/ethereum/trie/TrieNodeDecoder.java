@@ -18,29 +18,31 @@ import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Stream;
+
+import com.google.common.collect.Streams;
 
 public class TrieNodeDecoder {
+  private static final StoredNodeFactory<BytesValue> emptyNodeFactory =
+      new StoredNodeFactory<>((h) -> Optional.empty(), Function.identity(), Function.identity());
 
-  private final StoredNodeFactory<BytesValue> nodeFactory;
+  // Hide constructor for static utility class
+  private TrieNodeDecoder() {}
 
-  private TrieNodeDecoder(final NodeLoader nodeLoader) {
-    nodeFactory = new StoredNodeFactory<>(nodeLoader, Function.identity(), Function.identity());
-  }
-
-  public static TrieNodeDecoder create(final NodeLoader nodeLoader) {
-    return new TrieNodeDecoder(nodeLoader);
-  }
-
-  public static TrieNodeDecoder create() {
-    return new TrieNodeDecoder((h) -> Optional.empty());
-  }
-
-  public Node<BytesValue> decode(final BytesValue rlp) {
-    return nodeFactory.decode(rlp);
+  /**
+   * Decode an rlp-encoded trie node
+   *
+   * @param rlp The rlp-encoded node
+   * @return A {@code Node} representation of the rlp data
+   */
+  public static Node<BytesValue> decode(final BytesValue rlp) {
+    return emptyNodeFactory.decode(rlp);
   }
 
   /**
@@ -49,7 +51,7 @@ public class TrieNodeDecoder {
    * @param nodeRlp The bytes of the trie node to be decoded.
    * @return A list of nodes and node references embedded in the given rlp.
    */
-  public List<Node<BytesValue>> decodeNodes(final BytesValue nodeRlp) {
+  public static List<Node<BytesValue>> decodeNodes(final BytesValue nodeRlp) {
     Node<BytesValue> node = decode(nodeRlp);
     List<Node<BytesValue>> nodes = new ArrayList<>();
     nodes.add(node);
@@ -77,42 +79,68 @@ public class TrieNodeDecoder {
    * Walks the trie in a bread-first manner, returning the list of nodes encountered in order. If
    * any nodes are missing from the nodeLoader, those nodes are just skipped.
    *
+   * @param nodeLoader The NodeLoader for looking up nodes by hash
    * @param rootHash The hash of the root node
    * @param maxDepth The maximum depth to traverse to. A value of zero will traverse the root node
    *     only.
-   * @param maxNodes The maximum number of nodes to return
-   * @return A list of non-null nodes in the order they were encountered.
+   * @return A stream non-null nodes in the breadth-first traversal order.
    */
-  public List<Node<BytesValue>> breadthFirstDecode(
-      final Bytes32 rootHash, final int maxDepth, final int maxNodes) {
+  public static Stream<Node<BytesValue>> breadthFirstDecoder(
+      final NodeLoader nodeLoader, final Bytes32 rootHash, final int maxDepth) {
     checkArgument(maxDepth >= 0);
-    checkArgument(maxNodes >= 0);
-    final List<Node<BytesValue>> trieNodes = new ArrayList<>();
-    if (rootHash == MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH || maxNodes == 0) {
-      return trieNodes;
+    return Streams.stream(new BreadthFirstIterator(nodeLoader, rootHash, maxDepth));
+  }
+
+  /**
+   * Walks the trie in a bread-first manner, returning the list of nodes encountered in order. If
+   * any nodes are missing from the nodeLoader, those nodes are just skipped.
+   *
+   * @param nodeLoader The NodeLoader for looking up nodes by hash
+   * @param rootHash The hash of the root node
+   * @return A stream non-null nodes in the breadth-first traversal order.
+   */
+  public static Stream<Node<BytesValue>> breadthFirstDecoder(
+      final NodeLoader nodeLoader, final Bytes32 rootHash) {
+    return breadthFirstDecoder(nodeLoader, rootHash, Integer.MAX_VALUE);
+  }
+
+  private static class BreadthFirstIterator implements Iterator<Node<BytesValue>> {
+
+    private final int maxDepth;
+    private final StoredNodeFactory<BytesValue> nodeFactory;
+
+    private int currentDepth = 0;
+    private final List<Node<BytesValue>> currentNodes = new ArrayList<>();
+    private final List<Node<BytesValue>> nextNodes = new ArrayList<>();
+
+    BreadthFirstIterator(final NodeLoader nodeLoader, final Bytes32 rootHash, final int maxDepth) {
+      this.maxDepth = maxDepth;
+      this.nodeFactory =
+          new StoredNodeFactory<>(nodeLoader, Function.identity(), Function.identity());
+
+      nodeLoader.getNode(rootHash).map(TrieNodeDecoder::decode).ifPresent(currentNodes::add);
     }
 
-    final Optional<Node<BytesValue>> maybeRootNode = nodeFactory.retrieve(rootHash);
-    if (!maybeRootNode.isPresent()) {
-      return trieNodes;
+    public static BreadthFirstIterator create(
+        final NodeLoader nodeLoader, final Bytes32 rootHash, final int maxDepth) {
+      return new BreadthFirstIterator(nodeLoader, rootHash, maxDepth);
     }
-    final Node<BytesValue> rootNode = maybeRootNode.get();
 
-    // Walk through nodes in breadth-first traversal
-    List<Node<BytesValue>> currentNodes = new ArrayList<>();
-    currentNodes.add(rootNode);
-    List<Node<BytesValue>> nextNodes = new ArrayList<>();
+    @Override
+    public boolean hasNext() {
+      return !currentNodes.isEmpty() && currentDepth <= maxDepth;
+    }
 
-    int currentDepth = 0;
-    while (!currentNodes.isEmpty() && currentDepth <= maxDepth) {
-      final Node<BytesValue> currentNode = currentNodes.remove(0);
-      trieNodes.add(currentNode);
-      if (trieNodes.size() >= maxNodes) {
-        break;
+    @Override
+    public Node<BytesValue> next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
       }
 
+      final Node<BytesValue> nextNode = currentNodes.remove(0);
+
       final List<Node<BytesValue>> children = new ArrayList<>();
-      currentNode.getChildren().ifPresent(children::addAll);
+      nextNode.getChildren().ifPresent(children::addAll);
       while (!children.isEmpty()) {
         Node<BytesValue> child = children.remove(0);
         if (Objects.equals(child, NullNode.instance())) {
@@ -133,11 +161,11 @@ public class TrieNodeDecoder {
       // Set up next level
       if (currentNodes.isEmpty()) {
         currentDepth += 1;
-        currentNodes = nextNodes;
-        nextNodes = new ArrayList<>();
+        currentNodes.addAll(nextNodes);
+        nextNodes.clear();
       }
-    }
 
-    return trieNodes;
+      return nextNode;
+    }
   }
 }

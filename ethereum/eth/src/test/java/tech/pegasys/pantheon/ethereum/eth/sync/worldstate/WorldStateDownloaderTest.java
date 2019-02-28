@@ -761,9 +761,9 @@ public class WorldStateDownloaderTest {
       final WorldStateStorage storage, final Bytes32 rootHash, final int maxNodes) {
     final Map<Bytes32, BytesValue> trieNodes = new HashMap<>();
 
-    final TrieNodeDecoder decoder = TrieNodeDecoder.create(storage::getNodeData);
-    decoder.breadthFirstDecode(rootHash, Integer.MAX_VALUE, maxNodes).stream()
+    TrieNodeDecoder.breadthFirstDecoder(storage::getNodeData, rootHash)
         .filter(Node::isReferencedByHash)
+        .limit(maxNodes)
         .forEach((n) -> trieNodes.put(n.getHash(), n.getRlp()));
 
     return trieNodes;
@@ -782,9 +782,8 @@ public class WorldStateDownloaderTest {
       final WorldStateStorage storage, final Bytes32 rootHash) {
     final List<Bytes32> hashesToRequest = new ArrayList<>();
 
-    final TrieNodeDecoder decoder = TrieNodeDecoder.create();
     BytesValue rootNodeRlp = storage.getNodeData(rootHash).get();
-    decoder.decodeNodes(rootNodeRlp).stream()
+    TrieNodeDecoder.decodeNodes(rootNodeRlp).stream()
         .filter(n -> !Objects.equals(n.getHash(), rootHash))
         .filter(Node::isReferencedByHash)
         .forEach((n) -> hashesToRequest.add(n.getHash()));

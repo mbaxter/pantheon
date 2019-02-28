@@ -23,8 +23,6 @@ import java.util.stream.Stream;
 
 abstract class TrieNodeDataRequest extends NodeDataRequest {
 
-  private static final TrieNodeDecoder nodeDecoder = TrieNodeDecoder.create();
-
   TrieNodeDataRequest(final RequestType kind, final Hash hash) {
     super(kind, hash);
   }
@@ -36,7 +34,7 @@ abstract class TrieNodeDataRequest extends NodeDataRequest {
       return Stream.empty();
     }
 
-    final Node<BytesValue> node = nodeDecoder.decode(getData());
+    final Node<BytesValue> node = TrieNodeDecoder.decode(getData());
     return getRequestsFromLoadedTrieNode(node);
   }
 
