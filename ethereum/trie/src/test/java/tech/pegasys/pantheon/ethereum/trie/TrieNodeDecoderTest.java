@@ -208,8 +208,8 @@ public class TrieNodeDecoderTest {
             .collect(Collectors.toList());
     assertThat(result.size()).isEqualTo(1);
     assertThat(result.get(0).getValue()).contains(BytesValue.of(1));
-    // TODO: fix path representation
-    // assertThat(result.get(0).getPath()).isEqualTo(BytesValue.fromHexString("0x100000"));
+    BytesValue actualPath = CompactEncoding.pathToBytes(result.get(0).getPath());
+    assertThat(actualPath).isEqualTo(BytesValue.fromHexString("0x100000"));
   }
 
   @Test
