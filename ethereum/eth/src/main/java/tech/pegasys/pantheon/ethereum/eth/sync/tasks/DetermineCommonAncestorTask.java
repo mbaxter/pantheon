@@ -148,12 +148,11 @@ public class DetermineCommonAncestorTask extends AbstractEthTask<BlockHeader> {
 
   private CompletableFuture<Void> processHeaders(
       final AbstractPeerTask.PeerTaskResult<List<BlockHeader>> headersResult) {
-    final CompletableFuture<Void> processingResult = CompletableFuture.completedFuture(null);
     initialQuery = false;
     final List<BlockHeader> headers = headersResult.getResult();
     if (headers.isEmpty()) {
       // Nothing to do
-      return processingResult;
+      return CompletableFuture.completedFuture(null);
     }
 
     final OptionalInt maybeAncestorNumber =
@@ -172,6 +171,6 @@ public class DetermineCommonAncestorTask extends AbstractEthTask<BlockHeader> {
     }
     minimumPossibleCommonAncestorNumber = headers.get(ancestorNumber).getNumber();
 
-    return processingResult;
+    return CompletableFuture.completedFuture(null);
   }
 }
