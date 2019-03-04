@@ -261,7 +261,7 @@ public class DetermineCommonAncestorTaskTest {
    * @param remoteBlockCount The number of remote blocks to create. Highest block will be: {@code
    *     remoteBlockCount} - 1.
    * @param blocksInCommon The number of blocks shared between local and remote. If a common
-   *     ancestor, its block number will be: {@code blocksInCommon} - 1
+   *     ancestor exists, its block number will be: {@code blocksInCommon} - 1
    * @return
    */
   private Blockchain setupLocalAndRemoteChains(
