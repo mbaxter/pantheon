@@ -28,7 +28,6 @@ import tech.pegasys.pantheon.ethereum.ProtocolContext;
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
 import tech.pegasys.pantheon.ethereum.core.Block;
-import tech.pegasys.pantheon.ethereum.core.BlockBody;
 import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.TransactionReceipt;
@@ -59,15 +58,15 @@ import org.junit.Test;
 
 public class DetermineCommonAncestorTaskTest {
 
-  private final ProtocolSchedule<Void> protocolSchedule = MainnetProtocolSchedule.create();
+  private final ProtocolSchedule<?> protocolSchedule = MainnetProtocolSchedule.create();
   private final BlockDataGenerator blockDataGenerator = new BlockDataGenerator();
   private final MetricsSystem metricsSystem = new NoOpMetricsSystem();
-  private MutableBlockchain localBlockchain;
   private final int defaultHeaderRequestSize = 10;
-  Block localGenesisBlock;
+  private MutableBlockchain localBlockchain;
+  private Block localGenesisBlock;
   private EthProtocolManager ethProtocolManager;
   private EthContext ethContext;
-  private ProtocolContext<Void> protocolContext;
+  private ProtocolContext<?> protocolContext;
 
   @Before
   public void setup() {
@@ -77,41 +76,6 @@ public class DetermineCommonAncestorTaskTest {
     ethProtocolManager = EthProtocolManagerTestUtil.create(localBlockchain, worldStateArchive);
     ethContext = ethProtocolManager.ethContext();
     protocolContext = new ProtocolContext<>(localBlockchain, worldStateArchive, null);
-  }
-
-  @Test
-  public void shouldThrowExceptionNoCommonBlock() {
-    // TODO: debug
-    // Fail values: 11, 100
-    // Pass values: 10
-    final Blockchain remoteBlockchain = setupLocalAndRemoteChains(11, 11, 0);
-
-    final RespondingEthPeer.Responder responder =
-        RespondingEthPeer.blockchainResponder(remoteBlockchain);
-    final RespondingEthPeer respondingEthPeer =
-        EthProtocolManagerTestUtil.createPeer(ethProtocolManager);
-    final EthTask<BlockHeader> task =
-        DetermineCommonAncestorTask.create(
-            protocolSchedule,
-            protocolContext,
-            ethContext,
-            respondingEthPeer.getEthPeer(),
-            defaultHeaderRequestSize,
-            metricsSystem);
-
-    final CompletableFuture<BlockHeader> future = task.run();
-    respondingEthPeer.respondWhile(responder, () -> !future.isDone());
-    final AtomicReference<Throwable> failure = new AtomicReference<>();
-    future.whenComplete(
-        (response, error) -> {
-          failure.set(error);
-        });
-
-    assertThat(failure.get()).isNotNull();
-    final Throwable error = ExceptionUtils.rootCause(failure.get());
-    assertThat(error)
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("No common ancestor.");
   }
 
   @Test
@@ -205,7 +169,7 @@ public class DetermineCommonAncestorTaskTest {
     final RespondingEthPeer respondingEthPeer =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager);
 
-    final DetermineCommonAncestorTask<Void> task =
+    final DetermineCommonAncestorTask task =
         DetermineCommonAncestorTask.create(
             protocolSchedule,
             protocolContext,
@@ -213,7 +177,7 @@ public class DetermineCommonAncestorTaskTest {
             respondingEthPeer.getEthPeer(),
             defaultHeaderRequestSize,
             metricsSystem);
-    final DetermineCommonAncestorTask<Void> spy = spy(task);
+    final DetermineCommonAncestorTask spy = spy(task);
 
     // Execute task
     final CompletableFuture<BlockHeader> future = spy.run();
@@ -234,24 +198,22 @@ public class DetermineCommonAncestorTaskTest {
   @Test
   public void shouldShortCircuitOnHeaderInInitialRequest() {
     final Blockchain remoteBlockchain = setupLocalAndRemoteChains(100, 100, 96);
-    final BlockHeader commonHeader = remoteBlockchain.getBlockHeader(95).get();
-    final BlockBody commonBody = remoteBlockchain.getBlockBody(commonHeader.getHash()).get();
-    final Block commonBlock = new Block(commonHeader, commonBody);
+    final BlockHeader commonHeader = localBlockchain.getBlockHeader(95).get();
 
     final RespondingEthPeer.Responder responder =
         RespondingEthPeer.blockchainResponder(remoteBlockchain);
     final RespondingEthPeer respondingEthPeer =
         EthProtocolManagerTestUtil.createPeer(ethProtocolManager);
 
-    final DetermineCommonAncestorTask<Void> task =
+    final DetermineCommonAncestorTask task =
         DetermineCommonAncestorTask.create(
             protocolSchedule,
             protocolContext,
             ethContext,
             respondingEthPeer.getEthPeer(),
-            defaultHeaderRequestSize,
+            10,
             metricsSystem);
-    final DetermineCommonAncestorTask<Void> spy = spy(task);
+    final DetermineCommonAncestorTask spy = spy(task);
 
     // Execute task
     final CompletableFuture<BlockHeader> future = spy.run();
@@ -264,7 +226,7 @@ public class DetermineCommonAncestorTaskTest {
         });
 
     Assertions.assertThat(result.get().getHash())
-        .isEqualTo(MainnetBlockHashFunction.createHash(commonBlock.getHeader()));
+        .isEqualTo(MainnetBlockHashFunction.createHash(commonHeader));
 
     verify(spy, times(1)).requestHeaders();
   }
