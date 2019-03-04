@@ -41,11 +41,14 @@ class WorldDownloadState {
   private final TaskQueue<NodeDataRequest> pendingRequests;
   private final ArrayBlockingQueue<Task<NodeDataRequest>> requestsToPersist;
   private final int maxOutstandingRequests;
+  private final int maxRequestsWithoutProgress;
   private final Set<EthTask<?>> outstandingRequests =
       Collections.newSetFromMap(new ConcurrentHashMap<>());
   private final AtomicBoolean sendingRequests = new AtomicBoolean(false);
   private final CompletableFuture<Void> internalFuture;
   private final CompletableFuture<Void> downloadFuture;
+  // Volatile so monitoring can access it without having to synchronize.
+  private volatile int requestsSinceLastProgress = 0;
   private boolean waitingForNewPeer = false;
   private BytesValue rootNodeData;
   private EthTask<?> persistenceTask;
@@ -53,11 +56,13 @@ class WorldDownloadState {
   public WorldDownloadState(
       final TaskQueue<NodeDataRequest> pendingRequests,
       final ArrayBlockingQueue<Task<NodeDataRequest>> requestsToPersist,
-      final int maxOutstandingRequests) {
+      final int maxOutstandingRequests,
+      final int maxRequestsWithoutProgress) {
     this.downloadWasResumed = !pendingRequests.isEmpty();
     this.pendingRequests = pendingRequests;
     this.requestsToPersist = requestsToPersist;
     this.maxOutstandingRequests = maxOutstandingRequests;
+    this.maxRequestsWithoutProgress = maxRequestsWithoutProgress;
     this.internalFuture = new CompletableFuture<>();
     this.downloadFuture = new CompletableFuture<>();
     this.internalFuture.whenComplete(this::cleanup);
@@ -189,11 +194,26 @@ class WorldDownloadState {
     return requestsToPersist.size();
   }
 
-  public synchronized void markAsStalled(final int maxNodeRequestRetries) {
+  public synchronized void requestComplete(final boolean madeProgress) {
+    if (madeProgress) {
+      requestsSinceLastProgress = 0;
+    } else {
+      requestsSinceLastProgress++;
+      if (requestsSinceLastProgress >= maxRequestsWithoutProgress) {
+        markAsStalled(maxRequestsWithoutProgress);
+      }
+    }
+  }
+
+  public int getRequestsSinceLastProgress() {
+    return requestsSinceLastProgress;
+  }
+
+  private synchronized void markAsStalled(final int maxNodeRequestRetries) {
     final String message =
         "Download stalled due to too many failures to retrieve node data (>"
             + maxNodeRequestRetries
-            + " failures)";
+            + " requests without making progress)";
     final WorldStateDownloaderException e = new StalledDownloadException(message);
     internalFuture.completeExceptionally(e);
   }

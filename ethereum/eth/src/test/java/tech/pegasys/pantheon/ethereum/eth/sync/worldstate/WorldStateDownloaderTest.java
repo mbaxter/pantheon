@@ -636,7 +636,7 @@ public class WorldStateDownloaderTest {
     final WorldStateStorage localStorage =
         new KeyValueStorageWorldStateStorage(new InMemoryKeyValueStorage());
     final SynchronizerConfiguration syncConfig =
-        SynchronizerConfiguration.builder().worldStateRequestMaxRetries(10).build();
+        SynchronizerConfiguration.builder().worldStateMaxRequestsWithoutProgress(10).build();
     final WorldStateDownloader downloader =
         createDownloader(syncConfig, ethProtocolManager.ethContext(), localStorage, queue);
 
@@ -992,7 +992,7 @@ public class WorldStateDownloaderTest {
         queue,
         config.getWorldStateHashCountPerRequest(),
         config.getWorldStateRequestParallelism(),
-        config.getWorldStateRequestMaxRetries(),
+        config.getWorldStateMaxRequestsWithoutProgress(),
         new NoOpMetricsSystem());
   }
 
