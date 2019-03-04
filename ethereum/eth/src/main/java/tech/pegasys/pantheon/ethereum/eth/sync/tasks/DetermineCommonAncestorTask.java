@@ -142,8 +142,13 @@ public class DetermineCommonAncestorTask<C> extends AbstractEthTask<BlockHeader>
 
   private CompletableFuture<Void> processHeaders(
       final AbstractPeerTask.PeerTaskResult<List<BlockHeader>> headersResult) {
+    final CompletableFuture<Void> processingResult = CompletableFuture.completedFuture(null);
     initialQuery = false;
     final List<BlockHeader> headers = headersResult.getResult();
+    if (headers.isEmpty()) {
+      // Nothing to do
+      return processingResult;
+    }
 
     final OptionalInt maybeAncestorNumber =
         BlockchainUtil.findHighestKnownBlockIndex(protocolContext.getBlockchain(), headers, false);
@@ -161,6 +166,6 @@ public class DetermineCommonAncestorTask<C> extends AbstractEthTask<BlockHeader>
     }
     minimumPossibleCommonAncestorNumber = headers.get(ancestorNumber).getNumber();
 
-    return CompletableFuture.completedFuture(null);
+    return processingResult;
   }
 }
