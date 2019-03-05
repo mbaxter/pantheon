@@ -13,7 +13,6 @@
 package tech.pegasys.pantheon.cli;
 
 import static tech.pegasys.pantheon.controller.KeyPairUtil.loadKeyPair;
-import static tech.pegasys.pantheon.controller.PantheonController.DATABASE_PATH;
 
 import tech.pegasys.pantheon.config.GenesisConfigFile;
 import tech.pegasys.pantheon.controller.PantheonController;
@@ -92,8 +91,7 @@ public class PantheonControllerBuilder {
     // otherwise use the indicated genesis file
     final KeyPair nodeKeys = loadKeyPair(nodePrivateKeyFile);
 
-    final StorageProvider storageProvider =
-        RocksDbStorageProvider.create(homePath.resolve(DATABASE_PATH), metricsSystem);
+    final StorageProvider storageProvider = RocksDbStorageProvider.create(homePath, metricsSystem);
 
     final GenesisConfigFile genesisConfigFile;
     if (devMode) {

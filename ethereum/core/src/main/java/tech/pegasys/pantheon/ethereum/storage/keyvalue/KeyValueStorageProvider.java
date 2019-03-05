@@ -20,28 +20,42 @@ import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
 
 import java.io.IOException;
+import java.util.function.Supplier;
 
 public class KeyValueStorageProvider implements StorageProvider {
 
-  private final KeyValueStorage keyValueStorage;
+  private final Supplier<KeyValueStorage> worldStateStorageProvider;
+  private final Supplier<KeyValueStorage> blockchainKeyValueStorage;
+  private boolean worldStateStorageCreated = false;
+  private boolean chainStorageCreated = false;
 
-  public KeyValueStorageProvider(final KeyValueStorage keyValueStorage) {
-    this.keyValueStorage = keyValueStorage;
+  public KeyValueStorageProvider(
+      final Supplier<KeyValueStorage> worldStateStorageProvider,
+      final Supplier<KeyValueStorage> blockchainKeyValueStorage) {
+    this.worldStateStorageProvider = worldStateStorageProvider;
+    this.blockchainKeyValueStorage = blockchainKeyValueStorage;
   }
 
   @Override
   public BlockchainStorage createBlockchainStorage(final ProtocolSchedule<?> protocolSchedule) {
+    chainStorageCreated = true;
     return new KeyValueStoragePrefixedKeyBlockchainStorage(
-        keyValueStorage, ScheduleBasedBlockHashFunction.create(protocolSchedule));
+        blockchainKeyValueStorage.get(), ScheduleBasedBlockHashFunction.create(protocolSchedule));
   }
 
   @Override
   public WorldStateStorage createWorldStateStorage() {
-    return new KeyValueStorageWorldStateStorage(keyValueStorage);
+    worldStateStorageCreated = true;
+    return new KeyValueStorageWorldStateStorage(worldStateStorageProvider.get());
   }
 
   @Override
   public void close() throws IOException {
-    keyValueStorage.close();
+    if (chainStorageCreated) {
+      blockchainKeyValueStorage.get().close();
+    }
+    if (worldStateStorageCreated) {
+      worldStateStorageProvider.get().close();
+    }
   }
 }

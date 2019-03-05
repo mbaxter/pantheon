@@ -39,8 +39,6 @@ import java.util.Map;
 
 public interface PantheonController<C> extends Closeable {
 
-  String DATABASE_PATH = "database";
-
   static PantheonController<?> fromConfig(
       final GenesisConfigFile genesisConfigFile,
       final SynchronizerConfiguration syncConfig,

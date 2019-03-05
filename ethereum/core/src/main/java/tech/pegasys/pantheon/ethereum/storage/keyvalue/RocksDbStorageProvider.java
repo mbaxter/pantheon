@@ -20,13 +20,56 @@ import tech.pegasys.pantheon.services.kvstore.RocksDbKeyValueStorage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.Supplier;
+
+import com.google.common.base.Suppliers;
 
 public class RocksDbStorageProvider {
+  private static String MONOLITHIC_DATABASE_PATH = "database";
+  private static String WORLDSTATE_DATABASE_PATH = "chain";
+  private static String CHAIN_DATABASE_PATH = "worldstate";
 
-  public static StorageProvider create(final Path databaseDir, final MetricsSystem metricsSystem)
+  public static StorageProvider create(final Path dataDirectory, final MetricsSystem metricsSystem)
       throws IOException {
-    final KeyValueStorage kv =
-        RocksDbKeyValueStorage.create(Files.createDirectories(databaseDir), metricsSystem);
-    return new KeyValueStorageProvider(kv);
+    // Make sure data directory exists
+    Files.createDirectories(dataDirectory);
+
+    if (dataDirectory.resolve(MONOLITHIC_DATABASE_PATH).toFile().exists()) {
+      // If database has already been initialized as a monolithic db, keep this structure
+      final Supplier<KeyValueStorage> stroageSupplier =
+          getMonolithicStorageSupplier(dataDirectory, metricsSystem);
+      return new KeyValueStorageProvider(stroageSupplier, stroageSupplier);
+    } else {
+      // Otherwise setup separate world state and chain databases
+      final Supplier<KeyValueStorage> worldStateStorage =
+          getWorldStateStorageSupplier(dataDirectory, metricsSystem);
+      final Supplier<KeyValueStorage> chainStorage =
+          getChainStorageSupplier(dataDirectory, metricsSystem);
+      return new KeyValueStorageProvider(worldStateStorage, chainStorage);
+    }
+  }
+
+  private static Supplier<KeyValueStorage> getMonolithicStorageSupplier(
+      final Path dataDirectory, final MetricsSystem metricsSystem) {
+    return Suppliers.memoize(
+        () ->
+            RocksDbKeyValueStorage.create(
+                dataDirectory.resolve(MONOLITHIC_DATABASE_PATH), metricsSystem));
+  }
+
+  private static Supplier<KeyValueStorage> getWorldStateStorageSupplier(
+      final Path dataDirectory, final MetricsSystem metricsSystem) {
+    return Suppliers.memoize(
+        () ->
+            RocksDbKeyValueStorage.create(
+                dataDirectory.resolve(WORLDSTATE_DATABASE_PATH), metricsSystem));
+  }
+
+  private static Supplier<KeyValueStorage> getChainStorageSupplier(
+      final Path dataDirectory, final MetricsSystem metricsSystem) {
+    return Suppliers.memoize(
+        () ->
+            RocksDbKeyValueStorage.create(
+                dataDirectory.resolve(CHAIN_DATABASE_PATH), metricsSystem));
   }
 }
