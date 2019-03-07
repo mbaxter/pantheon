@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.services.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import tech.pegasys.pantheon.services.queue.TaskQueue.Task;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.ArrayList;

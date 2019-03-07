@@ -29,7 +29,7 @@ import tech.pegasys.pantheon.ethereum.storage.keyvalue.KeyValueStorageWorldState
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
 import tech.pegasys.pantheon.services.queue.InMemoryTaskQueue;
-import tech.pegasys.pantheon.services.queue.TaskQueue.Task;
+import tech.pegasys.pantheon.services.queue.Task;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Arrays;

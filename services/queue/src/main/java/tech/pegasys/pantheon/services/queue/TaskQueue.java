@@ -47,14 +47,4 @@ public interface TaskQueue<T> extends Closeable {
 
   /** @return True if all tasks have been dequeued and processed. */
   boolean allTasksCompleted();
-
-  interface Task<T> {
-    T getData();
-
-    /** Mark this task as completed. */
-    void markCompleted();
-
-    /** Mark this task as failed and requeue. */
-    void markFailed();
-  }
 }
