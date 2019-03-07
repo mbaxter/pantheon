@@ -20,7 +20,7 @@ import java.util.Queue;
 import java.util.Set;
 
 public class TaskBag<T> implements Closeable {
-  private static final int DEFAULT_CACHE_SIZE = 5_000_000;
+  private static final int DEFAULT_CACHE_SIZE = 1_000_000;
   private final int maxCacheSize;
 
   // The underlying queue
