@@ -27,7 +27,7 @@ import tech.pegasys.pantheon.ethereum.mainnet.ScheduleBasedBlockHashFunction;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.services.queue.RocksDbTaskQueue;
-import tech.pegasys.pantheon.services.queue.TaskQueue;
+import tech.pegasys.pantheon.services.queue.TaskBag;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,19 +45,19 @@ class FastSynchronizer<C> {
 
   private final FastSyncDownloader<C> fastSyncDownloader;
   private final Path fastSyncDataDirectory;
-  private final TaskQueue<NodeDataRequest> stateQueue;
+  private final TaskBag<NodeDataRequest> taskBag;
   private final WorldStateDownloader worldStateDownloader;
   private final FastSyncState initialSyncState;
 
   private FastSynchronizer(
       final FastSyncDownloader<C> fastSyncDownloader,
       final Path fastSyncDataDirectory,
-      final TaskQueue<NodeDataRequest> stateQueue,
+      final TaskBag<NodeDataRequest> taskBag,
       final WorldStateDownloader worldStateDownloader,
       final FastSyncState initialSyncState) {
     this.fastSyncDownloader = fastSyncDownloader;
     this.fastSyncDataDirectory = fastSyncDataDirectory;
-    this.stateQueue = stateQueue;
+    this.taskBag = taskBag;
     this.worldStateDownloader = worldStateDownloader;
     this.initialSyncState = initialSyncState;
   }
@@ -88,13 +88,13 @@ class FastSynchronizer<C> {
       return Optional.empty();
     }
 
-    final TaskQueue<NodeDataRequest> stateQueue =
-        createWorldStateDownloaderQueue(getStateQueueDirectory(dataDirectory), metricsSystem);
+    final TaskBag<NodeDataRequest> taskBag =
+        createWorldStateDownloaderTaskBag(getStateQueueDirectory(dataDirectory), metricsSystem);
     final WorldStateDownloader worldStateDownloader =
         new WorldStateDownloader(
             ethContext,
             worldStateStorage,
-            stateQueue,
+            taskBag,
             syncConfig.getWorldStateHashCountPerRequest(),
             syncConfig.getWorldStateRequestParallelism(),
             syncConfig.getWorldStateMaxRequestsWithoutProgress(),
@@ -114,7 +114,7 @@ class FastSynchronizer<C> {
         new FastSynchronizer<>(
             fastSyncDownloader,
             fastSyncDataDirectory,
-            stateQueue,
+            taskBag,
             worldStateDownloader,
             fastSyncState));
   }
@@ -128,7 +128,7 @@ class FastSynchronizer<C> {
     // Make sure downloader is stopped before we start cleaning up its dependencies
     worldStateDownloader.cancel();
     try {
-      stateQueue.close();
+      taskBag.close();
       if (fastSyncDataDirectory.toFile().exists()) {
         // Clean up this data for now (until fast sync resume functionality is in place)
         MoreFiles.deleteRecursively(fastSyncDataDirectory, RecursiveDeleteOption.ALLOW_INSECURE);
@@ -156,9 +156,13 @@ class FastSynchronizer<C> {
     }
   }
 
-  private static TaskQueue<NodeDataRequest> createWorldStateDownloaderQueue(
+  private static TaskBag<NodeDataRequest> createWorldStateDownloaderTaskBag(
       final Path dataDirectory, final MetricsSystem metricsSystem) {
-    return RocksDbTaskQueue.create(
-        dataDirectory, NodeDataRequest::serialize, NodeDataRequest::deserialize, metricsSystem);
+    return new TaskBag<>(
+        RocksDbTaskQueue.create(
+            dataDirectory,
+            NodeDataRequest::serialize,
+            NodeDataRequest::deserialize,
+            metricsSystem));
   }
 }

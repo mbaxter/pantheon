@@ -30,6 +30,7 @@ import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
 import tech.pegasys.pantheon.services.queue.InMemoryTaskQueue;
 import tech.pegasys.pantheon.services.queue.Task;
+import tech.pegasys.pantheon.services.queue.TaskBag;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Arrays;
@@ -51,7 +52,7 @@ public class WorldDownloadStateTest {
 
   private final BlockHeader header =
       new BlockHeaderTestFixture().stateRoot(ROOT_NODE_HASH).buildHeader();
-  private final InMemoryTaskQueue<NodeDataRequest> pendingRequests = new InMemoryTaskQueue<>();
+  private final TaskBag<NodeDataRequest> pendingRequests = new TaskBag<>(new InMemoryTaskQueue<>());
   private final ArrayBlockingQueue<Task<NodeDataRequest>> requestsToPersist =
       new ArrayBlockingQueue<>(100);
 
@@ -94,7 +95,7 @@ public class WorldDownloadStateTest {
 
   @Test
   public void shouldNotCompleteWhenThereArePendingTasks() {
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
 
     downloadState.checkCompletion(worldStateStorage, header);
 
@@ -115,8 +116,8 @@ public class WorldDownloadStateTest {
     downloadState.addOutstandingTask(outstandingTask1);
     downloadState.addOutstandingTask(outstandingTask2);
 
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY));
     requestsToPersist.add(toPersist1);
     requestsToPersist.add(toPersist2);
 
@@ -133,7 +134,7 @@ public class WorldDownloadStateTest {
 
   @Test
   public void shouldNotSendAdditionalRequestsWhenWaitingForANewPeer() {
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
 
     downloadState.setWaitingForNewPeer(true);
     downloadState.whileAdditionalRequestsCanBeSent(mustNotBeCalled());
@@ -141,7 +142,7 @@ public class WorldDownloadStateTest {
 
   @Test
   public void shouldResumeSendingAdditionalRequestsWhenNoLongerWaitingForPeer() {
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
     final Runnable sendRequest =
         mockWithAction(() -> downloadState.addOutstandingTask(mock(EthTask.class)));
 
@@ -155,10 +156,10 @@ public class WorldDownloadStateTest {
 
   @Test
   public void shouldStopSendingAdditionalRequestsWhenPendingRequestsIsEmpty() {
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
 
-    final Runnable sendRequest = mockWithAction(pendingRequests::dequeue);
+    final Runnable sendRequest = mockWithAction(pendingRequests::get);
     downloadState.whileAdditionalRequestsCanBeSent(sendRequest);
 
     verify(sendRequest, times(2)).run();
@@ -166,7 +167,7 @@ public class WorldDownloadStateTest {
 
   @Test
   public void shouldStopSendingAdditionalRequestsWhenMaximumOutstandingRequestCountReached() {
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
     final Runnable sendRequest =
         mockWithAction(() -> downloadState.addOutstandingTask(mock(EthTask.class)));
 
@@ -176,7 +177,7 @@ public class WorldDownloadStateTest {
 
   @Test
   public void shouldStopSendingAdditionalRequestsWhenFutureIsCancelled() {
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
     final Runnable sendRequest = mockWithAction(() -> future.cancel(true));
 
     downloadState.whileAdditionalRequestsCanBeSent(sendRequest);
@@ -185,7 +186,7 @@ public class WorldDownloadStateTest {
 
   @Test
   public void shouldStopSendingAdditionalRequestsWhenDownloadIsMarkedAsStalled() {
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
     final Runnable sendRequest = mockWithAction(() -> downloadState.requestComplete(false));
 
     downloadState.whileAdditionalRequestsCanBeSent(sendRequest);
@@ -210,7 +211,7 @@ public class WorldDownloadStateTest {
 
   @Test
   public void shouldNotAllowMultipleCallsToSendAdditionalRequestsAtOnce() {
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
     final Runnable sendRequest =
         mockWithAction(
             () -> {
@@ -223,7 +224,7 @@ public class WorldDownloadStateTest {
   }
 
   @Test
-  public void shouldNotEnqueueRequestsAfterDownloadIsStalled() {
+  public void shouldNotAddRequestsAfterDownloadIsStalled() {
     downloadState.checkCompletion(worldStateStorage, header);
 
     downloadState.enqueueRequests(Arrays.asList(createAccountDataRequest(Hash.EMPTY_TRIE_HASH)));
@@ -235,7 +236,7 @@ public class WorldDownloadStateTest {
   @Test // Sanity check for the test structure
   public void shouldFailWhenMustNotBeCalledIsCalled() {
 
-    pendingRequests.enqueue(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
+    pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
     assertThatThrownBy(() -> downloadState.whileAdditionalRequestsCanBeSent(mustNotBeCalled()))
         .hasMessage("Unexpected invocation");
   }

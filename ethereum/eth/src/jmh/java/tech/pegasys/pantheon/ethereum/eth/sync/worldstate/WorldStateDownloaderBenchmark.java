@@ -33,7 +33,7 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
 import tech.pegasys.pantheon.services.queue.RocksDbTaskQueue;
-import tech.pegasys.pantheon.services.queue.TaskQueue;
+import tech.pegasys.pantheon.services.queue.TaskBag;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.nio.file.Path;
@@ -61,7 +61,7 @@ public class WorldStateDownloaderBenchmark {
   private WorldStateStorage worldStateStorage;
   private RespondingEthPeer peer;
   private Responder responder;
-  private TaskQueue<NodeDataRequest> pendingRequests;
+  private TaskBag<NodeDataRequest> pendingRequests;
   private StorageProvider storageProvider;
   private EthProtocolManager ethProtocolManager;
   private InMemoryKeyValueStorage remoteKeyValueStorage;
@@ -89,11 +89,13 @@ public class WorldStateDownloaderBenchmark {
     worldStateStorage = storageProvider.createWorldStateStorage();
 
     pendingRequests =
-        RocksDbTaskQueue.create(
-            tempDir.resolve("fastsync"),
-            NodeDataRequest::serialize,
-            NodeDataRequest::deserialize,
-            metricsSystem);
+        new TaskBag<>(
+            RocksDbTaskQueue.create(
+                tempDir.resolve("fastsync"),
+                NodeDataRequest::serialize,
+                NodeDataRequest::deserialize,
+                metricsSystem),
+            0);
     worldStateDownloader =
         new WorldStateDownloader(
             ethContext,
