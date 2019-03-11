@@ -28,9 +28,9 @@ import tech.pegasys.pantheon.ethereum.eth.manager.task.EthTask;
 import tech.pegasys.pantheon.ethereum.storage.keyvalue.KeyValueStorageWorldStateStorage;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
-import tech.pegasys.pantheon.services.queue.CachingTaskCollection;
-import tech.pegasys.pantheon.services.queue.InMemoryTaskQueue;
-import tech.pegasys.pantheon.services.queue.Task;
+import tech.pegasys.pantheon.services.tasks.CachingTaskCollection;
+import tech.pegasys.pantheon.services.tasks.InMemoryTaskQueue;
+import tech.pegasys.pantheon.services.tasks.Task;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Arrays;

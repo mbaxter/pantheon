@@ -32,8 +32,8 @@ import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
-import tech.pegasys.pantheon.services.queue.CachingTaskCollection;
-import tech.pegasys.pantheon.services.queue.RocksDbTaskQueue;
+import tech.pegasys.pantheon.services.tasks.CachingTaskCollection;
+import tech.pegasys.pantheon.services.tasks.RocksDbTaskQueue;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.nio.file.Path;

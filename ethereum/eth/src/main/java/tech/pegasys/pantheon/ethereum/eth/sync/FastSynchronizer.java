@@ -26,8 +26,8 @@ import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.mainnet.ScheduleBasedBlockHashFunction;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
-import tech.pegasys.pantheon.services.queue.CachingTaskCollection;
-import tech.pegasys.pantheon.services.queue.RocksDbTaskQueue;
+import tech.pegasys.pantheon.services.tasks.CachingTaskCollection;
+import tech.pegasys.pantheon.services.tasks.RocksDbTaskQueue;
 
 import java.io.File;
 import java.io.IOException;
