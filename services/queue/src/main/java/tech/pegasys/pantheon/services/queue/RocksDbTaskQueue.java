@@ -31,7 +31,7 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
 
-public class RocksDbTaskQueue<T> implements TaskQueue<T> {
+public class RocksDbTaskQueue<T> implements TaskCollection<T> {
 
   private final Options options;
   private final RocksDB db;
@@ -106,7 +106,7 @@ public class RocksDbTaskQueue<T> implements TaskQueue<T> {
   }
 
   @Override
-  public synchronized void enqueue(final T taskData) {
+  public synchronized void add(final T taskData) {
     assertNotClosed();
     try (final OperationTimer.TimingContext ignored = enqueueLatency.startTimer()) {
       final long key = ++lastEnqueuedKey;
@@ -117,7 +117,7 @@ public class RocksDbTaskQueue<T> implements TaskQueue<T> {
   }
 
   @Override
-  public synchronized Task<T> dequeue() {
+  public synchronized Task<T> remove() {
     assertNotClosed();
     if (isEmpty()) {
       return null;
@@ -235,7 +235,7 @@ public class RocksDbTaskQueue<T> implements TaskQueue<T> {
 
   private synchronized void handleFailedTask(final RocksDbTask<T> task) {
     if (markTaskCompleted(task)) {
-      enqueue(task.getData());
+      add(task.getData());
     }
   }
 

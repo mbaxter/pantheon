@@ -12,80 +12,85 @@
  */
 package tech.pegasys.pantheon.services.queue;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 
-public class TaskBag<T> implements Closeable {
+public class CachingTaskCollection<T> implements TaskCollection<T> {
   private static final int DEFAULT_CACHE_SIZE = 1_000_000;
   private final int maxCacheSize;
 
-  // The underlying queue
-  private final TaskQueue<T> taskQueue;
-  // A cache of tasks to operate on before going to taskQueue
-  private final Queue<Task<T>> taskCache = new ArrayDeque<>();
+  // The underlying collection
+  private final TaskCollection<T> wrappedCollection;
+  // A cache of tasks to operate on before going to taskCollection
+  private final Queue<Task<T>> cache = new ArrayDeque<>();
   // Tasks that have been removed, but not marked completed yet
   private final Set<Task<T>> outstandingTasks = new HashSet<>();
 
   private boolean closed = false;
 
-  public TaskBag(final TaskQueue<T> queue, final int maxCacheSize) {
-    this.taskQueue = queue;
+  public CachingTaskCollection(final TaskCollection<T> collection, final int maxCacheSize) {
+    this.wrappedCollection = collection;
     this.maxCacheSize = maxCacheSize;
   }
 
-  public TaskBag(final TaskQueue<T> queue) {
-    this(queue, DEFAULT_CACHE_SIZE);
+  public CachingTaskCollection(final TaskCollection<T> collection) {
+    this(collection, DEFAULT_CACHE_SIZE);
   }
 
+  @Override
   public synchronized void add(final T taskData) {
     assertNotClosed();
     if (cacheSize() >= maxCacheSize) {
-      // Too many tasks in the cache, push this to the underlying queue
-      taskQueue.enqueue(taskData);
+      // Too many tasks in the cache, push this to the underlying collection
+      wrappedCollection.add(taskData);
       return;
     }
 
     Task<T> newTask = new CachedTask<>(this, taskData);
-    taskCache.add(newTask);
+    cache.add(newTask);
   }
 
-  public synchronized Task<T> get() {
+  @Override
+  public synchronized Task<T> remove() {
     assertNotClosed();
-    if (taskCache.size() == 0) {
-      return taskQueue.dequeue();
+    if (cache.size() == 0) {
+      return wrappedCollection.remove();
     }
 
-    final Task<T> pendingTask = taskCache.remove();
+    final Task<T> pendingTask = cache.remove();
     outstandingTasks.add(pendingTask);
     return pendingTask;
   }
 
+  @Override
   public synchronized void clear() {
     assertNotClosed();
-    taskQueue.clear();
+    wrappedCollection.clear();
     outstandingTasks.clear();
-    taskCache.clear();
+    cache.clear();
   }
 
+  @Override
   public long size() {
-    return taskQueue.size() + taskCache.size();
+    return wrappedCollection.size() + cache.size();
   }
 
   public int cacheSize() {
-    return outstandingTasks.size() + taskCache.size();
+    return outstandingTasks.size() + cache.size();
   }
 
+  @Override
   public boolean isEmpty() {
     return size() == 0;
   }
 
   /** @return True if all tasks have been removed and processed. */
+  @Override
   public boolean allTasksCompleted() {
-    return cacheSize() == 0 && taskQueue.allTasksCompleted();
+    return cacheSize() == 0 && wrappedCollection.allTasksCompleted();
   }
 
   private synchronized boolean completePendingTask(final CachedTask<T> cachedTask) {
@@ -94,7 +99,7 @@ public class TaskBag<T> implements Closeable {
 
   private synchronized void failPendingTask(final CachedTask<T> cachedTask) {
     if (completePendingTask(cachedTask)) {
-      taskCache.add(cachedTask);
+      cache.add(cachedTask);
     }
   }
 
@@ -102,7 +107,7 @@ public class TaskBag<T> implements Closeable {
   public synchronized void close() throws IOException {
     closed = true;
     clear();
-    taskQueue.close();
+    wrappedCollection.close();
   }
 
   private void assertNotClosed() {
@@ -112,11 +117,11 @@ public class TaskBag<T> implements Closeable {
   }
 
   private static class CachedTask<T> implements Task<T> {
-    private final TaskBag<T> taskBag;
+    private final CachingTaskCollection<T> cachingTaskCollection;
     private final T data;
 
-    private CachedTask(final TaskBag<T> taskBag, final T data) {
-      this.taskBag = taskBag;
+    private CachedTask(final CachingTaskCollection<T> cachingTaskCollection, final T data) {
+      this.cachingTaskCollection = cachingTaskCollection;
       this.data = data;
     }
 
@@ -127,12 +132,12 @@ public class TaskBag<T> implements Closeable {
 
     @Override
     public void markCompleted() {
-      taskBag.completePendingTask(this);
+      cachingTaskCollection.completePendingTask(this);
     }
 
     @Override
     public void markFailed() {
-      taskBag.failPendingTask(this);
+      cachingTaskCollection.failPendingTask(this);
     }
   }
 }

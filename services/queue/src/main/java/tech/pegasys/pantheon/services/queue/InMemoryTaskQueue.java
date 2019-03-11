@@ -18,19 +18,19 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class InMemoryTaskQueue<T> implements TaskQueue<T> {
+public class InMemoryTaskQueue<T> implements TaskCollection<T> {
   private final Queue<T> internalQueue = new ArrayDeque<>();
   private final Set<InMemoryTask<T>> unfinishedOutstandingTasks = new HashSet<>();
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   @Override
-  public synchronized void enqueue(final T taskData) {
+  public synchronized void add(final T taskData) {
     assertNotClosed();
     internalQueue.add(taskData);
   }
 
   @Override
-  public synchronized Task<T> dequeue() {
+  public synchronized Task<T> remove() {
     assertNotClosed();
     T data = internalQueue.poll();
     if (data == null) {
@@ -81,7 +81,7 @@ public class InMemoryTaskQueue<T> implements TaskQueue<T> {
 
   private synchronized void handleFailedTask(final InMemoryTask<T> task) {
     if (markTaskCompleted(task)) {
-      enqueue(task.getData());
+      add(task.getData());
     }
   }
 

@@ -24,7 +24,7 @@ import java.util.function.Function;
 
 import org.junit.Test;
 
-abstract class AbstractTaskQueueTest<T extends TaskQueue<BytesValue>> {
+abstract class AbstractTaskQueueTest<T extends TaskCollection<BytesValue>> {
 
   protected abstract T createQueue() throws Exception;
 
@@ -35,20 +35,20 @@ abstract class AbstractTaskQueueTest<T extends TaskQueue<BytesValue>> {
       BytesValue two = BytesValue.of(2);
       BytesValue three = BytesValue.of(3);
 
-      assertThat(queue.dequeue()).isNull();
+      assertThat(queue.remove()).isNull();
 
-      queue.enqueue(one);
-      queue.enqueue(two);
-      assertThat(queue.dequeue().getData()).isEqualTo(one);
+      queue.add(one);
+      queue.add(two);
+      assertThat(queue.remove().getData()).isEqualTo(one);
 
-      queue.enqueue(three);
-      assertThat(queue.dequeue().getData()).isEqualTo(two);
-      assertThat(queue.dequeue().getData()).isEqualTo(three);
-      assertThat(queue.dequeue()).isNull();
-      assertThat(queue.dequeue()).isNull();
+      queue.add(three);
+      assertThat(queue.remove().getData()).isEqualTo(two);
+      assertThat(queue.remove().getData()).isEqualTo(three);
+      assertThat(queue.remove()).isNull();
+      assertThat(queue.remove()).isNull();
 
-      queue.enqueue(three);
-      assertThat(queue.dequeue().getData()).isEqualTo(three);
+      queue.add(three);
+      assertThat(queue.remove().getData()).isEqualTo(three);
     }
   }
 
@@ -60,12 +60,12 @@ abstract class AbstractTaskQueueTest<T extends TaskQueue<BytesValue>> {
       assertThat(queue.isEmpty()).isTrue();
       assertThat(queue.allTasksCompleted()).isTrue();
 
-      queue.enqueue(value);
+      queue.add(value);
 
       assertThat(queue.isEmpty()).isFalse();
       assertThat(queue.allTasksCompleted()).isFalse();
 
-      Task<BytesValue> task = queue.dequeue();
+      Task<BytesValue> task = queue.remove();
       assertThat(task).isNotNull();
       assertThat(task.getData()).isEqualTo(value);
       assertThat(queue.isEmpty()).isTrue();
@@ -90,12 +90,12 @@ abstract class AbstractTaskQueueTest<T extends TaskQueue<BytesValue>> {
       assertThat(queue.isEmpty()).isTrue();
       assertThat(queue.allTasksCompleted()).isTrue();
 
-      queue.enqueue(value);
+      queue.add(value);
 
       assertThat(queue.isEmpty()).isFalse();
       assertThat(queue.allTasksCompleted()).isFalse();
 
-      Task<BytesValue> task = queue.dequeue();
+      Task<BytesValue> task = queue.remove();
       assertThat(task).isNotNull();
       assertThat(task.getData()).isEqualTo(value);
       assertThat(queue.isEmpty()).isTrue();
@@ -121,8 +121,8 @@ abstract class AbstractTaskQueueTest<T extends TaskQueue<BytesValue>> {
       BytesValue four = BytesValue.of(4);
 
       // Fill queue
-      queue.enqueue(one);
-      queue.enqueue(two);
+      queue.add(one);
+      queue.add(two);
       assertThat(queue.size()).isEqualTo(2);
       assertThat(queue.isEmpty()).isFalse();
       assertThat(queue.allTasksCompleted()).isFalse();
@@ -132,14 +132,14 @@ abstract class AbstractTaskQueueTest<T extends TaskQueue<BytesValue>> {
       assertThat(queue.size()).isEqualTo(0);
       assertThat(queue.isEmpty()).isTrue();
       assertThat(queue.allTasksCompleted()).isTrue();
-      assertThat(queue.dequeue()).isNull();
+      assertThat(queue.remove()).isNull();
 
       // Subsequent operations should work as expected
-      queue.enqueue(three);
+      queue.add(three);
       assertThat(queue.size()).isEqualTo(1);
-      queue.enqueue(four);
+      queue.add(four);
       assertThat(queue.size()).isEqualTo(2);
-      assertThat(queue.dequeue().getData()).isEqualTo(three);
+      assertThat(queue.remove().getData()).isEqualTo(three);
     }
   }
 
@@ -148,9 +148,9 @@ abstract class AbstractTaskQueueTest<T extends TaskQueue<BytesValue>> {
     try (T queue = createQueue()) {
       BytesValue one = BytesValue.of(1);
 
-      // Add and then dequeue task
-      queue.enqueue(one);
-      Task<BytesValue> task = queue.dequeue();
+      // Add and then remove task
+      queue.add(one);
+      Task<BytesValue> task = queue.remove();
       assertThat(task.getData()).isEqualTo(one);
       assertThat(queue.isEmpty()).isTrue();
       assertThat(queue.allTasksCompleted()).isFalse();
@@ -160,14 +160,14 @@ abstract class AbstractTaskQueueTest<T extends TaskQueue<BytesValue>> {
       assertThat(queue.size()).isEqualTo(0);
       assertThat(queue.isEmpty()).isTrue();
       assertThat(queue.allTasksCompleted()).isTrue();
-      assertThat(queue.dequeue()).isNull();
+      assertThat(queue.remove()).isNull();
 
       // Marking old task as failed should not requeue task
       task.markFailed();
       assertThat(queue.size()).isEqualTo(0);
       assertThat(queue.isEmpty()).isTrue();
       assertThat(queue.allTasksCompleted()).isTrue();
-      assertThat(queue.dequeue()).isNull();
+      assertThat(queue.remove()).isNull();
     }
   }
 
@@ -187,7 +187,7 @@ abstract class AbstractTaskQueueTest<T extends TaskQueue<BytesValue>> {
             () -> {
               while (queuingFinished.getCount() > 0 || !queue.isEmpty()) {
                 if (!queue.isEmpty()) {
-                  Task<BytesValue> value = queue.dequeue();
+                  Task<BytesValue> value = queue.remove();
                   value.markCompleted();
                   dequeued.add(value);
                 }
@@ -202,7 +202,7 @@ abstract class AbstractTaskQueueTest<T extends TaskQueue<BytesValue>> {
                 () -> {
                   try {
                     for (int i = 0; i < itemsPerThread; i++) {
-                      queue.enqueue(value);
+                      queue.add(value);
                     }
                   } finally {
                     queuingFinished.countDown();

@@ -43,7 +43,7 @@ public class RocksDbTaskQueueBenchmark {
         RocksDbTaskQueue.create(
             tempDir.toPath(), Function.identity(), Function.identity(), new NoOpMetricsSystem());
     for (int i = 0; i < 1_000_000; i++) {
-      queue.enqueue(UInt256.of(i).getBytes());
+      queue.add(UInt256.of(i).getBytes());
     }
   }
 
@@ -55,6 +55,6 @@ public class RocksDbTaskQueueBenchmark {
 
   @Benchmark
   public Task<BytesValue> dequeue() {
-    return queue.dequeue();
+    return queue.remove();
   }
 }

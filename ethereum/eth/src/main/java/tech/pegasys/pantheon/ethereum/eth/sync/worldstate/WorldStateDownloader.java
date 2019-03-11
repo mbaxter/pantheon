@@ -27,8 +27,8 @@ import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage.Updater;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
+import tech.pegasys.pantheon.services.queue.CachingTaskCollection;
 import tech.pegasys.pantheon.services.queue.Task;
-import tech.pegasys.pantheon.services.queue.TaskBag;
 import tech.pegasys.pantheon.util.ExceptionUtils;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
@@ -61,7 +61,7 @@ public class WorldStateDownloader {
   private final MetricsSystem metricsSystem;
 
   private final EthContext ethContext;
-  private final TaskBag<NodeDataRequest> taskBag;
+  private final CachingTaskCollection<NodeDataRequest> taskCollection;
   private final int hashCountPerRequest;
   private final int maxOutstandingRequests;
   private final int maxNodeRequestsWithoutProgress;
@@ -72,14 +72,14 @@ public class WorldStateDownloader {
   public WorldStateDownloader(
       final EthContext ethContext,
       final WorldStateStorage worldStateStorage,
-      final TaskBag<NodeDataRequest> taskBag,
+      final CachingTaskCollection<NodeDataRequest> taskCollection,
       final int hashCountPerRequest,
       final int maxOutstandingRequests,
       final int maxNodeRequestsWithoutProgress,
       final MetricsSystem metricsSystem) {
     this.ethContext = ethContext;
     this.worldStateStorage = worldStateStorage;
-    this.taskBag = taskBag;
+    this.taskCollection = taskCollection;
     this.hashCountPerRequest = hashCountPerRequest;
     this.maxOutstandingRequests = maxOutstandingRequests;
     this.maxNodeRequestsWithoutProgress = maxNodeRequestsWithoutProgress;
@@ -89,7 +89,7 @@ public class WorldStateDownloader {
         MetricCategory.SYNCHRONIZER,
         "world_state_pending_requests_current",
         "Number of pending requests for fast sync world state download",
-        taskBag::size);
+        taskCollection::size);
 
     completedRequestsCounter =
         metricsSystem.createCounter(
@@ -159,7 +159,7 @@ public class WorldStateDownloader {
       final int persistenceQueueCapacity = hashCountPerRequest * maxOutstandingRequests * 2;
       final WorldDownloadState newDownloadState =
           new WorldDownloadState(
-              taskBag,
+              taskCollection,
               new ArrayBlockingQueue<>(persistenceQueueCapacity),
               maxOutstandingRequests,
               maxNodeRequestsWithoutProgress);

@@ -28,9 +28,9 @@ import tech.pegasys.pantheon.ethereum.eth.manager.task.EthTask;
 import tech.pegasys.pantheon.ethereum.storage.keyvalue.KeyValueStorageWorldStateStorage;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
+import tech.pegasys.pantheon.services.queue.CachingTaskCollection;
 import tech.pegasys.pantheon.services.queue.InMemoryTaskQueue;
 import tech.pegasys.pantheon.services.queue.Task;
-import tech.pegasys.pantheon.services.queue.TaskBag;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Arrays;
@@ -52,7 +52,8 @@ public class WorldDownloadStateTest {
 
   private final BlockHeader header =
       new BlockHeaderTestFixture().stateRoot(ROOT_NODE_HASH).buildHeader();
-  private final TaskBag<NodeDataRequest> pendingRequests = new TaskBag<>(new InMemoryTaskQueue<>());
+  private final CachingTaskCollection<NodeDataRequest> pendingRequests =
+      new CachingTaskCollection<>(new InMemoryTaskQueue<>());
   private final ArrayBlockingQueue<Task<NodeDataRequest>> requestsToPersist =
       new ArrayBlockingQueue<>(100);
 
@@ -159,7 +160,7 @@ public class WorldDownloadStateTest {
     pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
     pendingRequests.add(createAccountDataRequest(Hash.EMPTY_TRIE_HASH));
 
-    final Runnable sendRequest = mockWithAction(pendingRequests::get);
+    final Runnable sendRequest = mockWithAction(pendingRequests::remove);
     downloadState.whileAdditionalRequestsCanBeSent(sendRequest);
 
     verify(sendRequest, times(2)).run();

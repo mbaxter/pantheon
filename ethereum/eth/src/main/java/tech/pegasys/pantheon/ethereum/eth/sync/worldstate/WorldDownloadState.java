@@ -16,8 +16,8 @@ import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.eth.manager.task.EthTask;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage.Updater;
+import tech.pegasys.pantheon.services.queue.CachingTaskCollection;
 import tech.pegasys.pantheon.services.queue.Task;
-import tech.pegasys.pantheon.services.queue.TaskBag;
 import tech.pegasys.pantheon.util.ExceptionUtils;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
@@ -38,7 +38,7 @@ class WorldDownloadState {
   private static final Logger LOG = LogManager.getLogger();
 
   private final boolean downloadWasResumed;
-  private final TaskBag<NodeDataRequest> pendingRequests;
+  private final CachingTaskCollection<NodeDataRequest> pendingRequests;
   private final ArrayBlockingQueue<Task<NodeDataRequest>> requestsToPersist;
   private final int maxOutstandingRequests;
   private final int maxRequestsWithoutProgress;
@@ -54,7 +54,7 @@ class WorldDownloadState {
   private EthTask<?> persistenceTask;
 
   public WorldDownloadState(
-      final TaskBag<NodeDataRequest> pendingRequests,
+      final CachingTaskCollection<NodeDataRequest> pendingRequests,
       final ArrayBlockingQueue<Task<NodeDataRequest>> requestsToPersist,
       final int maxOutstandingRequests,
       final int maxRequestsWithoutProgress) {
@@ -165,7 +165,7 @@ class WorldDownloadState {
     if (internalFuture.isDone()) {
       return null;
     }
-    return pendingRequests.get();
+    return pendingRequests.remove();
   }
 
   public synchronized void setRootNodeData(final BytesValue rootNodeData) {
