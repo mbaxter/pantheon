@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.services.tasks;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -201,6 +202,14 @@ public class CachingTaskCollectionTest {
     assertThat(remainingTasks.size()).isEqualTo(failedTasks.size());
     assertThat(getTaskData(remainingTasks))
         .containsExactlyInAnyOrder(getTaskData(failedTasks).toArray(new BytesValue[0]));
+  }
+
+  @Test
+  public void close() throws IOException {
+    final CachingTaskCollection<BytesValue> taskCollection = createCachingCollection(10);
+    taskCollection.close();
+    assertThatThrownBy(() -> taskCollection.add(BytesValue.of(1)))
+        .isInstanceOf(IllegalStateException.class);
   }
 
   private List<BytesValue> generateTasks(

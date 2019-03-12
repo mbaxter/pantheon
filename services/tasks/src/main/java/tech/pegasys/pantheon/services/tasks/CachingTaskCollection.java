@@ -107,9 +107,10 @@ public class CachingTaskCollection<T> implements TaskCollection<T> {
 
   @Override
   public synchronized void close() throws IOException {
-    closed = true;
-    clear();
+    outstandingTasks.clear();
+    cache.clear();
     wrappedCollection.close();
+    closed = true;
   }
 
   private void assertNotClosed() {
