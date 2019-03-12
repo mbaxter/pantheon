@@ -74,22 +74,22 @@ public class CachingTaskCollection<T> implements TaskCollection<T> {
   }
 
   @Override
-  public long size() {
+  public synchronized long size() {
     return wrappedCollection.size() + cache.size();
   }
 
-  public int cacheSize() {
+  public synchronized int cacheSize() {
     return outstandingTasks.size() + cache.size();
   }
 
   @Override
-  public boolean isEmpty() {
+  public synchronized boolean isEmpty() {
     return size() == 0;
   }
 
   /** @return True if all tasks have been removed and processed. */
   @Override
-  public boolean allTasksCompleted() {
+  public synchronized boolean allTasksCompleted() {
     return cacheSize() == 0 && wrappedCollection.allTasksCompleted();
   }
 
