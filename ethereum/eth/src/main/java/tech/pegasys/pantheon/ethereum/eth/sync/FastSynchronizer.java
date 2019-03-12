@@ -25,6 +25,7 @@ import tech.pegasys.pantheon.ethereum.eth.sync.worldstate.WorldStateDownloader;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.mainnet.ScheduleBasedBlockHashFunction;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
+import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.services.tasks.CachingTaskCollection;
 import tech.pegasys.pantheon.services.tasks.RocksDbTaskQueue;
@@ -159,11 +160,31 @@ class FastSynchronizer<C> {
 
   private static CachingTaskCollection<NodeDataRequest> createWorldStateDownloaderTaskCollection(
       final Path dataDirectory, final MetricsSystem metricsSystem) {
-    return new CachingTaskCollection<>(
-        RocksDbTaskQueue.create(
-            dataDirectory,
-            NodeDataRequest::serialize,
-            NodeDataRequest::deserialize,
-            metricsSystem));
+    final CachingTaskCollection<NodeDataRequest> taskCollection =
+        new CachingTaskCollection<>(
+            RocksDbTaskQueue.create(
+                dataDirectory,
+                NodeDataRequest::serialize,
+                NodeDataRequest::deserialize,
+                metricsSystem));
+
+    metricsSystem.createLongGauge(
+        MetricCategory.SYNCHRONIZER,
+        "world_state_pending_requests_current",
+        "Number of pending requests for fast sync world state download",
+        taskCollection::size);
+
+    metricsSystem.createIntegerGauge(
+        MetricCategory.SYNCHRONIZER,
+        "world_state_pending_requests_cache_size",
+        "Pending request cache size for fast sync world state download",
+        taskCollection::cacheSize);
+
+    // We're using the CachingTaskCollection which isn't designed to reliably persist all
+    // added tasks.  We therefore can't resume from previously added tasks.
+    // So for now, clear tasks when we start up.
+    taskCollection.clear();
+
+    return taskCollection;
   }
 }

@@ -85,12 +85,6 @@ public class WorldStateDownloader {
     this.maxNodeRequestsWithoutProgress = maxNodeRequestsWithoutProgress;
     this.metricsSystem = metricsSystem;
 
-    metricsSystem.createLongGauge(
-        MetricCategory.SYNCHRONIZER,
-        "world_state_pending_requests_current",
-        "Number of pending requests for fast sync world state download",
-        taskCollection::size);
-
     completedRequestsCounter =
         metricsSystem.createCounter(
             MetricCategory.SYNCHRONIZER,
