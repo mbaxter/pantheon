@@ -15,57 +15,22 @@ package tech.pegasys.pantheon.services.tasks;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.junit.ClassRule;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
-@RunWith(Parameterized.class)
 public class CachingTaskCollectionTest {
-  @ClassRule public static final TemporaryFolder folder = new TemporaryFolder();
+  private TaskCollection<BytesValue> wrappedTaskCollection;
 
-  private final TaskCollection<BytesValue> wrappedTaskCollection;
-
-  public CachingTaskCollectionTest(
-      final String testName, final TaskCollectionSupplier wrappedTaskCollection) throws Exception {
-    this.wrappedTaskCollection = wrappedTaskCollection.get();
-  }
-
-  private CachingTaskCollection<BytesValue> createCachingCollection(final int cacheSize) {
-    return new CachingTaskCollection<>(wrappedTaskCollection, cacheSize);
-  }
-
-  @Parameters(name = "Wrap {0}")
-  public static Collection<Object[]> getTestParametersForConfig() throws IOException {
-    return Arrays.asList(
-        new Object[][] {
-          {
-            InMemoryTaskQueue.class.getSimpleName(), (TaskCollectionSupplier) InMemoryTaskQueue::new
-          },
-          {
-            RocksDbTaskQueue.class.getSimpleName(),
-            (TaskCollectionSupplier)
-                () ->
-                    RocksDbTaskQueue.create(
-                        folder.newFolder().toPath(),
-                        Function.identity(),
-                        Function.identity(),
-                        new NoOpMetricsSystem())
-          }
-        });
+  @Before
+  public void setup() {
+    wrappedTaskCollection = new InMemoryTaskQueue<>();
   }
 
   @Test
@@ -169,6 +134,10 @@ public class CachingTaskCollectionTest {
   @Test
   public void processTasksWithMixedSuccess_noCache() {
     testProcessTasksWithMixedSuccess(10, 20);
+  }
+
+  private CachingTaskCollection<BytesValue> createCachingCollection(final int cacheSize) {
+    return new CachingTaskCollection<>(wrappedTaskCollection, cacheSize);
   }
 
   private void testProcessTasksWithMixedSuccess(final int cacheSize, final int taskCount) {
