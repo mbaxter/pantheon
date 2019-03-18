@@ -22,10 +22,10 @@ import tech.pegasys.pantheon.config.GenesisConfigOptions;
 import tech.pegasys.pantheon.consensus.clique.CliqueContext;
 import tech.pegasys.pantheon.consensus.clique.CliqueExtraData;
 import tech.pegasys.pantheon.consensus.clique.CliqueProtocolSchedule;
-import tech.pegasys.pantheon.consensus.clique.VoteTallyCache;
 import tech.pegasys.pantheon.consensus.common.EpochManager;
 import tech.pegasys.pantheon.consensus.common.VoteProposer;
 import tech.pegasys.pantheon.consensus.common.VoteTally;
+import tech.pegasys.pantheon.consensus.common.VoteTallyCache;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
 import tech.pegasys.pantheon.ethereum.core.Address;
@@ -36,6 +36,7 @@ import tech.pegasys.pantheon.ethereum.core.MiningParameters;
 import tech.pegasys.pantheon.ethereum.core.PendingTransactions;
 import tech.pegasys.pantheon.ethereum.core.Util;
 import tech.pegasys.pantheon.ethereum.core.Wei;
+import tech.pegasys.pantheon.testutil.TestClock;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.List;
@@ -86,7 +87,7 @@ public class CliqueMinerExecutorTest {
             cliqueProtocolContext,
             Executors.newSingleThreadExecutor(),
             CliqueProtocolSchedule.create(GENESIS_CONFIG_OPTIONS, proposerKeyPair),
-            new PendingTransactions(1),
+            new PendingTransactions(1, TestClock.fixed()),
             proposerKeyPair,
             new MiningParameters(AddressHelpers.ofValue(1), Wei.ZERO, wrappedVanityData, false),
             mock(CliqueBlockScheduler.class),
@@ -116,7 +117,7 @@ public class CliqueMinerExecutorTest {
             cliqueProtocolContext,
             Executors.newSingleThreadExecutor(),
             CliqueProtocolSchedule.create(GENESIS_CONFIG_OPTIONS, proposerKeyPair),
-            new PendingTransactions(1),
+            new PendingTransactions(1, TestClock.fixed()),
             proposerKeyPair,
             new MiningParameters(AddressHelpers.ofValue(1), Wei.ZERO, wrappedVanityData, false),
             mock(CliqueBlockScheduler.class),

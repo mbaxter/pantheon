@@ -17,6 +17,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.BlockingAsyncExecutor;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.MockPeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.MockTimerUtil;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.OutboundMessageHandler;
@@ -46,7 +47,7 @@ public class PeerDiscoveryTimestampsTest {
     final List<DiscoveryPeer> peers = helper.createDiscoveryPeers(keypairs);
 
     final MockPeerDiscoveryAgent agent = mock(MockPeerDiscoveryAgent.class);
-    when(agent.getAdvertisedPeer()).thenReturn(peers.get(0));
+    when(agent.getAdvertisedPeer()).thenReturn(Optional.of(peers.get(0)));
     DiscoveryPeer localPeer = peers.get(0);
     KeyPair localKeyPair = keypairs.get(0);
 
@@ -54,13 +55,15 @@ public class PeerDiscoveryTimestampsTest {
         new PeerDiscoveryController(
             localKeyPair,
             localPeer,
-            new PeerTable(agent.getAdvertisedPeer().getId()),
+            new PeerTable(agent.getAdvertisedPeer().get().getId()),
             Collections.emptyList(),
             OutboundMessageHandler.NOOP,
             new MockTimerUtil(),
+            new BlockingAsyncExecutor(),
             TimeUnit.HOURS.toMillis(1),
             () -> true,
             new PeerBlacklist(),
+            Optional.empty(),
             Optional.empty(),
             new Subscribers<>(),
             new Subscribers<>());

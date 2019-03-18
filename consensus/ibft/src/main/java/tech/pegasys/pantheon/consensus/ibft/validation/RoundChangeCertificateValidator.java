@@ -58,6 +58,10 @@ public class RoundChangeCertificateValidator {
     final Collection<SignedData<RoundChangePayload>> roundChangeMsgs =
         roundChangeCert.getRoundChangePayloads();
 
+    if (hasDuplicateAuthors(roundChangeMsgs)) {
+      return false;
+    }
+
     if (roundChangeMsgs.size() < quorum) {
       LOG.info("Invalid RoundChangeCertificate, insufficient RoundChange messages.");
       return false;
@@ -77,11 +81,23 @@ public class RoundChangeCertificateValidator {
 
     if (!roundChangeCert.getRoundChangePayloads().stream()
         .allMatch(roundChangeValidator::validateRoundChange)) {
-      LOG.info("Invalid NewRound message, embedded RoundChange message failed validation.");
+      LOG.info("Invalid RoundChangeCertificate, embedded RoundChange message failed validation.");
       return false;
     }
 
     return true;
+  }
+
+  private boolean hasDuplicateAuthors(
+      final Collection<SignedData<RoundChangePayload>> roundChangeMsgs) {
+    final long distinctAuthorCount =
+        roundChangeMsgs.stream().map(SignedData::getAuthor).distinct().count();
+
+    if (distinctAuthorCount != roundChangeMsgs.size()) {
+      LOG.info("Invalid RoundChangeCertificate, multiple RoundChanges from the same author.");
+      return true;
+    }
+    return false;
   }
 
   public boolean validateProposalMessageMatchesLatestPrepareCertificate(
@@ -94,7 +110,7 @@ public class RoundChangeCertificateValidator {
         findLatestPreparedCertificate(roundChangePayloads);
 
     if (!latestPreparedCertificate.isPresent()) {
-      LOG.trace(
+      LOG.debug(
           "No round change messages have a preparedCertificate, any valid block may be proposed.");
       return true;
     }
@@ -116,7 +132,7 @@ public class RoundChangeCertificateValidator {
         .getHash()
         .equals(latestPreparedCertificate.get().getProposalPayload().getPayload().getDigest())) {
       LOG.info(
-          "Invalid NewRound message, block in latest RoundChange does not match proposed block.");
+          "Invalid RoundChangeCertificate, block in latest RoundChange does not match proposed block.");
       return false;
     }
 

@@ -20,10 +20,12 @@ import tech.pegasys.pantheon.controller.PantheonController;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider;
 import tech.pegasys.pantheon.ethereum.core.MiningParametersTestBuilder;
+import tech.pegasys.pantheon.ethereum.core.PendingTransactions;
 import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.testutil.BlockTestUtil;
+import tech.pegasys.pantheon.testutil.TestClock;
 import tech.pegasys.pantheon.util.uint.UInt256;
 
 import java.io.IOException;
@@ -53,13 +55,14 @@ public final class BlockImporterTest {
             GenesisConfigFile.mainnet(),
             SynchronizerConfiguration.builder().build(),
             new InMemoryStorageProvider(),
-            false,
             1,
             new MiningParametersTestBuilder().enabled(false).build(),
             KeyPair.generate(),
             new NoOpMetricsSystem(),
             PrivacyParameters.noPrivacy(),
-            dataDir);
+            dataDir,
+            TestClock.fixed(),
+            PendingTransactions.MAX_PENDING_TRANSACTIONS);
     final BlockImporter.ImportResult result =
         blockImporter.importBlockchain(source, targetController);
     // Don't count the Genesis block
@@ -89,13 +92,14 @@ public final class BlockImporterTest {
             GenesisConfigFile.fromConfig(config),
             SynchronizerConfiguration.builder().build(),
             new InMemoryStorageProvider(),
-            false,
             10,
             new MiningParametersTestBuilder().enabled(false).build(),
             KeyPair.generate(),
             new NoOpMetricsSystem(),
             PrivacyParameters.noPrivacy(),
-            dataDir);
+            dataDir,
+            TestClock.fixed(),
+            PendingTransactions.MAX_PENDING_TRANSACTIONS);
     final BlockImporter.ImportResult result = blockImporter.importBlockchain(source, controller);
 
     // Don't count the Genesis block

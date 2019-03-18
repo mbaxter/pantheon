@@ -50,7 +50,6 @@ rpc-ws-api=["DEBUG","ETH"]
 rpc-ws-apis=["DEBUG","ETH"]
 rpc-ws-host="9.10.11.12"
 rpc-ws-port=9101
-rpc-ws-refresh-delay=500
 rpc-ws-authentication-enabled=false
 rpc-ws-authentication-credentials-file="none"
 
@@ -58,6 +57,7 @@ rpc-ws-authentication-credentials-file="none"
 metrics-enabled=false
 metrics-host="8.6.7.5"
 metrics-port=309
+metrics-category=["RPC"]
 metrics-push-enabled=false
 metrics-push-host="5.5.5.1"
 metrics-push-port=212
@@ -80,3 +80,5 @@ privacy-url="http://127.0.0.1:8888"
 privacy-public-key-file="./pubKey.pub"
 privacy-enabled=false
 privacy-precompiled-address=9
+
+tx-pool-max-size=1234

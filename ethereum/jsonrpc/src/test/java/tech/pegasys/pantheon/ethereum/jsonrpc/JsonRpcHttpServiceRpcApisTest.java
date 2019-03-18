@@ -17,7 +17,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
+import tech.pegasys.pantheon.config.StubGenesisConfigOptions;
 import tech.pegasys.pantheon.ethereum.blockcreation.EthHashMiningCoordinator;
+import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Synchronizer;
 import tech.pegasys.pantheon.ethereum.core.TransactionPool;
 import tech.pegasys.pantheon.ethereum.eth.EthProtocol;
@@ -29,7 +31,6 @@ import tech.pegasys.pantheon.ethereum.mainnet.MainnetProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.permissioning.AccountWhitelistController;
-import tech.pegasys.pantheon.ethereum.privacy.PrivateTransactionHandler;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 
 import java.util.HashSet;
@@ -65,6 +66,7 @@ public class JsonRpcHttpServiceRpcApisTest {
   private static String baseUrl;
   private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
   private static final String CLIENT_VERSION = "TestClientVersion/0.1.0";
+  private static final int NETWORK_ID = 123;
   private JsonRpcConfiguration configuration;
 
   @Mock protected static BlockchainQueries blockchainQueries;
@@ -169,6 +171,8 @@ public class JsonRpcHttpServiceRpcApisTest {
             new JsonRpcMethodsFactory()
                 .methods(
                     CLIENT_VERSION,
+                    NETWORK_ID,
+                    new StubGenesisConfigOptions(),
                     mock(P2PNetwork.class),
                     blockchainQueries,
                     mock(Synchronizer.class),
@@ -180,7 +184,7 @@ public class JsonRpcHttpServiceRpcApisTest {
                     supportedCapabilities,
                     Optional.of(mock(AccountWhitelistController.class)),
                     config.getRpcApis(),
-                    mock(PrivateTransactionHandler.class)));
+                    mock(PrivacyParameters.class)));
     final JsonRpcHttpService jsonRpcHttpService =
         new JsonRpcHttpService(
             vertx, folder.newFolder().toPath(), config, new NoOpMetricsSystem(), rpcMethods);

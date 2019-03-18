@@ -17,9 +17,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static tech.pegasys.pantheon.cli.DefaultCommandValues.MANDATORY_FILE_FORMAT_HELP;
 import static tech.pegasys.pantheon.cli.PublicKeySubCommand.COMMAND_NAME;
 
+import tech.pegasys.pantheon.cli.PublicKeySubCommand.AddressSubCommand;
 import tech.pegasys.pantheon.cli.PublicKeySubCommand.ExportSubCommand;
-import tech.pegasys.pantheon.controller.PantheonController;
+import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
+import tech.pegasys.pantheon.ethereum.core.Address;
+import tech.pegasys.pantheon.ethereum.core.Util;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -27,6 +30,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -41,7 +45,7 @@ import picocli.CommandLine.Spec;
     name = COMMAND_NAME,
     description = "This command provides node public key related actions.",
     mixinStandardHelpOptions = true,
-    subcommands = {ExportSubCommand.class})
+    subcommands = {ExportSubCommand.class, AddressSubCommand.class})
 class PublicKeySubCommand implements Runnable {
   private static final Logger LOG = LogManager.getLogger();
 
@@ -56,9 +60,11 @@ class PublicKeySubCommand implements Runnable {
   private CommandSpec spec; // Picocli injects reference to command spec
 
   private final PrintStream out;
+  private final KeyLoader keyLoader;
 
-  PublicKeySubCommand(final PrintStream out) {
+  PublicKeySubCommand(final PrintStream out, final KeyLoader keyLoader) {
     this.out = out;
+    this.keyLoader = keyLoader;
   }
 
   @Override
@@ -66,26 +72,35 @@ class PublicKeySubCommand implements Runnable {
     spec.commandLine().usage(out);
   }
 
+  private Optional<KeyPair> getKeyPair() {
+    try {
+      return Optional.of(keyLoader.load(parentCommand.nodePrivateKeyFile()));
+    } catch (IOException e) {
+      LOG.error("An error occurred while trying to read the private key", e);
+      return Optional.empty();
+    }
+  }
+
   /**
    * Public key export sub-command
    *
-   * <p>Export of the public key takes a file as parameter to export directly by writing the key in
-   * the file. A direct output of the key to standard out is not done because we don't want the key
-   * value to be polluted by other information like logs that are in KeyPairUtil that is inevitable.
+   * <p>Export of the public key is writing the key to the standard output by default. An option
+   * enables to write it in a file. Indeed, a direct output of the value to standard out is not
+   * always recommended as reading can be made difficult as the value can be mixed with other
+   * information like logs that are in KeyPairUtil that is inevitable.
    */
   @Command(
       name = "export",
-      description = "This command exports the node public key to a file.",
+      description = "This command outputs the node public key. Default output is standard output.",
       mixinStandardHelpOptions = true)
   static class ExportSubCommand implements Runnable {
 
     @Option(
         names = "--to",
-        required = true,
         paramLabel = MANDATORY_FILE_FORMAT_HELP,
-        description = "File to write public key to",
+        description = "File to write public key to instead of standard output",
         arity = "1..1")
-    private final File publicKeyExportFile = null;
+    private File publicKeyExportFile = null;
 
     @SuppressWarnings("unused")
     @ParentCommand
@@ -96,18 +111,82 @@ class PublicKeySubCommand implements Runnable {
       checkNotNull(parentCommand);
       checkNotNull(parentCommand.parentCommand);
 
-      final PantheonController<?> controller = parentCommand.parentCommand.buildController();
-      final KeyPair keyPair = controller.getLocalNodeKeyPair();
+      parentCommand.getKeyPair().ifPresent(this::outputPublicKey);
+    }
 
-      // this publicKeyExportFile can never be null because of Picocli arity requirement
-      //noinspection ConstantConditions
-      final Path path = publicKeyExportFile.toPath();
+    private void outputPublicKey(final KeyPair keyPair) {
+      // if we have an output file defined, print to it
+      // otherwise print to standard output.
+      if (publicKeyExportFile != null) {
+        final Path path = publicKeyExportFile.toPath();
 
-      try (final BufferedWriter fileWriter = Files.newBufferedWriter(path, UTF_8)) {
-        fileWriter.write(keyPair.getPublicKey().toString());
-      } catch (final IOException e) {
-        LOG.error("An error occurred while trying to write the public key", e);
+        try (final BufferedWriter fileWriter = Files.newBufferedWriter(path, UTF_8)) {
+          fileWriter.write(keyPair.getPublicKey().toString());
+        } catch (final IOException e) {
+          LOG.error("An error occurred while trying to write the public key", e);
+        }
+      } else {
+        parentCommand.out.println(keyPair.getPublicKey().toString());
       }
     }
+  }
+
+  /**
+   * Public key address export sub-command
+   *
+   * <p>Export of the public key address is writing the address to the standard output by default.
+   * An option enables to write it in a file. Indeed, a direct output of the value to standard out
+   * is not always recommended as reading can be made difficult as the value can be mixed with other
+   * information like logs that are in KeyPairUtil that is inevitable.
+   */
+  @Command(
+      name = "export-address",
+      description =
+          "This command outputs the node's public key address. "
+              + "Default output is standard output.",
+      mixinStandardHelpOptions = true)
+  static class AddressSubCommand implements Runnable {
+
+    @Option(
+        names = "--to",
+        paramLabel = MANDATORY_FILE_FORMAT_HELP,
+        description = "File to write address to instead of standard output",
+        arity = "1..1")
+    private File addressExportFile = null;
+
+    @SuppressWarnings("unused")
+    @ParentCommand
+    private PublicKeySubCommand parentCommand; // Picocli injects reference to parent command
+
+    @Override
+    public void run() {
+      checkNotNull(parentCommand);
+      checkNotNull(parentCommand.parentCommand);
+
+      parentCommand.getKeyPair().ifPresent(this::outputAddress);
+    }
+
+    private void outputAddress(final KeyPair keyPair) {
+      final Address address = Util.publicKeyToAddress(keyPair.getPublicKey());
+
+      // if we have an output file defined, print to it
+      // otherwise print to standard output.
+      if (addressExportFile != null) {
+        final Path path = addressExportFile.toPath();
+
+        try (final BufferedWriter fileWriter = Files.newBufferedWriter(path, UTF_8)) {
+          fileWriter.write(address.toString());
+        } catch (final IOException e) {
+          LOG.error("An error occurred while trying to write the public key address", e);
+        }
+      } else {
+        parentCommand.out.println(address.toString());
+      }
+    }
+  }
+
+  @FunctionalInterface
+  public interface KeyLoader {
+    SECP256K1.KeyPair load(final File keyFile) throws IOException;
   }
 }

@@ -19,6 +19,7 @@ import tech.pegasys.pantheon.config.GenesisConfigFile;
 import tech.pegasys.pantheon.controller.PantheonController;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.core.MiningParameters;
+import tech.pegasys.pantheon.ethereum.core.PendingTransactions;
 import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
 import tech.pegasys.pantheon.ethereum.storage.StorageProvider;
@@ -28,18 +29,19 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
 
 public class PantheonControllerBuilder {
 
   private SynchronizerConfiguration synchronizerConfiguration;
   private Path homePath;
   private EthNetworkConfig ethNetworkConfig;
-  private boolean syncWithOttoman;
   private MiningParameters miningParameters;
   private boolean devMode;
   private File nodePrivateKeyFile;
   private MetricsSystem metricsSystem;
   private PrivacyParameters privacyParameters;
+  private Integer maxPendingTransactions = PendingTransactions.MAX_PENDING_TRANSACTIONS;
 
   public PantheonControllerBuilder synchronizerConfiguration(
       final SynchronizerConfiguration synchronizerConfiguration) {
@@ -54,11 +56,6 @@ public class PantheonControllerBuilder {
 
   public PantheonControllerBuilder ethNetworkConfig(final EthNetworkConfig ethNetworkConfig) {
     this.ethNetworkConfig = ethNetworkConfig;
-    return this;
-  }
-
-  public PantheonControllerBuilder syncWithOttoman(final boolean syncWithOttoman) {
-    this.syncWithOttoman = syncWithOttoman;
     return this;
   }
 
@@ -82,6 +79,11 @@ public class PantheonControllerBuilder {
     return this;
   }
 
+  public PantheonControllerBuilder maxPendingTransactions(final Integer maxPendingTransactions) {
+    this.maxPendingTransactions = maxPendingTransactions;
+    return this;
+  }
+
   public PantheonControllerBuilder privacyParameters(final PrivacyParameters privacyParameters) {
     this.privacyParameters = privacyParameters;
     return this;
@@ -102,17 +104,18 @@ public class PantheonControllerBuilder {
       final String genesisConfig = ethNetworkConfig.getGenesisConfig();
       genesisConfigFile = GenesisConfigFile.fromConfig(genesisConfig);
     }
-
+    Clock clock = Clock.systemUTC();
     return PantheonController.fromConfig(
         genesisConfigFile,
         synchronizerConfiguration,
         storageProvider,
-        syncWithOttoman,
         ethNetworkConfig.getNetworkId(),
         miningParameters,
         nodeKeys,
         metricsSystem,
         privacyParameters,
-        homePath);
+        homePath,
+        clock,
+        maxPendingTransactions);
   }
 }

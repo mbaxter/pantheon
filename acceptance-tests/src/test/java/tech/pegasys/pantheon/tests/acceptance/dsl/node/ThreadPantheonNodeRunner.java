@@ -12,7 +12,7 @@
  */
 package tech.pegasys.pantheon.tests.acceptance.dsl.node;
 
-import static tech.pegasys.pantheon.cli.NetworkName.MAINNET;
+import static tech.pegasys.pantheon.cli.NetworkName.DEV;
 
 import tech.pegasys.pantheon.Runner;
 import tech.pegasys.pantheon.RunnerBuilder;
@@ -20,7 +20,6 @@ import tech.pegasys.pantheon.cli.EthNetworkConfig;
 import tech.pegasys.pantheon.cli.PantheonControllerBuilder;
 import tech.pegasys.pantheon.controller.KeyPairUtil;
 import tech.pegasys.pantheon.controller.PantheonController;
-import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
@@ -40,8 +39,6 @@ import org.apache.logging.log4j.Logger;
 
 public class ThreadPantheonNodeRunner implements PantheonNodeRunner {
 
-  private static final int NETWORK_ID = 10;
-
   private final Logger LOG = LogManager.getLogger();
   private final Map<String, Runner> pantheonRunners = new HashMap<>();
   private ExecutorService nodeExecutor = Executors.newCachedThreadPool();
@@ -54,12 +51,12 @@ public class ThreadPantheonNodeRunner implements PantheonNodeRunner {
 
     final MetricsSystem noOpMetricsSystem = new NoOpMetricsSystem();
     final PantheonControllerBuilder builder = new PantheonControllerBuilder();
-    final EthNetworkConfig ethNetworkConfig =
-        node.ethNetworkConfig()
-            .orElse(
-                new EthNetworkConfig.Builder(EthNetworkConfig.getNetworkConfig(MAINNET))
-                    .setNetworkId(NETWORK_ID)
-                    .build());
+    final EthNetworkConfig.Builder networkConfigBuilder =
+        new EthNetworkConfig.Builder(EthNetworkConfig.getNetworkConfig(DEV))
+            .setBootNodes(node.getConfiguration().bootnodes());
+    node.getConfiguration().getGenesisConfig().ifPresent(networkConfigBuilder::setGenesisConfig);
+    final EthNetworkConfig ethNetworkConfig = networkConfigBuilder.build();
+
     final PantheonController<?> pantheonController;
     try {
       pantheonController =
@@ -67,28 +64,27 @@ public class ThreadPantheonNodeRunner implements PantheonNodeRunner {
               .synchronizerConfiguration(new SynchronizerConfiguration.Builder().build())
               .homePath(node.homeDirectory())
               .ethNetworkConfig(ethNetworkConfig)
-              .syncWithOttoman(false)
               .miningParameters(node.getMiningParameters())
+              .privacyParameters(node.getPrivacyParameters())
               .devMode(node.isDevMode())
               .nodePrivateKeyFile(KeyPairUtil.getDefaultKeyFile(node.homeDirectory()))
               .metricsSystem(noOpMetricsSystem)
-              .privacyParameters(PrivacyParameters.noPrivacy())
               .build();
     } catch (final IOException e) {
       throw new RuntimeException("Error building PantheonController", e);
     }
 
-    RunnerBuilder runnerBuilder = new RunnerBuilder();
+    final RunnerBuilder runnerBuilder = new RunnerBuilder();
     node.getPermissioningConfiguration().ifPresent(runnerBuilder::permissioningConfiguration);
 
     final Runner runner =
         runnerBuilder
             .vertx(Vertx.vertx())
             .pantheonController(pantheonController)
+            .ethNetworkConfig(ethNetworkConfig)
             .discovery(node.isDiscoveryEnabled())
-            .bootstrapPeers(node.bootnodes())
             .discoveryHost(node.hostName())
-            .discoveryPort(node.p2pPort())
+            .discoveryPort(0)
             .maxPeers(25)
             .jsonRpcConfiguration(node.jsonRpcConfiguration())
             .webSocketConfiguration(node.webSocketConfiguration())
@@ -96,12 +92,10 @@ public class ThreadPantheonNodeRunner implements PantheonNodeRunner {
             .bannedNodeIds(Collections.emptySet())
             .metricsSystem(noOpMetricsSystem)
             .metricsConfiguration(node.metricsConfiguration())
-            .p2pEnabled(node.p2pEnabled())
+            .p2pEnabled(node.isP2pEnabled())
             .build();
 
-    nodeExecutor.submit(runner::execute);
-
-    waitForPortsFile(node.homeDirectory().toAbsolutePath());
+    runner.start();
 
     pantheonRunners.put(node.getName(), runner);
   }

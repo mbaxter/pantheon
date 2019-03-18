@@ -101,6 +101,12 @@ pantheon --data-path=Node-1-data-path --genesis-file=../privateNetworkGenesis.js
 pantheon --data-path=Node-1-data-path --genesis-file=..\privateNetworkGenesis.json public-key export --to=Node-1-data-path\publicKeyNode1
 ```
 
+!!!note
+    The [`--data-path`](../Reference/Pantheon-CLI-Syntax.md#data-path) and [`--genesis-file`](../Reference/Pantheon-CLI-Syntax.md#genesis-file) 
+    options are not used when running Pantheon from the [Docker image](../Getting-Started/Run-Docker-Image.md). 
+    Use a bind mount to [specify a configuration file with Docker](../Getting-Started/Run-Docker-Image.md#custom-genesis-file)
+    and volume to [specify the data directory](../Getting-Started/Run-Docker-Image.md#data-directory).
+
 Your node 1 directory now contains: 
 ```bash
 ├── Node-1
@@ -180,7 +186,7 @@ The command line specifies:
 Start another terminal, use curl to call the JSON-RPC API [`net_peerCount`](../Reference/JSON-RPC-API-Methods.md#net_peercount) method and confirm the nodes are functioning as peers: 
 
 ```bash
-curl -X POST --data '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":1}' 127.0.0.1:8545
+curl -X POST --data '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":1}' localhost:8545
 ```
 
 The result confirms Node-1 (the node running the JSON-RPC service) has two peers (Node-2 and Node-3):
@@ -201,7 +207,7 @@ Import accounts to MetaMask and send transactions as described in the [Private N
     
 Send transactions using `eth_sendRawTransaction` to [send ether or, deploy or invoke contracts](../Using-Pantheon/Transactions.md).
 
-Use the [JSON-RPC API](../Reference/Using-JSON-RPC-API.md). 
+Use the [JSON-RPC API](../JSON-RPC-API/Using-JSON-RPC-API.md). 
 
 Start a node with the [`--rpc-ws-enabled`](../Reference/Pantheon-CLI-Syntax.md#rpc-ws-enabled) option and use the [RPC Pub/Sub API](../Using-Pantheon/RPC-PubSub.md).       
 

@@ -14,8 +14,9 @@ package tech.pegasys.pantheon.ethereum.p2p.discovery;
 
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryTestHelper.AgentBuilder;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.FindNeighborsPacketData;
@@ -25,19 +26,20 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.NeighborsPacketData
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.Packet;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PacketType;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
-import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
-import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.junit.Test;
 
 public class PeerDiscoveryAgentTest {
+
+  private static final int BROADCAST_TCP_PORT = 30303;
   private final PeerDiscoveryTestHelper helper = new PeerDiscoveryTestHelper();
 
   @Test
@@ -64,7 +66,10 @@ public class PeerDiscoveryAgentTest {
     final List<MockPeerDiscoveryAgent> otherAgents =
         helper.startDiscoveryAgents(20, Collections.emptyList());
     final List<DiscoveryPeer> otherPeers =
-        otherAgents.stream().map(MockPeerDiscoveryAgent::getAdvertisedPeer).collect(toList());
+        otherAgents.stream()
+            .map(MockPeerDiscoveryAgent::getAdvertisedPeer)
+            .map(Optional::get)
+            .collect(Collectors.toList());
 
     // Start another peer pointing to those 20 agents.
     final MockPeerDiscoveryAgent agent = helper.startDiscoveryAgent(otherPeers);
@@ -82,7 +87,7 @@ public class PeerDiscoveryAgentTest {
     packet =
         Packet.create(
             PacketType.FIND_NEIGHBORS,
-            FindNeighborsPacketData.create(otherAgents.get(0).getAdvertisedPeer().getId()),
+            FindNeighborsPacketData.create(otherAgents.get(0).getAdvertisedPeer().get().getId()),
             testAgent.getKeyPair());
     helper.sendMessageBetweenAgents(testAgent, agent, packet);
 
@@ -106,18 +111,18 @@ public class PeerDiscoveryAgentTest {
     otherPeers.removeAll(neighbors.getNodes());
     assertThat(otherPeers.size()).isBetween(4, 5);
     if (otherPeers.size() == 5) {
-      assertThat(neighbors.getNodes()).contains(testAgent.getAdvertisedPeer());
+      assertThat(neighbors.getNodes()).contains(testAgent.getAdvertisedPeer().get());
     }
   }
 
   @Test
   public void shouldEvictPeerOnDisconnect() {
     final MockPeerDiscoveryAgent peerDiscoveryAgent1 = helper.startDiscoveryAgent();
-    peerDiscoveryAgent1.start().join();
-    final DiscoveryPeer peer = peerDiscoveryAgent1.getAdvertisedPeer();
+    peerDiscoveryAgent1.start(BROADCAST_TCP_PORT).join();
+    final DiscoveryPeer peer = peerDiscoveryAgent1.getAdvertisedPeer().get();
 
     final MockPeerDiscoveryAgent peerDiscoveryAgent2 = helper.startDiscoveryAgent(peer);
-    peerDiscoveryAgent2.start().join();
+    peerDiscoveryAgent2.start(BROADCAST_TCP_PORT).join();
 
     assertThat(peerDiscoveryAgent2.getPeers().collect(toList()).size()).isEqualTo(1);
 
@@ -285,36 +290,9 @@ public class PeerDiscoveryAgentTest {
   }
 
   private PeerConnection createAnonymousPeerConnection(final BytesValue id) {
-    return new PeerConnection() {
-      @Override
-      public void send(final Capability capability, final MessageData message)
-          throws PeerNotConnected {}
-
-      @Override
-      public Set<Capability> getAgreedCapabilities() {
-        return null;
-      }
-
-      @Override
-      public PeerInfo getPeer() {
-        return new PeerInfo(0, null, null, 0, id);
-      }
-
-      @Override
-      public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {}
-
-      @Override
-      public void disconnect(final DisconnectReason reason) {}
-
-      @Override
-      public SocketAddress getLocalAddress() {
-        return null;
-      }
-
-      @Override
-      public SocketAddress getRemoteAddress() {
-        return null;
-      }
-    };
+    PeerConnection conn = mock(PeerConnection.class);
+    PeerInfo peerInfo = new PeerInfo(0, null, null, 0, id);
+    when(conn.getPeer()).thenReturn(peerInfo);
+    return conn;
   }
 }

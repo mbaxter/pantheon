@@ -9,12 +9,11 @@ Pantheon implements a number of consensus protocols:
   
 * [Clique](Clique.md) (Proof of Authority)
   
-* [IBFT 2.0](IBFT.md) (Proof of Authority)
+* [IBFT 2.0](IBFT.md) (Proof of Authority) 
 
-!!! note 
-    IBFT 2.0 is under development and will be available in v1.0. 
+* [Quorum IBFT 1.0](QuorumIBFT.md) (Proof of Authority) 
 
-The genesis file specifies the consensus protocol for a chain `config`: 
+The genesis file specifies the consensus protocol for a chain in the `config` property: 
 
 ```json tab="Ethash"
 {
@@ -51,3 +50,16 @@ The genesis file specifies the consensus protocol for a chain `config`:
   ...
 }
 ``` 
+
+```json tab="IBFT 1.0" 
+{
+  "config": {
+    ....
+    "ibft": {
+      ...     
+   }
+  },
+  ...
+}
+```
+

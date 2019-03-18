@@ -26,10 +26,10 @@ import tech.pegasys.pantheon.consensus.clique.CliqueExtraData;
 import tech.pegasys.pantheon.consensus.clique.CliqueHelpers;
 import tech.pegasys.pantheon.consensus.clique.CliqueProtocolSchedule;
 import tech.pegasys.pantheon.consensus.clique.TestHelpers;
-import tech.pegasys.pantheon.consensus.clique.VoteTallyCache;
 import tech.pegasys.pantheon.consensus.common.EpochManager;
 import tech.pegasys.pantheon.consensus.common.VoteProposer;
 import tech.pegasys.pantheon.consensus.common.VoteTally;
+import tech.pegasys.pantheon.consensus.common.VoteTallyCache;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
 import tech.pegasys.pantheon.ethereum.chain.GenesisState;
@@ -44,6 +44,7 @@ import tech.pegasys.pantheon.ethereum.core.Util;
 import tech.pegasys.pantheon.ethereum.core.Wei;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
+import tech.pegasys.pantheon.testutil.TestClock;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.List;
@@ -109,7 +110,7 @@ public class CliqueBlockCreatorTest {
         new CliqueBlockCreator(
             coinbase,
             parent -> extraData.encode(),
-            new PendingTransactions(5),
+            new PendingTransactions(5, TestClock.fixed()),
             protocolContext,
             protocolSchedule,
             gasLimit -> gasLimit,
@@ -136,7 +137,7 @@ public class CliqueBlockCreatorTest {
         new CliqueBlockCreator(
             coinbase,
             parent -> extraData.encode(),
-            new PendingTransactions(5),
+            new PendingTransactions(5, TestClock.fixed()),
             protocolContext,
             protocolSchedule,
             gasLimit -> gasLimit,
@@ -162,7 +163,7 @@ public class CliqueBlockCreatorTest {
         new CliqueBlockCreator(
             coinbase,
             parent -> extraData.encode(),
-            new PendingTransactions(5),
+            new PendingTransactions(5, TestClock.fixed()),
             protocolContext,
             protocolSchedule,
             gasLimit -> gasLimit,
@@ -191,7 +192,7 @@ public class CliqueBlockCreatorTest {
         new CliqueBlockCreator(
             coinbase,
             parent -> extraData.encode(),
-            new PendingTransactions(5),
+            new PendingTransactions(5, TestClock.fixed()),
             protocolContext,
             protocolSchedule,
             gasLimit -> gasLimit,

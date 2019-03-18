@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon;
 
+import tech.pegasys.pantheon.cli.EthNetworkConfig;
 import tech.pegasys.pantheon.controller.PantheonController;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
@@ -52,15 +53,20 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
 import tech.pegasys.pantheon.ethereum.permissioning.AccountWhitelistController;
-import tech.pegasys.pantheon.ethereum.permissioning.NodeWhitelistController;
+import tech.pegasys.pantheon.ethereum.permissioning.LocalPermissioningConfiguration;
+import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
+import tech.pegasys.pantheon.ethereum.permissioning.NodePermissioningControllerFactory;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
-import tech.pegasys.pantheon.ethereum.privacy.PrivateTransactionHandler;
+import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
+import tech.pegasys.pantheon.ethereum.transaction.TransactionSimulator;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsService;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
@@ -78,7 +84,7 @@ public class RunnerBuilder {
   private PantheonController<?> pantheonController;
   private boolean p2pEnabled = true;
   private boolean discovery;
-  private Collection<?> bootstrapPeers;
+  private EthNetworkConfig ethNetworkConfig;
   private String discoveryHost;
   private int listenPort;
   private int maxPeers;
@@ -89,6 +95,11 @@ public class RunnerBuilder {
   private MetricsConfiguration metricsConfiguration;
   private MetricsSystem metricsSystem;
   private Optional<PermissioningConfiguration> permissioningConfiguration = Optional.empty();
+
+  private EnodeURL getSelfEnode() {
+    String nodeId = pantheonController.getLocalNodeKeyPair().getPublicKey().toString();
+    return new EnodeURL(nodeId, discoveryHost, listenPort);
+  }
 
   public RunnerBuilder vertx(final Vertx vertx) {
     this.vertx = vertx;
@@ -110,8 +121,8 @@ public class RunnerBuilder {
     return this;
   }
 
-  public RunnerBuilder bootstrapPeers(final Collection<?> bootstrapPeers) {
-    this.bootstrapPeers = bootstrapPeers;
+  public RunnerBuilder ethNetworkConfig(final EthNetworkConfig ethNetworkConfig) {
+    this.ethNetworkConfig = ethNetworkConfig;
     return this;
   }
 
@@ -172,11 +183,11 @@ public class RunnerBuilder {
 
     final DiscoveryConfiguration discoveryConfiguration;
     if (discovery) {
-      final Collection<?> bootstrap;
-      if (bootstrapPeers == null) {
+      final Collection<URI> bootstrap;
+      if (ethNetworkConfig.getBootNodes() == null) {
         bootstrap = DiscoveryConfiguration.MAINNET_BOOTSTRAP_NODES;
       } else {
-        bootstrap = bootstrapPeers;
+        bootstrap = ethNetworkConfig.getBootNodes();
       }
       discoveryConfiguration =
           DiscoveryConfiguration.create()
@@ -213,12 +224,28 @@ public class RunnerBuilder {
         new PeerBlacklist(
             bannedNodeIds.stream().map(BytesValue::fromHexString).collect(Collectors.toSet()));
 
-    final Optional<NodeWhitelistController> nodeWhitelistController =
-        permissioningConfiguration
-            .filter(PermissioningConfiguration::isNodeWhitelistEnabled)
-            .map(NodeWhitelistController::new);
+    final List<EnodeURL> bootnodesAsEnodeURLs =
+        discoveryConfiguration.getBootstrapPeers().stream()
+            .map(p -> new EnodeURL(p.getEnodeURI()))
+            .collect(Collectors.toList());
+
+    final Optional<LocalPermissioningConfiguration> localPermissioningConfiguration =
+        permissioningConfiguration.flatMap(PermissioningConfiguration::getLocalConfig);
+
+    final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController =
+        localPermissioningConfiguration.map(
+            config ->
+                new NodeLocalConfigPermissioningController(
+                    config, bootnodesAsEnodeURLs, getSelfEnode()));
 
     final Synchronizer synchronizer = pantheonController.getSynchronizer();
+
+    final TransactionSimulator transactionSimulator =
+        new TransactionSimulator(
+            context.getBlockchain(), context.getWorldStateArchive(), protocolSchedule);
+
+    final Optional<NodePermissioningController> nodePermissioningController =
+        buildNodePermissioningController(bootnodesAsEnodeURLs, synchronizer, transactionSimulator);
 
     final NetworkRunner networkRunner =
         NetworkRunner.builder()
@@ -235,7 +262,12 @@ public class RunnerBuilder {
                             synchronizer::hasSufficientPeers,
                             peerBlacklist,
                             metricsSystem,
-                            nodeWhitelistController)
+                            nodeWhitelistController,
+                            nodePermissioningController,
+                            // TODO this dependency on the Blockchain will be removed in PAN-2442
+                            nodePermissioningController.isPresent()
+                                ? context.getBlockchain()
+                                : null)
                     : caps -> new NoopP2PNetwork())
             .metricsSystem(metricsSystem)
             .build();
@@ -243,20 +275,17 @@ public class RunnerBuilder {
     final TransactionPool transactionPool = pantheonController.getTransactionPool();
     final MiningCoordinator miningCoordinator = pantheonController.getMiningCoordinator();
     final Optional<AccountWhitelistController> accountWhitelistController =
-        permissioningConfiguration
-            .filter(PermissioningConfiguration::isAccountWhitelistEnabled)
+        localPermissioningConfiguration
+            .filter(LocalPermissioningConfiguration::isAccountWhitelistEnabled)
             .map(
                 configuration -> {
-                  AccountWhitelistController whitelistController =
+                  final AccountWhitelistController whitelistController =
                       new AccountWhitelistController(configuration);
-                  transactionPool.setAccountWhitelist(whitelistController);
+                  transactionPool.setAccountFilter(whitelistController::contains);
                   return whitelistController;
                 });
 
     final PrivacyParameters privacyParameters = pantheonController.getPrivacyParameters();
-    final PrivateTransactionHandler privateTransactionHandler =
-        new PrivateTransactionHandler(privacyParameters);
-
     final FilterManager filterManager = createFilterManager(vertx, context, transactionPool);
 
     Optional<JsonRpcHttpService> jsonRpcHttpService = Optional.empty();
@@ -275,7 +304,7 @@ public class RunnerBuilder {
               jsonRpcConfiguration.getRpcApis(),
               filterManager,
               accountWhitelistController,
-              privateTransactionHandler);
+              privacyParameters);
       jsonRpcHttpService =
           Optional.of(
               new JsonRpcHttpService(
@@ -298,11 +327,10 @@ public class RunnerBuilder {
               webSocketConfiguration.getRpcApis(),
               filterManager,
               accountWhitelistController,
-              privateTransactionHandler);
+              privacyParameters);
 
       final SubscriptionManager subscriptionManager =
-          createSubscriptionManager(
-              vertx, transactionPool, webSocketConfiguration.getRefreshDelay());
+          createSubscriptionManager(vertx, transactionPool);
 
       createLogsSubscriptionService(
           context.getBlockchain(), context.getWorldStateArchive(), subscriptionManager);
@@ -333,6 +361,21 @@ public class RunnerBuilder {
         dataDir);
   }
 
+  private Optional<NodePermissioningController> buildNodePermissioningController(
+      final List<EnodeURL> bootnodesAsEnodeURLs,
+      final Synchronizer synchronizer,
+      final TransactionSimulator transactionSimulator) {
+    return permissioningConfiguration.map(
+        config ->
+            new NodePermissioningControllerFactory()
+                .create(
+                    config,
+                    synchronizer,
+                    bootnodesAsEnodeURLs,
+                    getSelfEnode(),
+                    transactionSimulator));
+  }
+
   private FilterManager createFilterManager(
       final Vertx vertx, final ProtocolContext<?> context, final TransactionPool transactionPool) {
     final FilterManager filterManager =
@@ -358,11 +401,13 @@ public class RunnerBuilder {
       final Collection<RpcApi> jsonRpcApis,
       final FilterManager filterManager,
       final Optional<AccountWhitelistController> accountWhitelistController,
-      final PrivateTransactionHandler privateTransactionHandler) {
+      final PrivacyParameters privacyParameters) {
     final Map<String, JsonRpcMethod> methods =
         new JsonRpcMethodsFactory()
             .methods(
                 PantheonInfo.version(),
+                ethNetworkConfig.getNetworkId(),
+                pantheonController.getGenesisConfigOptions(),
                 network,
                 context.getBlockchain(),
                 context.getWorldStateArchive(),
@@ -375,14 +420,14 @@ public class RunnerBuilder {
                 jsonRpcApis,
                 filterManager,
                 accountWhitelistController,
-                privateTransactionHandler);
+                privacyParameters);
     methods.putAll(pantheonController.getAdditionalJsonRpcMethods(jsonRpcApis));
     return methods;
   }
 
   private SubscriptionManager createSubscriptionManager(
-      final Vertx vertx, final TransactionPool transactionPool, final long refreshDelay) {
-    final SubscriptionManager subscriptionManager = new SubscriptionManager(refreshDelay);
+      final Vertx vertx, final TransactionPool transactionPool) {
+    final SubscriptionManager subscriptionManager = new SubscriptionManager();
     final PendingTransactionSubscriptionService pendingTransactions =
         new PendingTransactionSubscriptionService(subscriptionManager);
     transactionPool.addTransactionListener(pendingTransactions);

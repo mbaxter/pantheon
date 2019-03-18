@@ -21,7 +21,7 @@ import tech.pegasys.pantheon.config.StubGenesisConfigOptions;
 import tech.pegasys.pantheon.consensus.common.BlockInterface;
 import tech.pegasys.pantheon.consensus.common.EpochManager;
 import tech.pegasys.pantheon.consensus.common.VoteProposer;
-import tech.pegasys.pantheon.consensus.common.VoteTally;
+import tech.pegasys.pantheon.consensus.common.VoteTallyCache;
 import tech.pegasys.pantheon.consensus.common.VoteTallyUpdater;
 import tech.pegasys.pantheon.consensus.ibft.BlockTimer;
 import tech.pegasys.pantheon.consensus.ibft.EventMultiplexer;
@@ -34,11 +34,14 @@ import tech.pegasys.pantheon.consensus.ibft.IbftExtraData;
 import tech.pegasys.pantheon.consensus.ibft.IbftGossip;
 import tech.pegasys.pantheon.consensus.ibft.IbftHelpers;
 import tech.pegasys.pantheon.consensus.ibft.IbftProtocolSchedule;
+import tech.pegasys.pantheon.consensus.ibft.MessageTracker;
 import tech.pegasys.pantheon.consensus.ibft.RoundTimer;
+import tech.pegasys.pantheon.consensus.ibft.SynchronizerUpdater;
 import tech.pegasys.pantheon.consensus.ibft.UniqueMessageMulticaster;
 import tech.pegasys.pantheon.consensus.ibft.blockcreation.IbftBlockCreatorFactory;
 import tech.pegasys.pantheon.consensus.ibft.blockcreation.ProposerSelector;
 import tech.pegasys.pantheon.consensus.ibft.payload.MessageFactory;
+import tech.pegasys.pantheon.consensus.ibft.statemachine.FutureMessageBuffer;
 import tech.pegasys.pantheon.consensus.ibft.statemachine.IbftBlockHeightManagerFactory;
 import tech.pegasys.pantheon.consensus.ibft.statemachine.IbftController;
 import tech.pegasys.pantheon.consensus.ibft.statemachine.IbftFinalState;
@@ -61,6 +64,7 @@ import tech.pegasys.pantheon.ethereum.core.Util;
 import tech.pegasys.pantheon.ethereum.core.Wei;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
+import tech.pegasys.pantheon.testutil.TestClock;
 import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.uint.UInt256;
@@ -114,6 +118,8 @@ public class TestContextBuilder {
   public static final int MESSAGE_QUEUE_LIMIT = 1000;
   public static final int GOSSIPED_HISTORY_LIMIT = 100;
   public static final int DUPLICATE_MESSAGE_LIMIT = 100;
+  public static final int FUTURE_MESSAGES_MAX_DISTANCE = 10;
+  public static final int FUTURE_MESSAGES_LIMIT = 1000;
 
   private Clock clock = Clock.fixed(Instant.MIN, ZoneId.of("UTC"));
   private IbftEventQueue ibftEventQueue = new IbftEventQueue(MESSAGE_QUEUE_LIMIT);
@@ -164,9 +170,17 @@ public class TestContextBuilder {
 
     final Gossiper gossiper = useGossip ? new IbftGossip(uniqueMulticaster) : mock(Gossiper.class);
 
+    final StubbedSynchronizerUpdater synchronizerUpdater = new StubbedSynchronizerUpdater();
+
     final ControllerAndState controllerAndState =
         createControllerAndFinalState(
-            blockChain, multicaster, nodeKeys, clock, ibftEventQueue, gossiper);
+            blockChain,
+            multicaster,
+            nodeKeys,
+            clock,
+            ibftEventQueue,
+            gossiper,
+            synchronizerUpdater);
 
     // Add each networkNode to the Multicaster (such that each can receive msgs from local node).
     // NOTE: the remotePeers needs to be ordered based on Address (as this is used to determine
@@ -187,6 +201,7 @@ public class TestContextBuilder {
                     LinkedHashMap::new));
 
     multicaster.addNetworkPeers(remotePeers.values());
+    synchronizerUpdater.addNetworkPeers(remotePeers.values());
 
     return new TestContext(
         remotePeers,
@@ -227,7 +242,8 @@ public class TestContextBuilder {
       final KeyPair nodeKeys,
       final Clock clock,
       final IbftEventQueue ibftEventQueue,
-      final Gossiper gossiper) {
+      final Gossiper gossiper,
+      final SynchronizerUpdater synchronizerUpdater) {
 
     final WorldStateArchive worldStateArchive = createInMemoryWorldStateArchive();
 
@@ -249,30 +265,35 @@ public class TestContextBuilder {
     final EpochManager epochManager = new EpochManager(EPOCH_LENGTH);
 
     final BlockInterface blockInterface = new IbftBlockInterface();
-    final VoteTally voteTally =
-        new VoteTallyUpdater(epochManager, blockInterface).buildVoteTallyFromBlockchain(blockChain);
+
+    final VoteTallyCache voteTallyCache =
+        new VoteTallyCache(
+            blockChain,
+            new VoteTallyUpdater(epochManager, blockInterface),
+            epochManager,
+            new IbftBlockInterface());
 
     final VoteProposer voteProposer = new VoteProposer();
 
     final ProtocolContext<IbftContext> protocolContext =
         new ProtocolContext<>(
-            blockChain, worldStateArchive, new IbftContext(voteTally, voteProposer));
+            blockChain, worldStateArchive, new IbftContext(voteTallyCache, voteProposer));
 
     final IbftBlockCreatorFactory blockCreatorFactory =
         new IbftBlockCreatorFactory(
             (gasLimit) -> gasLimit,
-            new PendingTransactions(1), // changed from IbftPantheonController
+            new PendingTransactions(1, clock), // changed from IbftPantheonController
             protocolContext,
             protocolSchedule,
             miningParams,
             Util.publicKeyToAddress(nodeKeys.getPublicKey()));
 
     final ProposerSelector proposerSelector =
-        new ProposerSelector(blockChain, voteTally, blockInterface, true);
+        new ProposerSelector(blockChain, blockInterface, true);
 
     final IbftFinalState finalState =
         new IbftFinalState(
-            voteTally,
+            protocolContext.getConsensusState().getVoteTallyCache(),
             nodeKeys,
             Util.publicKeyToAddress(nodeKeys.getPublicKey()),
             proposerSelector,
@@ -283,7 +304,7 @@ public class TestContextBuilder {
                 ibftEventQueue,
                 BLOCK_TIMER_SEC * 1000,
                 Executors.newScheduledThreadPool(1),
-                Clock.systemUTC()),
+                TestClock.fixed()),
             blockCreatorFactory,
             new MessageFactory(nodeKeys),
             clock);
@@ -292,6 +313,13 @@ public class TestContextBuilder {
         new MessageValidatorFactory(proposerSelector, protocolSchedule, protocolContext);
 
     final Subscribers<MinedBlockObserver> minedBlockObservers = new Subscribers<>();
+
+    final MessageTracker duplicateMessageTracker = new MessageTracker(DUPLICATE_MESSAGE_LIMIT);
+    final FutureMessageBuffer futureMessageBuffer =
+        new FutureMessageBuffer(
+            FUTURE_MESSAGES_MAX_DISTANCE,
+            FUTURE_MESSAGES_LIMIT,
+            blockChain.getChainHeadBlockNumber());
 
     final IbftController ibftController =
         new IbftController(
@@ -307,7 +335,9 @@ public class TestContextBuilder {
                     messageValidatorFactory),
                 messageValidatorFactory),
             gossiper,
-            DUPLICATE_MESSAGE_LIMIT);
+            duplicateMessageTracker,
+            futureMessageBuffer,
+            synchronizerUpdater);
 
     final EventMultiplexer eventMultiplexer = new EventMultiplexer(ibftController);
     //////////////////////////// END IBFT PantheonController ////////////////////////////

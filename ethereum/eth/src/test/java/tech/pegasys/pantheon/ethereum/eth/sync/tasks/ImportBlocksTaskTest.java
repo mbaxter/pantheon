@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.ethereum.eth.sync.tasks;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
 
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
@@ -26,13 +27,13 @@ import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManagerTestUtil;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer;
 import tech.pegasys.pantheon.ethereum.eth.manager.RespondingEthPeer.Responder;
 import tech.pegasys.pantheon.ethereum.eth.manager.ethtaskutils.AbstractMessageTaskTest;
+import tech.pegasys.pantheon.ethereum.eth.manager.exceptions.NoAvailablePeersException;
 import tech.pegasys.pantheon.ethereum.eth.manager.task.AbstractPeerTask.PeerTaskResult;
 import tech.pegasys.pantheon.ethereum.eth.manager.task.EthTask;
 import tech.pegasys.pantheon.ethereum.eth.messages.BlockHeadersMessage;
 import tech.pegasys.pantheon.ethereum.eth.messages.EthPV62;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
-import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -78,7 +79,7 @@ public class ImportBlocksTaskTest
         ethContext,
         firstBlock.getHeader(),
         requestedData.size(),
-        NoOpMetricsSystem.NO_OP_LABELLED_TIMER);
+        metricsSystem);
   }
 
   @Override
@@ -160,6 +161,23 @@ public class ImportBlocksTaskTest
         });
     assertThat(future.isDone()).isTrue();
     assertThat(future.isCompletedExceptionally()).isFalse();
+  }
+
+  @Test
+  public void shouldNotRequestDataFromPeerBelowExpectedHeight() {
+    // Setup a unresponsive peer
+    final Responder responder = RespondingEthPeer.emptyResponder();
+    final RespondingEthPeer respondingEthPeer =
+        EthProtocolManagerTestUtil.createPeer(ethProtocolManager, 1);
+
+    // Execute task and wait for response
+    final List<Block> requestedData = generateDataToBeRequested();
+    final EthTask<PeerTaskResult<List<Block>>> task = createTask(requestedData);
+    final CompletableFuture<PeerTaskResult<List<Block>>> future = task.run();
+    respondingEthPeer.respondWhile(responder, () -> !future.isDone());
+    assertThat(future.isDone()).isTrue();
+    assertThat(future.isCompletedExceptionally()).isTrue();
+    assertThatThrownBy(future::get).hasCauseInstanceOf(NoAvailablePeersException.class);
   }
 
   private MutableBlockchain createShortChain(final long truncateAtBlockNumber) {

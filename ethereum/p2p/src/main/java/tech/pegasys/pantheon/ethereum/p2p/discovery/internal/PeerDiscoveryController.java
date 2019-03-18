@@ -29,10 +29,12 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.EvictResu
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.EvictResult.EvictOutcome;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
-import tech.pegasys.pantheon.ethereum.permissioning.NodeWhitelistController;
+import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
+import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodeWhitelistUpdatedEvent;
 import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.util.Collection;
 import java.util.List;
@@ -44,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -116,10 +119,12 @@ public class PeerDiscoveryController {
   private final DiscoveryPeer localPeer;
   private final OutboundMessageHandler outboundMessageHandler;
   private final PeerBlacklist peerBlacklist;
-  private final Optional<NodeWhitelistController> nodeWhitelistController;
+  private final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController;
+  private final Optional<NodePermissioningController> nodePermissioningController;
 
   private RetryDelayFunction retryDelayFunction = RetryDelayFunction.linear(1.5, 2000, 60000);
 
+  private final AsyncExecutor workerExecutor;
   private final long tableRefreshIntervalMs;
 
   private final PeerRequirement peerRequirement;
@@ -141,10 +146,12 @@ public class PeerDiscoveryController {
       final Collection<DiscoveryPeer> bootstrapNodes,
       final OutboundMessageHandler outboundMessageHandler,
       final TimerUtil timerUtil,
+      final AsyncExecutor workerExecutor,
       final long tableRefreshIntervalMs,
       final PeerRequirement peerRequirement,
       final PeerBlacklist peerBlacklist,
-      final Optional<NodeWhitelistController> nodeWhitelistController,
+      final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController,
+      final Optional<NodePermissioningController> nodePermissioningController,
       final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers,
       final Subscribers<Consumer<PeerDroppedEvent>> peerDroppedObservers) {
     this.timerUtil = timerUtil;
@@ -152,41 +159,49 @@ public class PeerDiscoveryController {
     this.localPeer = localPeer;
     this.bootstrapNodes = bootstrapNodes;
     this.peerTable = peerTable;
+    this.workerExecutor = workerExecutor;
     this.tableRefreshIntervalMs = tableRefreshIntervalMs;
     this.peerRequirement = peerRequirement;
     this.peerBlacklist = peerBlacklist;
     this.nodeWhitelistController = nodeWhitelistController;
+    this.nodePermissioningController = nodePermissioningController;
     this.outboundMessageHandler = outboundMessageHandler;
     this.peerBondedObservers = peerBondedObservers;
     this.peerDroppedObservers = peerDroppedObservers;
   }
 
-  public CompletableFuture<?> start() {
+  public void start() {
     if (!started.compareAndSet(false, true)) {
       throw new IllegalStateException("The peer table had already been started");
     }
 
-    bootstrapNodes.stream()
-        .filter(this::whitelistIfPresentIsNodePermitted)
-        .forEach(peerTable::tryAdd);
+    bootstrapNodes.stream().filter(p -> isPeerPermitted(localPeer, p)).forEach(peerTable::tryAdd);
 
     recursivePeerRefreshState =
         new RecursivePeerRefreshState(
             peerBlacklist,
-            nodeWhitelistController,
+            nodePermissioningController,
             this::bond,
             this::findNodes,
             timerUtil,
-            localPeer.getId(),
+            localPeer,
             peerTable,
             PEER_REFRESH_ROUND_TIMEOUT_IN_SECONDS,
             100);
 
     final List<DiscoveryPeer> initialDiscoveryPeers =
         bootstrapNodes.stream()
-            .filter(this::whitelistIfPresentIsNodePermitted)
+            .filter(p -> isPeerPermitted(localPeer, p))
             .collect(Collectors.toList());
-    recursivePeerRefreshState.start(initialDiscoveryPeers, localPeer.getId());
+
+    if (nodePermissioningController.isPresent()) {
+      nodePermissioningController
+          .get()
+          .startPeerDiscoveryCallback(
+              () -> recursivePeerRefreshState.start(initialDiscoveryPeers, localPeer.getId()));
+    } else {
+      recursivePeerRefreshState.start(initialDiscoveryPeers, localPeer.getId());
+    }
 
     final long timerId =
         timerUtil.setPeriodic(
@@ -196,8 +211,6 @@ public class PeerDiscoveryController {
 
     nodeWhitelistController.ifPresent(
         c -> c.subscribeToListUpdatedEvent(this::handleNodeWhitelistUpdatedEvent));
-
-    return CompletableFuture.completedFuture(null);
   }
 
   public CompletableFuture<?> stop() {
@@ -212,9 +225,13 @@ public class PeerDiscoveryController {
     return CompletableFuture.completedFuture(null);
   }
 
-  private boolean whitelistIfPresentIsNodePermitted(final DiscoveryPeer sender) {
-    return nodeWhitelistController
-        .map(nodeWhitelistController -> nodeWhitelistController.isPermitted(sender.getEnodeURI()))
+  private boolean isPeerPermitted(final Peer sourcePeer, final Peer destinationPeer) {
+    return nodePermissioningController
+        .map(
+            c ->
+                c.isPermitted(
+                    new EnodeURL(sourcePeer.getEnodeURI()),
+                    new EnodeURL(destinationPeer.getEnodeURI())))
         .orElse(true);
   }
 
@@ -237,7 +254,7 @@ public class PeerDiscoveryController {
       return;
     }
 
-    if (!whitelistIfPresentIsNodePermitted(sender)) {
+    if (!isPeerPermitted(sender, localPeer)) {
       LOG.trace("Dropping packet from peer not in the whitelist ({})", sender.getEnodeURI());
       return;
     }
@@ -392,31 +409,39 @@ public class PeerDiscoveryController {
         interaction -> {
           final PingPacketData data =
               PingPacketData.create(localPeer.getEndpoint(), peer.getEndpoint());
-          final Packet pingPacket = createPacket(PacketType.PING, data);
+          createPacket(
+              PacketType.PING,
+              data,
+              pingPacket -> {
+                final BytesValue pingHash = pingPacket.getHash();
+                // Update the matching filter to only accept the PONG if it echoes the hash of our
+                // PING.
+                final Predicate<Packet> newFilter =
+                    packet ->
+                        packet
+                            .getPacketData(PongPacketData.class)
+                            .map(pong -> pong.getPingHash().equals(pingHash))
+                            .orElse(false);
+                interaction.updateFilter(newFilter);
 
-          final BytesValue pingHash = pingPacket.getHash();
-          // Update the matching filter to only accept the PONG if it echoes the hash of our PING.
-          final Predicate<Packet> newFilter =
-              packet ->
-                  packet
-                      .getPacketData(PongPacketData.class)
-                      .map(pong -> pong.getPingHash().equals(pingHash))
-                      .orElse(false);
-          interaction.updateFilter(newFilter);
-
-          sendPacket(peer, pingPacket);
+                sendPacket(peer, pingPacket);
+              });
         };
 
     // The filter condition will be updated as soon as the action is performed.
     final PeerInteractionState ping =
-        new PeerInteractionState(action, PacketType.PONG, (packet) -> false, true);
+        new PeerInteractionState(action, peer.getId(), PacketType.PONG, (packet) -> false, true);
     dispatchInteraction(peer, ping);
   }
 
   private void sendPacket(final DiscoveryPeer peer, final PacketType type, final PacketData data) {
-    Packet packet = createPacket(type, data);
-    logSendingPacket(peer, packet);
-    outboundMessageHandler.send(peer, packet);
+    createPacket(
+        type,
+        data,
+        packet -> {
+          logSendingPacket(peer, packet);
+          outboundMessageHandler.send(peer, packet);
+        });
   }
 
   private void sendPacket(final DiscoveryPeer peer, final Packet packet) {
@@ -425,8 +450,17 @@ public class PeerDiscoveryController {
   }
 
   @VisibleForTesting
-  Packet createPacket(final PacketType type, final PacketData data) {
-    return Packet.create(type, data, keypair);
+  void createPacket(final PacketType type, final PacketData data, final Consumer<Packet> handler) {
+    // Creating packets is quite expensive because they have to be cryptographically signed
+    // So ensure the work is done on a worker thread to avoid blocking the vertx event thread.
+    workerExecutor
+        .execute(() -> Packet.create(type, data, keypair))
+        .thenAccept(handler)
+        .exceptionally(
+            error -> {
+              LOG.error("Error while creating packet", error);
+              return null;
+            });
   }
 
   /**
@@ -442,7 +476,7 @@ public class PeerDiscoveryController {
           sendPacket(peer, PacketType.FIND_NEIGHBORS, data);
         };
     final PeerInteractionState interaction =
-        new PeerInteractionState(action, PacketType.NEIGHBORS, packet -> true, true);
+        new PeerInteractionState(action, peer.getId(), PacketType.NEIGHBORS, packet -> true, true);
     dispatchInteraction(peer, interaction);
   }
 
@@ -460,7 +494,7 @@ public class PeerDiscoveryController {
     if (previous != null) {
       previous.cancelTimers();
     }
-    state.execute(0);
+    state.execute(0, 0);
   }
 
   private void respondToPing(
@@ -500,11 +534,15 @@ public class PeerDiscoveryController {
 
   /** Holds the state machine data for a peer interaction. */
   private class PeerInteractionState implements Predicate<Packet> {
+
+    private static final int MAX_RETRIES = 5;
     /**
      * The action that led to the peer being in this state (e.g. sending a PING or NEIGHBORS
      * message), in case it needs to be retried.
      */
     private final Consumer<PeerInteractionState> action;
+
+    private final BytesValue peerId;
     /** The expected type of the message that will transition the peer out of this state. */
     private final PacketType expectedType;
     /** A custom filter to accept transitions out of this state. */
@@ -516,10 +554,12 @@ public class PeerDiscoveryController {
 
     PeerInteractionState(
         final Consumer<PeerInteractionState> action,
+        final BytesValue peerId,
         final PacketType expectedType,
         final Predicate<Packet> filter,
         final boolean retryable) {
       this.action = action;
+      this.peerId = peerId;
       this.expectedType = expectedType;
       this.filter = filter;
       this.retryable = retryable;
@@ -541,11 +581,15 @@ public class PeerDiscoveryController {
      * @param lastTimeout the previous timeout, or 0 if this is the first time the action is being
      *     executed.
      */
-    void execute(final long lastTimeout) {
+    void execute(final long lastTimeout, final int retryCount) {
       action.accept(this);
-      if (retryable) {
+      if (retryable && retryCount < MAX_RETRIES) {
         final long newTimeout = retryDelayFunction.apply(lastTimeout);
-        timerId = OptionalLong.of(timerUtil.setTimer(newTimeout, () -> execute(newTimeout)));
+        timerId =
+            OptionalLong.of(
+                timerUtil.setTimer(newTimeout, () -> execute(newTimeout, retryCount + 1)));
+      } else {
+        inflightInteractions.remove(peerId);
       }
     }
 
@@ -553,5 +597,9 @@ public class PeerDiscoveryController {
     void cancelTimers() {
       timerId.ifPresent(timerUtil::cancelTimer);
     }
+  }
+
+  public interface AsyncExecutor {
+    <T> CompletableFuture<T> execute(Supplier<T> action);
   }
 }

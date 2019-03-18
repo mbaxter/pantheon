@@ -34,7 +34,6 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.queries.BlockchainQueries
 import tech.pegasys.pantheon.ethereum.mainnet.MainnetProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
-import tech.pegasys.pantheon.ethereum.privacy.PrivateTransactionHandler;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 
 import java.io.ByteArrayInputStream;
@@ -112,17 +111,20 @@ public class JsonRpcHttpServiceLoginTest {
     supportedCapabilities.add(EthProtocol.ETH62);
     supportedCapabilities.add(EthProtocol.ETH63);
 
+    final StubGenesisConfigOptions genesisConfigOptions =
+        new StubGenesisConfigOptions().constantinopleBlock(0).chainId(CHAIN_ID);
     rpcMethods =
         spy(
             new JsonRpcMethodsFactory()
                 .methods(
                     CLIENT_VERSION,
+                    CHAIN_ID,
+                    genesisConfigOptions,
                     peerDiscoveryMock,
                     blockchainQueries,
                     synchronizer,
                     MainnetProtocolSchedule.fromConfig(
-                        new StubGenesisConfigOptions().constantinopleBlock(0).chainId(CHAIN_ID),
-                        PrivacyParameters.noPrivacy()),
+                        genesisConfigOptions, PrivacyParameters.noPrivacy()),
                     mock(FilterManager.class),
                     mock(TransactionPool.class),
                     mock(EthHashMiningCoordinator.class),
@@ -130,7 +132,7 @@ public class JsonRpcHttpServiceLoginTest {
                     supportedCapabilities,
                     Optional.empty(),
                     JSON_RPC_APIS,
-                    mock(PrivateTransactionHandler.class)));
+                    mock(PrivacyParameters.class)));
     service = createJsonRpcHttpService();
     jwtAuth = service.authenticationService.get().getJwtAuthProvider();
     service.start().join();

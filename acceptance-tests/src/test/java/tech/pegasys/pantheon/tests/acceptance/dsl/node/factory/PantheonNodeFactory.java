@@ -21,19 +21,22 @@ import static tech.pegasys.pantheon.consensus.ibft.jsonrpc.IbftRpcApis.IBFT;
 import tech.pegasys.pantheon.consensus.clique.CliqueExtraData;
 import tech.pegasys.pantheon.consensus.ibft.IbftExtraData;
 import tech.pegasys.pantheon.ethereum.core.Address;
+import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.jsonrpc.JsonRpcConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApi;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApis;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketConfiguration;
+import tech.pegasys.pantheon.ethereum.permissioning.LocalPermissioningConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.WhitelistPersistor;
+import tech.pegasys.pantheon.ethereum.permissioning.WhitelistPersistor.WHITELIST_TYPE;
 import tech.pegasys.pantheon.tests.acceptance.dsl.node.GenesisConfigProvider;
+import tech.pegasys.pantheon.tests.acceptance.dsl.node.Node;
 import tech.pegasys.pantheon.tests.acceptance.dsl.node.PantheonNode;
 import tech.pegasys.pantheon.tests.acceptance.dsl.node.RunnableNode;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -44,30 +47,25 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import com.google.common.io.Resources;
 
 public class PantheonNodeFactory {
 
   private PantheonNode create(final PantheonFactoryConfiguration config) throws IOException {
-    ServerSocket serverSocket = new ServerSocket(0);
-    final PantheonNode node =
-        new PantheonNode(
-            config.getName(),
-            config.getMiningParameters(),
-            config.getJsonRpcConfiguration(),
-            config.getWebSocketConfiguration(),
-            config.getMetricsConfiguration(),
-            config.getPermissioningConfiguration(),
-            config.isDevMode(),
-            config.getGenesisConfigProvider(),
-            serverSocket.getLocalPort(),
-            config.getP2pEnabled(),
-            config.isDiscoveryEnabled());
-    serverSocket.close();
-
-    return node;
+    return new PantheonNode(
+        config.getName(),
+        config.getMiningParameters(),
+        config.getPrivacyParameters(),
+        config.getJsonRpcConfiguration(),
+        config.getWebSocketConfiguration(),
+        config.getMetricsConfiguration(),
+        config.getPermissioningConfiguration(),
+        config.isDevMode(),
+        config.getGenesisConfigProvider(),
+        config.isP2pEnabled(),
+        config.isDiscoveryEnabled(),
+        config.isBootnodeEligible());
   }
 
   public PantheonNode createMinerNode(final String name) throws IOException {
@@ -80,18 +78,15 @@ public class PantheonNodeFactory {
             .build());
   }
 
-  public PantheonNode createMinerNodeWithCustomRefreshDelay(
-      final String name, final Long refreshDelay) throws IOException {
-
-    WebSocketConfiguration wsConfig = createWebSocketEnabledConfig();
-    wsConfig.setRefreshDelay(refreshDelay);
-
+  public PantheonNode createPrivateTransactionEnabledMinerNode(
+      final String name, final PrivacyParameters privacyParameters) throws IOException {
     return create(
         new PantheonFactoryConfigurationBuilder()
             .setName(name)
             .miningEnabled()
-            .setJsonRpcConfiguration(createJsonRpcEnabledConfig())
-            .setWebSocketConfiguration(wsConfig)
+            .jsonRpcEnabled()
+            .enablePrivateTransactions(privacyParameters)
+            .webSocketEnabled()
             .build());
   }
 
@@ -101,6 +96,16 @@ public class PantheonNodeFactory {
             .setName(name)
             .jsonRpcEnabled()
             .webSocketEnabled()
+            .build());
+  }
+
+  public Node createArchiveNodeThatMustNotBeTheBootnode(final String name) throws IOException {
+    return create(
+        new PantheonFactoryConfigurationBuilder()
+            .setName(name)
+            .jsonRpcEnabled()
+            .webSocketEnabled()
+            .bootnodeEligible(false)
             .build());
   }
 
@@ -154,19 +159,6 @@ public class PantheonNodeFactory {
             .build());
   }
 
-  public PantheonNode createArchiveNodeWithCustomRefreshDelay(
-      final String name, final Long refreshDelay) throws IOException {
-    WebSocketConfiguration wsConfig = createWebSocketEnabledConfig();
-    wsConfig.setRefreshDelay(refreshDelay);
-
-    return create(
-        new PantheonFactoryConfigurationBuilder()
-            .setName(name)
-            .setJsonRpcConfiguration(createJsonRpcEnabledConfig())
-            .setWebSocketConfiguration(wsConfig)
-            .build());
-  }
-
   public PantheonNode createArchiveNodeWithRpcDisabled(final String name) throws IOException {
     return create(new PantheonFactoryConfigurationBuilder().setName(name).build());
   }
@@ -192,11 +184,15 @@ public class PantheonNodeFactory {
       final List<String> accountsWhitelist,
       final String tempFilePath)
       throws IOException {
-    PermissioningConfiguration permissioningConfiguration =
-        PermissioningConfiguration.createDefault();
-    permissioningConfiguration.setNodeWhitelist(nodesWhitelist);
-    permissioningConfiguration.setAccountWhitelist(accountsWhitelist);
-    permissioningConfiguration.setConfigurationFilePath(tempFilePath);
+    final LocalPermissioningConfiguration localPermissioningConfiguration =
+        LocalPermissioningConfiguration.createDefault();
+    localPermissioningConfiguration.setNodeWhitelist(nodesWhitelist);
+    localPermissioningConfiguration.setAccountWhitelist(accountsWhitelist);
+    localPermissioningConfiguration.setConfigurationFilePath(tempFilePath);
+
+    final PermissioningConfiguration permissioningConfiguration =
+        new PermissioningConfiguration(
+            Optional.of(localPermissioningConfiguration), Optional.empty());
 
     return create(
         new PantheonFactoryConfigurationBuilder()
@@ -207,16 +203,27 @@ public class PantheonNodeFactory {
   }
 
   public PantheonNode createNodeWithNodesWhitelist(
+      final String name, final Node... whitelistedNodes) throws IOException {
+    return createNodeWithNodesWhitelist(name, convertToEnodes(asList(whitelistedNodes)));
+  }
+
+  public PantheonNode createNodeWithNodesWhitelist(
       final String name, final List<URI> nodesWhitelist) throws IOException {
-    PermissioningConfiguration permissioningConfiguration =
-        PermissioningConfiguration.createDefault();
-    permissioningConfiguration.setNodeWhitelist(nodesWhitelist);
-    File tempFile = createTempPermissioningConfigurationFile();
-    permissioningConfiguration.setConfigurationFilePath(tempFile.getPath());
+    final LocalPermissioningConfiguration localPermissioningConfiguration =
+        LocalPermissioningConfiguration.createDefault();
+    localPermissioningConfiguration.setNodeWhitelist(nodesWhitelist);
+
+    final List<String> whitelistAsStrings =
+        nodesWhitelist.parallelStream().map(URI::toString).collect(toList());
+    final File tempFile = createTempPermissioningConfigurationFile();
+    tempFile.deleteOnExit();
+    localPermissioningConfiguration.setConfigurationFilePath(tempFile.getPath());
     initPermissioningConfigurationFile(
-        WhitelistPersistor.WHITELIST_TYPE.NODES,
-        nodesWhitelist.parallelStream().map(URI::toString).collect(Collectors.toList()),
-        tempFile.toPath());
+        WhitelistPersistor.WHITELIST_TYPE.NODES, whitelistAsStrings, tempFile.toPath());
+
+    final PermissioningConfiguration permissioningConfiguration =
+        new PermissioningConfiguration(
+            Optional.of(localPermissioningConfiguration), Optional.empty());
 
     return create(
         new PantheonFactoryConfigurationBuilder()
@@ -224,6 +231,13 @@ public class PantheonNodeFactory {
             .setJsonRpcConfiguration(jsonRpcConfigWithPermissioning())
             .setPermissioningConfiguration(permissioningConfiguration)
             .build());
+  }
+
+  private List<URI> convertToEnodes(final List<Node> nodes) {
+    return nodes.stream()
+        .map(node -> (RunnableNode) node)
+        .map(RunnableNode::enodeUrl)
+        .collect(toList());
   }
 
   private void initPermissioningConfigurationFile(
@@ -236,11 +250,21 @@ public class PantheonNodeFactory {
 
   public PantheonNode createNodeWithAccountsWhitelist(
       final String name, final List<String> accountsWhitelist) throws IOException {
-    PermissioningConfiguration permissioningConfiguration =
-        PermissioningConfiguration.createDefault();
-    permissioningConfiguration.setAccountWhitelist(accountsWhitelist);
-    permissioningConfiguration.setConfigurationFilePath(
+    final LocalPermissioningConfiguration localPermissioningConfiguration =
+        LocalPermissioningConfiguration.createDefault();
+    localPermissioningConfiguration.setAccountWhitelist(accountsWhitelist);
+    localPermissioningConfiguration.setConfigurationFilePath(
         createTempPermissioningConfigurationFile().getPath());
+
+    final File tempFile = createTempPermissioningConfigurationFile();
+    tempFile.deleteOnExit();
+    localPermissioningConfiguration.setConfigurationFilePath(tempFile.getPath());
+    initPermissioningConfigurationFile(
+        WHITELIST_TYPE.ACCOUNTS, accountsWhitelist, tempFile.toPath());
+
+    final PermissioningConfiguration permissioningConfiguration =
+        new PermissioningConfiguration(
+            Optional.of(localPermissioningConfiguration), Optional.empty());
 
     return create(
         new PantheonFactoryConfigurationBuilder()
@@ -252,7 +276,7 @@ public class PantheonNodeFactory {
   }
 
   private File createTempPermissioningConfigurationFile() throws IOException {
-    File tempFile = File.createTempFile("temp", "temp");
+    final File tempFile = File.createTempFile("temp", "temp");
     tempFile.deleteOnExit();
     return tempFile;
   }
@@ -347,9 +371,9 @@ public class PantheonNodeFactory {
 
   private String genesisTemplateConfig(final String template) {
     try {
-      URI uri = Resources.getResource(template).toURI();
+      final URI uri = Resources.getResource(template).toURI();
       return Resources.toString(uri.toURL(), Charset.defaultCharset());
-    } catch (URISyntaxException | IOException e) {
+    } catch (final URISyntaxException | IOException e) {
       throw new IllegalStateException("Unable to get test genesis config " + template);
     }
   }

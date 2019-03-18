@@ -34,6 +34,7 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 
 import java.io.Closeable;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Collection;
 import java.util.Map;
 
@@ -45,13 +46,14 @@ public interface PantheonController<C> extends Closeable {
       final GenesisConfigFile genesisConfigFile,
       final SynchronizerConfiguration syncConfig,
       final StorageProvider storageProvider,
-      final boolean ottomanTestnetOperation,
       final int networkId,
       final MiningParameters miningParameters,
       final KeyPair nodeKeys,
       final MetricsSystem metricsSystem,
       final PrivacyParameters privacyParameters,
-      final Path dataDirectory) {
+      final Path dataDirectory,
+      final Clock clock,
+      final int maxPendingTransactions) {
 
     final GenesisConfigOptions configOptions = genesisConfigFile.getConfigOptions();
 
@@ -62,10 +64,13 @@ public interface PantheonController<C> extends Closeable {
           MainnetProtocolSchedule.fromConfig(configOptions, privacyParameters),
           syncConfig,
           miningParameters,
+          networkId,
           nodeKeys,
           privacyParameters,
           dataDirectory,
-          metricsSystem);
+          metricsSystem,
+          clock,
+          maxPendingTransactions);
     } else if (configOptions.isIbft2()) {
       return IbftPantheonController.init(
           storageProvider,
@@ -75,17 +80,20 @@ public interface PantheonController<C> extends Closeable {
           networkId,
           nodeKeys,
           dataDirectory,
-          metricsSystem);
+          metricsSystem,
+          clock,
+          maxPendingTransactions);
     } else if (configOptions.isIbftLegacy()) {
       return IbftLegacyPantheonController.init(
           storageProvider,
           genesisConfigFile,
           syncConfig,
-          ottomanTestnetOperation,
           networkId,
           nodeKeys,
           dataDirectory,
-          metricsSystem);
+          metricsSystem,
+          clock,
+          maxPendingTransactions);
     } else if (configOptions.isClique()) {
       return CliquePantheonController.init(
           storageProvider,
@@ -95,7 +103,9 @@ public interface PantheonController<C> extends Closeable {
           networkId,
           nodeKeys,
           dataDirectory,
-          metricsSystem);
+          metricsSystem,
+          clock,
+          maxPendingTransactions);
     } else {
       throw new IllegalArgumentException("Unknown consensus mechanism defined");
     }
@@ -104,6 +114,8 @@ public interface PantheonController<C> extends Closeable {
   ProtocolContext<C> getProtocolContext();
 
   ProtocolSchedule<C> getProtocolSchedule();
+
+  GenesisConfigOptions getGenesisConfigOptions();
 
   Synchronizer getSynchronizer();
 

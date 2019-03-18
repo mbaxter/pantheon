@@ -33,10 +33,13 @@ dependencies {
   implementation project(':ethereum:permissioning')
   implementation project(':metrics')
   implementation project(':services:kvstore')
-  implementation project(':services:queue')
+  implementation project(':services:pipeline')
+  implementation project(':services:tasks')
 
   implementation 'io.vertx:vertx-core'
   implementation 'com.google.guava:guava'
+
+  compileOnly 'org.openjdk.jmh:jmh-generator-annprocess'
 
   testImplementation project(':config')
   testImplementation project(':crypto')
@@ -49,4 +52,6 @@ dependencies {
   testImplementation 'org.assertj:assertj-core'
   testImplementation 'org.awaitility:awaitility'
   testImplementation 'org.mockito:mockito-core'
+
+  jmhImplementation project(path: ':ethereum:core', configuration: 'testSupportArtifacts')
 }

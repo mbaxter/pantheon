@@ -12,15 +12,14 @@
  */
 package tech.pegasys.pantheon.ethereum.eth.sync.worldstate;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage.Updater;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 class CodeNodeDataRequest extends NodeDataRequest {
 
@@ -29,15 +28,14 @@ class CodeNodeDataRequest extends NodeDataRequest {
   }
 
   @Override
-  public void persist(final Updater updater) {
-    checkNotNull(getData(), "Must set data before node can be persisted.");
+  protected void doPersist(final Updater updater) {
     updater.putCode(getHash(), getData());
   }
 
   @Override
-  public Stream<NodeDataRequest> getChildRequests() {
+  public List<NodeDataRequest> getChildRequests() {
     // Code nodes have nothing further to download
-    return Stream.empty();
+    return Collections.emptyList();
   }
 
   @Override

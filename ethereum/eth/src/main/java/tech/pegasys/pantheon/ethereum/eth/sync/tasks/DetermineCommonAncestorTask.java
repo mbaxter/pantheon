@@ -21,8 +21,7 @@ import tech.pegasys.pantheon.ethereum.eth.manager.task.AbstractPeerTask;
 import tech.pegasys.pantheon.ethereum.eth.manager.task.GetHeadersFromPeerByNumberTask;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.util.BlockchainUtil;
-import tech.pegasys.pantheon.metrics.LabelledMetric;
-import tech.pegasys.pantheon.metrics.OperationTimer;
+import tech.pegasys.pantheon.metrics.MetricsSystem;
 
 import java.util.List;
 import java.util.OptionalInt;
@@ -32,13 +31,20 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class DetermineCommonAncestorTask<C> extends AbstractEthTask<BlockHeader> {
+/**
+ * Finds the common ancestor with the given peer. It is assumed that the peer will at least share
+ * the same genesis block with this node. Running this task against a peer with a non-matching
+ * genesis block will result in undefined behavior: the task may complete exceptionally or in some
+ * cases this node's genesis block will be returned.
+ */
+public class DetermineCommonAncestorTask extends AbstractEthTask<BlockHeader> {
   private static final Logger LOG = LogManager.getLogger();
   private final EthContext ethContext;
-  private final ProtocolSchedule<C> protocolSchedule;
-  private final ProtocolContext<C> protocolContext;
+  private final ProtocolSchedule<?> protocolSchedule;
+  private final ProtocolContext<?> protocolContext;
   private final EthPeer peer;
   private final int headerRequestSize;
+  private final MetricsSystem metricsSystem;
 
   private long maximumPossibleCommonAncestorNumber;
   private long minimumPossibleCommonAncestorNumber;
@@ -46,18 +52,19 @@ public class DetermineCommonAncestorTask<C> extends AbstractEthTask<BlockHeader>
   private boolean initialQuery = true;
 
   private DetermineCommonAncestorTask(
-      final ProtocolSchedule<C> protocolSchedule,
-      final ProtocolContext<C> protocolContext,
+      final ProtocolSchedule<?> protocolSchedule,
+      final ProtocolContext<?> protocolContext,
       final EthContext ethContext,
       final EthPeer peer,
       final int headerRequestSize,
-      final LabelledMetric<OperationTimer> ethTasksTimer) {
-    super(ethTasksTimer);
+      final MetricsSystem metricsSystem) {
+    super(metricsSystem);
     this.protocolSchedule = protocolSchedule;
     this.ethContext = ethContext;
     this.protocolContext = protocolContext;
     this.peer = peer;
     this.headerRequestSize = headerRequestSize;
+    this.metricsSystem = metricsSystem;
 
     maximumPossibleCommonAncestorNumber = protocolContext.getBlockchain().getChainHeadBlockNumber();
     minimumPossibleCommonAncestorNumber = BlockHeader.GENESIS_BLOCK_NUMBER;
@@ -65,15 +72,15 @@ public class DetermineCommonAncestorTask<C> extends AbstractEthTask<BlockHeader>
         protocolContext.getBlockchain().getBlockHeader(BlockHeader.GENESIS_BLOCK_NUMBER).get();
   }
 
-  public static <C> DetermineCommonAncestorTask<C> create(
-      final ProtocolSchedule<C> protocolSchedule,
-      final ProtocolContext<C> protocolContext,
+  public static DetermineCommonAncestorTask create(
+      final ProtocolSchedule<?> protocolSchedule,
+      final ProtocolContext<?> protocolContext,
       final EthContext ethContext,
       final EthPeer peer,
       final int headerRequestSize,
-      final LabelledMetric<OperationTimer> ethTasksTimer) {
-    return new DetermineCommonAncestorTask<>(
-        protocolSchedule, protocolContext, ethContext, peer, headerRequestSize, ethTasksTimer);
+      final MetricsSystem metricsSystem) {
+    return new DetermineCommonAncestorTask(
+        protocolSchedule, protocolContext, ethContext, peer, headerRequestSize, metricsSystem);
   }
 
   @Override
@@ -119,7 +126,7 @@ public class DetermineCommonAncestorTask<C> extends AbstractEthTask<BlockHeader>
                     maximumPossibleCommonAncestorNumber,
                     count,
                     skipInterval,
-                    ethTasksTimer)
+                    metricsSystem)
                 .assignPeer(peer)
                 .run());
   }
@@ -143,6 +150,10 @@ public class DetermineCommonAncestorTask<C> extends AbstractEthTask<BlockHeader>
       final AbstractPeerTask.PeerTaskResult<List<BlockHeader>> headersResult) {
     initialQuery = false;
     final List<BlockHeader> headers = headersResult.getResult();
+    if (headers.isEmpty()) {
+      // Nothing to do
+      return CompletableFuture.completedFuture(null);
+    }
 
     final OptionalInt maybeAncestorNumber =
         BlockchainUtil.findHighestKnownBlockIndex(protocolContext.getBlockchain(), headers, false);

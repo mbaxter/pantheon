@@ -58,6 +58,10 @@ pantheon --data-path=Node-1-data-path public-key export --to=Node-1-data-path/pu
 ```bash tab="Windows"
 pantheon --data-path=Node-1-data-path public-key export --to=Node-1-data-path\publicKeyNode1
 ```
+!!!note
+    The [`--data-path`](../Reference/Pantheon-CLI-Syntax.md#data-path) option is not used when running 
+    Pantheon from the [Docker image](../Getting-Started/Run-Docker-Image.md). Use a volume to 
+    [specify the data directory](../Getting-Started/Run-Docker-Image.md#data-directory).
 
 Your node 1 directory now contains: 
 ```bash
@@ -75,17 +79,15 @@ The `database` directory contains the blockchain data.
 In Clique networks, the address of at least one initial signer must be included in the genesis file. 
 For this Clique network, we will use Node-1 as the initial signer. This requires obtaining the address for Node-1. 
 
-To obtain the address for Node-1, do one of the following with the private key in the `key` file in the `Node-1-data-path` directory: 
+To obtain the address for Node-1, in the `Node-1` directory, use the [`public-key export-address`](../Reference/Pantheon-CLI-Syntax.md#public-key)
+subcommand to write the node address to the specified file (`nodeAddress1` in this example)
 
-* Import the private key into [MetaMask](https://metamask.io/) and click the **Copy to clipboard** button 
-displayed when hovering over the account name and address. 
-* Use the [ethereumjs-util](https://github.com/ethereumjs/ethereumjs-util) library and [node](https://nodejs.org/en/) 
-to execute the following where `<private key>` is replaced by the private key for Node-1 without the 0x prefix. 
-```js
-var ethUtil = require('ethereumjs-util')
-const privKey = Buffer.from('<private key>', 'hex')
-var address = ethUtil.privateToAddress(privKey).toString('hex')
-console.log("Address=" + address)
+```bash tab="MacOS"
+pantheon --data-path=Node-1-data-path public-key export-address --to=Node-1-data-path/nodeAddress1
+```
+
+```bash tab="Windows"
+pantheon --data-path=Node-1-data-path public-key export-address --to=Node-1-data-path\nodeAddress1
 ```
 
 ### 4. Create Genesis File 
@@ -172,6 +174,11 @@ pantheon --data-path=Node-1-data-path --genesis-file=../cliqueGenesis.json --boo
 pantheon --data-path=Node-1-data-path --genesis-file=..\cliqueGenesis.json --bootnodes --network-id 123 --rpc-http-enabled --rpc-http-api=ETH,NET,CLIQUE --host-whitelist=* --rpc-http-cors-origins="all"    
 ```
 
+!!!note
+    The [`--genesis-file`](../Reference/Pantheon-CLI-Syntax.md#genesis-file) option is not used when running 
+    Pantheon from the [Docker image](../Getting-Started/Run-Docker-Image.md). Use a bind mount to 
+    [specify a configuration file with Docker](../Getting-Started/Run-Docker-Image.md#custom-genesis-file).
+
 The command line specifies: 
 
 * No arguments for the [`--bootnodes`](../Reference/Pantheon-CLI-Syntax.md#bootnodes) option because this is your bootnode
@@ -228,7 +235,7 @@ The command line specifies:
 Start another terminal, use curl to call the JSON-RPC API [`net_peerCount`](../Reference/JSON-RPC-API-Methods.md#net_peercount) method and confirm the nodes are functioning as peers: 
 
 ```bash
-curl -X POST --data '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":1}' 127.0.0.1:8545
+curl -X POST --data '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":1}' localhost:8545
 ```
 
 The result confirms Node-1 has two peers (Node-2 and Node-3):

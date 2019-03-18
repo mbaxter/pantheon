@@ -15,29 +15,37 @@ package tech.pegasys.pantheon.ethereum.mainnet.precompiles.privacy;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.withSettings;
 
 import tech.pegasys.orion.testutil.OrionTestHarness;
+import tech.pegasys.orion.testutil.OrionTestHarnessFactory;
 import tech.pegasys.pantheon.enclave.Enclave;
 import tech.pegasys.pantheon.enclave.types.SendRequest;
 import tech.pegasys.pantheon.enclave.types.SendResponse;
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.core.Address;
+import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
 import tech.pegasys.pantheon.ethereum.core.ProcessableBlockHeader;
 import tech.pegasys.pantheon.ethereum.core.WorldUpdater;
 import tech.pegasys.pantheon.ethereum.mainnet.SpuriousDragonGasCalculator;
+import tech.pegasys.pantheon.ethereum.privacy.PrivateStateStorage;
 import tech.pegasys.pantheon.ethereum.privacy.PrivateTransaction;
 import tech.pegasys.pantheon.ethereum.privacy.PrivateTransactionProcessor;
+import tech.pegasys.pantheon.ethereum.privacy.PrivateTransactionStorage;
 import tech.pegasys.pantheon.ethereum.vm.BlockHashLookup;
 import tech.pegasys.pantheon.ethereum.vm.MessageFrame;
+import tech.pegasys.pantheon.ethereum.vm.OperationTracer;
+import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
+import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 
 import com.google.common.collect.Lists;
 import org.junit.AfterClass;
@@ -72,20 +80,26 @@ public class PrivacyPrecompiledContractIntegrationTest {
   private static MessageFrame messageFrame;
 
   private static OrionTestHarness testHarness;
+  private static WorldStateArchive worldStateArchive;
+  private static PrivateTransactionStorage privateTransactionStorage;
+  private static PrivateTransactionStorage.Updater updater;
+  private static PrivateStateStorage privateStateStorage;
+  private static PrivateStateStorage.Updater storageUpdater;
 
   private PrivateTransactionProcessor mockPrivateTxProcessor() {
     PrivateTransactionProcessor mockPrivateTransactionProcessor =
-        mock(PrivateTransactionProcessor.class, withSettings().verboseLogging());
+        mock(PrivateTransactionProcessor.class);
     PrivateTransactionProcessor.Result result =
         PrivateTransactionProcessor.Result.successful(
             null, 0, BytesValue.fromHexString(DEFAULT_OUTPUT), null);
-    when(mockPrivateTransactionProcessor.processPrivateTransaction(
+    when(mockPrivateTransactionProcessor.processTransaction(
             nullable(Blockchain.class),
             nullable(WorldUpdater.class),
             nullable(WorldUpdater.class),
             nullable(ProcessableBlockHeader.class),
             nullable(PrivateTransaction.class),
             nullable(Address.class),
+            nullable(OperationTracer.class),
             nullable(BlockHashLookup.class)))
         .thenReturn(result);
 
@@ -96,10 +110,29 @@ public class PrivacyPrecompiledContractIntegrationTest {
   public static void setUpOnce() throws Exception {
     folder.create();
 
-    testHarness = OrionTestHarness.create(folder.newFolder().toPath());
+    testHarness =
+        OrionTestHarnessFactory.create(
+            folder.newFolder().toPath(), "orion_key_0.pub", "orion_key_1.key");
 
     enclave = new Enclave(testHarness.clientUrl());
     messageFrame = mock(MessageFrame.class);
+
+    worldStateArchive = mock(WorldStateArchive.class);
+    MutableWorldState mutableWorldState = mock(MutableWorldState.class);
+    when(mutableWorldState.updater()).thenReturn(mock(WorldUpdater.class));
+    when(worldStateArchive.getMutable()).thenReturn(mutableWorldState);
+    when(worldStateArchive.getMutable(any())).thenReturn(Optional.of(mutableWorldState));
+    privateTransactionStorage = mock(PrivateTransactionStorage.class);
+    updater = mock(PrivateTransactionStorage.Updater.class);
+    when(updater.putTransactionLogs(nullable(Bytes32.class), any())).thenReturn(updater);
+    when(updater.putTransactionResult(nullable(Bytes32.class), any())).thenReturn(updater);
+    when(privateTransactionStorage.updater()).thenReturn(updater);
+
+    privateStateStorage = mock(PrivateStateStorage.class);
+    storageUpdater = mock(PrivateStateStorage.Updater.class);
+    when(storageUpdater.putPrivateAccountState(nullable(Bytes32.class), any()))
+        .thenReturn(storageUpdater);
+    when(privateStateStorage.updater()).thenReturn(storageUpdater);
   }
 
   @AfterClass
@@ -117,12 +150,17 @@ public class PrivacyPrecompiledContractIntegrationTest {
     List<String> publicKeys = testHarness.getPublicKeys();
 
     String s = new String(VALID_PRIVATE_TRANSACTION_RLP_BASE64, UTF_8);
-    SendRequest sc = new SendRequest(s, publicKeys.get(0), Lists.newArrayList(publicKeys.get(1)));
+    SendRequest sc = new SendRequest(s, publicKeys.get(0), Lists.newArrayList(publicKeys.get(0)));
     SendResponse sr = enclave.send(sc);
 
     PrivacyPrecompiledContract privacyPrecompiledContract =
         new PrivacyPrecompiledContract(
-            new SpuriousDragonGasCalculator(), publicKeys.get(0), enclave);
+            new SpuriousDragonGasCalculator(),
+            publicKeys.get(0),
+            enclave,
+            worldStateArchive,
+            privateTransactionStorage,
+            privateStateStorage);
 
     privacyPrecompiledContract.setPrivateTransactionProcessor(mockPrivateTxProcessor());
 

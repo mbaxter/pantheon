@@ -32,6 +32,7 @@ import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.DefaultMessage;
+import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.uint.UInt256;
@@ -46,6 +47,7 @@ import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import com.google.common.collect.Lists;
@@ -79,6 +81,16 @@ public class RespondingEthPeer {
 
   public static void respondOnce(final Responder responder, final RespondingEthPeer... peers) {
     respondOnce(responder, Arrays.asList(peers));
+  }
+
+  public boolean disconnect(final DisconnectReason reason) {
+    if (ethPeer.isDisconnected()) {
+      return false;
+    }
+
+    ethPeer.disconnect(reason);
+    ethProtocolManager.handleDisconnect(getPeerConnection(), reason, true);
+    return true;
   }
 
   public MockPeerConnection getPeerConnection() {
@@ -208,6 +220,18 @@ public class RespondingEthPeer {
 
   public boolean hasOutstandingRequests() {
     return !outgoingMessages.isEmpty();
+  }
+
+  public static Responder targetedResponder(
+      final BiFunction<Capability, MessageData, Boolean> requestFilter,
+      final BiFunction<Capability, MessageData, MessageData> responseGenerator) {
+    return (cap, msg) -> {
+      if (requestFilter.apply(cap, msg)) {
+        return Optional.of(responseGenerator.apply(cap, msg));
+      } else {
+        return Optional.empty();
+      }
+    };
   }
 
   public static Responder blockchainResponder(final Blockchain blockchain) {

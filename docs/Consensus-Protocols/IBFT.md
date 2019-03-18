@@ -6,9 +6,6 @@ description: Pantheon IBFT 2.0 Proof-of-Authority (PoA) consensus protocol imple
 
 # IBFT 2.0
 
-!!! note 
-    IBFT 2.0 is under development and will be available in v1.0. 
-
 Pantheon implements the IBFT 2.0 Proof-of-Authority (PoA) consensus protocol. IBFT 2.0 can be used for private networks. 
 
 In IBFT 2.0 networks, transactions and blocks are validated by approved accounts, known as validators. 
@@ -18,11 +15,12 @@ Validators take turns to create the next block. Existing validators propose and 
 
 To use IBFT 2.0 requires an IBFT 2.0 genesis file. The genesis file defines properties specific to IBFT 2.0:
 
-!!! example "IBFT 2.0 Genesis File (stripped)"
+!!! example "Example IBFT 2.0 Genesis File"
     ```json
       {
         "config": {
-          ...
+          "chainId": 1981,
+          "constantinoplefixblock": 0,
           "ibft2": {
             "blockperiodseconds": 2,
             "epochlength": 30000,
@@ -30,10 +28,13 @@ To use IBFT 2.0 requires an IBFT 2.0 genesis file. The genesis file defines prop
           }
         },
         "nonce": "0x0",
-        "extraData": "0xf853a00000000000000000000000000000000000000000000000000000000000000000ea94be068f726a13c8d46c44be6ce9d275600e1735a4945ff6f4b66a46a2b2310a6f3a93aaddc0d9a1c193808400000000c0",
+        "timestamp": "0x58ee40ba",
+        "extraData": "0xf83ea00000000000000000000000000000000000000000000000000000000000000000d594c2ab482b506de561668e07f04547232a72897daf808400000000c0",
+        "gasLimit": "0x47b760",
         "difficulty": "0x1",
         "mixHash": "0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365",
-        ...
+        "coinbase": "0x0000000000000000000000000000000000000000",
+        "alloc": {}
       }
     ```
     
@@ -42,31 +43,7 @@ Properties specific to IBFT 2.0 are:
 * `blockperiodseconds` - Minimum block time in seconds. 
 * `epochlength` - Number of blocks after which to reset all votes.
 * `requesttimeoutseconds` - Timeout for each consensus round before a round change. 
-* `extraData` - RLP([32 Bytes Vanity, List<Validators>, No Votes, Round=Int(0), 0 Seals])
-
-The `extraData` property is RLP encoded. RLP encoding is a space efficient object 
-serialization scheme used in Ethereum. You can use a library such as [EthereumJS RLP](https://github.com/ethereumjs/rlp)
-to encode and decode RLP strings. 
-
-!!! example "Decoding Extra Data Example"
-    
-    Using the [EthereumJS RLP](https://github.com/ethereumjs/rlp) library: 
-    ```bash
-    rlp decode "0xf853a00000000000000000000000000000000000000000000000000000000000000000ea94be068f726a13c8d46c44be6ce9d275600e1735a4945ff6f4b66a46a2b2310a6f3a93aaddc0d9a1c193808400000000c0"
-    ```
-    
-    The decoded result is: 
-    ```json
-    [ '0000000000000000000000000000000000000000000000000000000000000000',
-      [ 'be068f726a13c8d46c44be6ce9d275600e1735a4',
-        '5ff6f4b66a46a2b2310a6f3a93aaddc0d9a1c193' ],
-      '',
-      '00000000',
-      [] 
-    ]
-    ```
-    
-    
+* `extraData` - `RLP([32 Bytes Vanity, List<Validators>, No Vote, Round=Int(0), 0 Seals])`
 
 Properties that have specific values in IBFT 2.0 genesis files are: 
 
@@ -74,7 +51,54 @@ Properties that have specific values in IBFT 2.0 genesis files are:
 * `difficulty` - `0x1`
 * `mixHash` - `0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365` for Istanbul block identification.
 
-To start a node on an IBFT 2.0 private network, use the [`--genesis-file`](../Reference/Pantheon-CLI-Syntax.md#genesis-file`) option to specify the custom genesis file. 
+To start a node on an IBFT 2.0 private network, use the [`--genesis-file`](../Reference/Pantheon-CLI-Syntax.md#genesis-file) option to specify the custom genesis file. 
+
+!!!note
+    The [`--genesis-file`](../Reference/Pantheon-CLI-Syntax.md#genesis-file) option is not used when running 
+    Pantheon from the [Docker image](../Getting-Started/Run-Docker-Image.md). Use a bind mount to [specify a configuration file with Docker](../Getting-Started/Run-Docker-Image.md#custom-genesis-file).
+
+### Extra Data 
+
+The `extraData` property is RLP encoded. RLP encoding is a space efficient object serialization scheme 
+used in Ethereum. Use the Pantheon subcommand [`rlp encode`](../Reference/Pantheon-CLI-Syntax.md#rlp) 
+to generate the `extraData` RLP string to include in the genesis file. 
+
+!!! example                                        
+    ```bash
+    pantheon rlp encode --from=toEncode.json
+    ```    
+
+Where the `toEncode.json` file contains a list of the initial validators in ascending order. 
+
+!!! example "One Initial Validator"
+    ```json
+    [
+     "9811ebc35d7b06b3fa8dc5809a1f9c52751e1deb"
+    ]
+    ``` 
+
+Copy the RLP encoded data to the `extraData` in the genesis file. 
+
+### Block Time 
+
+When a new chain head is received, the block time (`blockperiodseconds`) and round timeout (`requesttimeoutseconds`) 
+timers are started. When `blockperiodseconds` is reached, a new block is proposed. 
+
+If `requesttimeoutseconds` is reached before the proposed block is added, a round change occurs, and the block time and 
+timeout timers are reset. The timeout period for the new round is two times `requesttimeoutseconds`. The 
+timeout period continues to double each time a round fails to add a block. 
+
+Generally, the proposed block is added before reaching `requesttimeoutseconds`. A new round is then started, 
+and the block time and round timeout timers are reset. When `blockperiodseconds` is reached, the next new block is proposed. 
+
+The time from proposing a block to the block being added is small (around 1s) even in networks
+with geographically dispersed validators. Setting `blockperiodseconds` to your desired block time and `requesttimeoutseconds`
+to two times `blockperiodseconds` generally results in blocks being added every `blockperiodseconds`. 
+
+!!! example 
+    An internal PegaSys IBFT 2.0 testnet has 4 geographically dispersed validators in Sweden, 
+    Sydney, and North Viringia (2 validators). With a `blockperiodseconds`of 5 and a `requesttimeoutseconds` of 10,
+    the testnet consistently creates block with a 5 second blocktime. 
 
 ### Optional Configuration Options 
 
@@ -85,6 +109,12 @@ Optional configuration options that can be specified in the genesis file are:
    
 * `duplicateMesageLimit` - Default is 100. If seeing messages being retransmitted by the same node, increasing the duplicate message limit 
    may reduce the number of retransmissions. A value of 2 to 3 times the number of validators is generally sufficient.  
+   
+*  `futureMessagesLimit` - Default is 1000. The future messages buffer holds IBFT 2.0 messages for a future chain height.
+    For large networks, increasing the future messages limit may be useful. 
+
+*  `futureMessagesMaxDistance` - Default is 10. Specifies the maximum height from the current chain height 
+    for which messages are buffered in the future messages buffer. 
 
 ## Adding and Removing Validators
 

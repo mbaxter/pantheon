@@ -12,6 +12,9 @@
  */
 package tech.pegasys.pantheon.config;
 
+import java.util.Map;
+
+import com.google.common.collect.ImmutableMap;
 import io.vertx.core.json.JsonObject;
 
 public class IbftConfigOptions {
@@ -26,6 +29,8 @@ public class IbftConfigOptions {
   private static final int DEFAULT_GOSSIPED_HISTORY_LIMIT = 1000;
   private static final int DEFAULT_MESSAGE_QUEUE_LIMIT = 1000;
   private static final int DEFAULT_DUPLICATE_MESSAGE_LIMIT = 100;
+  private static final int DEFAULT_FUTURE_MESSAGES_LIMIT = 1000;
+  private static final int DEFAULT_FUTURE_MESSAGES_MAX_DISTANCE = 10;
 
   private final JsonObject ibftConfigRoot;
 
@@ -55,5 +60,43 @@ public class IbftConfigOptions {
 
   public int getDuplicateMessageLimit() {
     return ibftConfigRoot.getInteger("duplicatemessagelimit", DEFAULT_DUPLICATE_MESSAGE_LIMIT);
+  }
+
+  public int getFutureMessagesLimit() {
+    return ibftConfigRoot.getInteger("futuremessageslimit", DEFAULT_FUTURE_MESSAGES_LIMIT);
+  }
+
+  public int getFutureMessagesMaxDistance() {
+    return ibftConfigRoot.getInteger(
+        "futuremessagesmaxdistance", DEFAULT_FUTURE_MESSAGES_MAX_DISTANCE);
+  }
+
+  Map<String, Object> asMap() {
+    final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    if (ibftConfigRoot.containsKey("epochlength")) {
+      builder.put("epochLength", getEpochLength());
+    }
+    if (ibftConfigRoot.containsKey("blockperiodseconds")) {
+      builder.put("blockPeriodSeconds", getBlockPeriodSeconds());
+    }
+    if (ibftConfigRoot.containsKey("requesttimeoutseconds")) {
+      builder.put("requestTimeoutSeconds", getRequestTimeoutSeconds());
+    }
+    if (ibftConfigRoot.containsKey("gossipedhistorylimit")) {
+      builder.put("gossipedHistoryLimit", getGossipedHistoryLimit());
+    }
+    if (ibftConfigRoot.containsKey("messagequeuelimit")) {
+      builder.put("messageQueueLimit", getMessageQueueLimit());
+    }
+    if (ibftConfigRoot.containsKey("duplicatemessagelimit")) {
+      builder.put("duplicateMessageLimit", getDuplicateMessageLimit());
+    }
+    if (ibftConfigRoot.containsKey("futuremessageslimit")) {
+      builder.put("futureMessagesLimit", getFutureMessagesLimit());
+    }
+    if (ibftConfigRoot.containsKey("futuremessagesmaxdistance")) {
+      builder.put("futureMessagesMaxDistance", getFutureMessagesMaxDistance());
+    }
+    return builder.build();
   }
 }

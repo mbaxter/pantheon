@@ -96,7 +96,7 @@ public class RocksDbKeyValueStorage implements KeyValueStorage, Closeable {
     throwIfClosed();
 
     try (final OperationTimer.TimingContext ignored = readLatency.startTimer()) {
-      return Optional.ofNullable(db.get(key.extractArray())).map(BytesValue::wrap);
+      return Optional.ofNullable(db.get(key.getArrayUnsafe())).map(BytesValue::wrap);
     } catch (final RocksDBException e) {
       throw new StorageException(e);
     }
@@ -107,14 +107,6 @@ public class RocksDbKeyValueStorage implements KeyValueStorage, Closeable {
     throwIfClosed();
     final WriteOptions options = new WriteOptions();
     return new RocksDbTransaction(db.beginTransaction(options), options);
-  }
-
-  @Override
-  public Stream<Entry> entries() {
-    throwIfClosed();
-    final RocksIterator rocksIt = db.newIterator();
-    rocksIt.seekToFirst();
-    return new RocksDbEntryIterator(rocksIt).toStream();
   }
 
   @Override
@@ -200,7 +192,7 @@ public class RocksDbKeyValueStorage implements KeyValueStorage, Closeable {
     @Override
     protected void doPut(final BytesValue key, final BytesValue value) {
       try (final OperationTimer.TimingContext ignored = writeLatency.startTimer()) {
-        innerTx.put(key.extractArray(), value.extractArray());
+        innerTx.put(key.getArrayUnsafe(), value.getArrayUnsafe());
       } catch (final RocksDBException e) {
         throw new StorageException(e);
       }
@@ -209,7 +201,7 @@ public class RocksDbKeyValueStorage implements KeyValueStorage, Closeable {
     @Override
     protected void doRemove(final BytesValue key) {
       try (final OperationTimer.TimingContext ignored = removeLatency.startTimer()) {
-        innerTx.delete(key.extractArray());
+        innerTx.delete(key.getArrayUnsafe());
       } catch (final RocksDBException e) {
         throw new StorageException(e);
       }

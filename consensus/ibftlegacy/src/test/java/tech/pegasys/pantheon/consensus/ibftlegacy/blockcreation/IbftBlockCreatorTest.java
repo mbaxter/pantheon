@@ -16,10 +16,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static tech.pegasys.pantheon.consensus.ibft.IbftContextBuilder.setupContextWithValidators;
 import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
 
 import tech.pegasys.pantheon.config.GenesisConfigFile;
-import tech.pegasys.pantheon.consensus.common.VoteProposer;
 import tech.pegasys.pantheon.consensus.common.VoteTally;
 import tech.pegasys.pantheon.consensus.ibft.IbftContext;
 import tech.pegasys.pantheon.consensus.ibftlegacy.IbftBlockHeaderValidationRulesetFactory;
@@ -38,6 +38,7 @@ import tech.pegasys.pantheon.ethereum.core.Wei;
 import tech.pegasys.pantheon.ethereum.mainnet.BlockHeaderValidator;
 import tech.pegasys.pantheon.ethereum.mainnet.HeaderValidationMode;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
+import tech.pegasys.pantheon.testutil.TestClock;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.time.Instant;
@@ -84,7 +85,7 @@ public class IbftBlockCreatorTest {
         new ProtocolContext<>(
             blockchain,
             createInMemoryWorldStateArchive(),
-            new IbftContext(voteTally, new VoteProposer()));
+            setupContextWithValidators(initialValidatorList));
 
     final IbftBlockCreator blockCreator =
         new IbftBlockCreator(
@@ -96,7 +97,7 @@ public class IbftBlockCreatorTest {
                         null,
                         initialValidatorList)
                     .encode(),
-            new PendingTransactions(1),
+            new PendingTransactions(1, TestClock.fixed()),
             protContext,
             protocolSchedule,
             parentGasLimit -> parentGasLimit,

@@ -14,12 +14,16 @@ package tech.pegasys.pantheon.tests.acceptance.dsl.node;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import tech.pegasys.pantheon.cli.EthNetworkConfig;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApi;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApis;
+import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.ProcessBuilder.Redirect;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -27,6 +31,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -37,8 +43,10 @@ import org.awaitility.Awaitility;
 public class ProcessPantheonNodeRunner implements PantheonNodeRunner {
 
   private final Logger LOG = LogManager.getLogger();
+  private final Logger PROCESS_LOG = LogManager.getLogger("tech.pegasys.pantheon.SubProcessLog");
 
   private final Map<String, Process> pantheonProcesses = new HashMap<>();
+  private final ExecutorService outputProcessorExecutor = Executors.newCachedThreadPool();
 
   ProcessPantheonNodeRunner() {
     Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown));
@@ -50,20 +58,23 @@ public class ProcessPantheonNodeRunner implements PantheonNodeRunner {
 
     final List<String> params = new ArrayList<>();
     params.add("build/install/pantheon/bin/pantheon");
-    params.add("--datadir");
+
+    params.add("--data-path");
     params.add(dataDir.toAbsolutePath().toString());
 
     if (node.isDevMode()) {
-      params.add("--dev-mode");
+      params.add("--network");
+      params.add("DEV");
     }
 
-    if (!node.isDiscoveryEnabled()) {
-      params.add("--no-discovery");
-      params.add("true");
-    }
+    params.add("--discovery-enabled");
+    params.add(Boolean.toString(node.isDiscoveryEnabled()));
 
-    params.add("--p2p-listen");
-    params.add(node.p2pListenAddress());
+    params.add("--p2p-host");
+    params.add(node.p2pListenHost());
+
+    params.add("--p2p-port");
+    params.add("0");
 
     if (node.getMiningParameters().isMiningEnabled()) {
       params.add("--miner-enabled");
@@ -71,13 +82,28 @@ public class ProcessPantheonNodeRunner implements PantheonNodeRunner {
       params.add(node.getMiningParameters().getCoinbase().get().toString());
     }
 
+    if (node.getPrivacyParameters().isEnabled()) {
+      params.add("--privacy-enabled");
+      params.add("--privacy-url");
+      params.add(node.getPrivacyParameters().getUrl());
+      params.add("--privacy-public-key-file");
+      params.add(node.getPrivacyParameters().getPublicKeyFile().getAbsolutePath());
+      params.add("--privacy-precompiled-address");
+      params.add(String.valueOf(node.getPrivacyParameters().getPrivacyAddress()));
+    }
+
     params.add("--bootnodes");
-    params.add(String.join(",", node.bootnodes().toString()));
+
+    if (!node.bootnodes().isEmpty()) {
+      params.add(node.bootnodes().stream().map(URI::toString).collect(Collectors.joining(",")));
+    }
 
     if (node.jsonRpcEnabled()) {
       params.add("--rpc-http-enabled");
-      params.add("--rpc-listen");
-      params.add(node.jsonRpcListenAddress().get());
+      params.add("--rpc-http-host");
+      params.add(node.jsonRpcListenHost().get());
+      params.add("--rpc-http-port");
+      params.add(node.jsonRpcListenPort().map(Object::toString).get());
       params.add("--rpc-http-api");
       params.add(apiList(node.jsonRpcConfiguration().getRpcApis()));
       if (node.jsonRpcConfiguration().isAuthenticationEnabled()) {
@@ -91,8 +117,10 @@ public class ProcessPantheonNodeRunner implements PantheonNodeRunner {
 
     if (node.wsRpcEnabled()) {
       params.add("--rpc-ws-enabled");
-      params.add("--ws-listen");
-      params.add(node.wsRpcListenAddress().get());
+      params.add("--rpc-ws-host");
+      params.add(node.wsRpcListenHost().get());
+      params.add("--rpc-ws-port");
+      params.add(node.wsRpcListenPort().map(Object::toString).get());
       params.add("--rpc-ws-api");
       params.add(apiList(node.webSocketConfiguration().getRpcApis()));
       if (node.webSocketConfiguration().isAuthenticationEnabled()) {
@@ -104,27 +132,45 @@ public class ProcessPantheonNodeRunner implements PantheonNodeRunner {
       }
     }
 
-    if (node.ethNetworkConfig().isPresent()) {
-      EthNetworkConfig ethNetworkConfig = node.ethNetworkConfig().get();
-      Path genesisFile = createGenesisFile(node, ethNetworkConfig);
-      params.add("--genesis");
-      params.add(genesisFile.toString());
-      params.add("--network-id");
-      params.add(Integer.toString(ethNetworkConfig.getNetworkId()));
-    }
+    node.getGenesisConfig()
+        .ifPresent(
+            genesis -> {
+              final Path genesisFile = createGenesisFile(node, genesis);
+              params.add("--genesis-file");
+              params.add(genesisFile.toAbsolutePath().toString());
+            });
 
-    if (!node.p2pEnabled()) {
+    if (!node.isP2pEnabled()) {
       params.add("--p2p-enabled");
       params.add("false");
     }
 
+    node.getPermissioningConfiguration()
+        .flatMap(PermissioningConfiguration::getLocalConfig)
+        .ifPresent(
+            permissioningConfiguration -> {
+              if (permissioningConfiguration.isNodeWhitelistEnabled()) {
+                params.add("--permissions-nodes-enabled");
+              }
+              if (permissioningConfiguration.isAccountWhitelistEnabled()) {
+                params.add("--permissions-accounts-enabled");
+              }
+              if (permissioningConfiguration.getConfigurationFilePath() != null) {
+                params.add("--permissions-config-file");
+                params.add(permissioningConfiguration.getConfigurationFilePath());
+              }
+            });
+
+    LOG.info("Creating pantheon process with params {}", params);
     final ProcessBuilder processBuilder =
         new ProcessBuilder(params)
             .directory(new File(System.getProperty("user.dir")).getParentFile())
-            .inheritIO();
+            .redirectErrorStream(true)
+            .redirectInput(Redirect.INHERIT);
 
     try {
       final Process process = processBuilder.start();
+      outputProcessorExecutor.submit(() -> printOutput(node, process));
       pantheonProcesses.put(node.getName(), process);
     } catch (final IOException e) {
       LOG.error("Error starting PantheonNode process", e);
@@ -133,18 +179,32 @@ public class ProcessPantheonNodeRunner implements PantheonNodeRunner {
     waitForPortsFile(dataDir);
   }
 
-  private Path createGenesisFile(final PantheonNode node, final EthNetworkConfig ethNetworkConfig) {
+  private void printOutput(final PantheonNode node, final Process process) {
+    try (final BufferedReader in =
+        new BufferedReader(new InputStreamReader(process.getInputStream(), UTF_8))) {
+      String line = in.readLine();
+      while (line != null) {
+        PROCESS_LOG.info("{}: {}", node.getName(), line);
+        line = in.readLine();
+      }
+    } catch (final IOException e) {
+      LOG.error("Failed to read output from process", e);
+    }
+  }
+
+  private Path createGenesisFile(final PantheonNode node, final String genesisConfig) {
     try {
-      Path genesisFile = Files.createTempFile(node.homeDirectory(), "genesis", "");
-      Files.write(genesisFile, ethNetworkConfig.getGenesisConfig().getBytes(UTF_8));
+      final Path genesisFile = Files.createTempFile(node.homeDirectory(), "genesis", "");
+      genesisFile.toFile().deleteOnExit();
+      Files.write(genesisFile, genesisConfig.getBytes(UTF_8));
       return genesisFile;
-    } catch (IOException e) {
+    } catch (final IOException e) {
       throw new IllegalStateException(e);
     }
   }
 
   private String apiList(final Collection<RpcApi> rpcApis) {
-    return String.join(",", rpcApis.stream().map(RpcApis::getValue).collect(Collectors.toList()));
+    return rpcApis.stream().map(RpcApis::getValue).collect(Collectors.joining(","));
   }
 
   @Override
@@ -160,12 +220,21 @@ public class ProcessPantheonNodeRunner implements PantheonNodeRunner {
   public synchronized void shutdown() {
     final HashMap<String, Process> localMap = new HashMap<>(pantheonProcesses);
     localMap.forEach(this::killPantheonProcess);
+    outputProcessorExecutor.shutdown();
+    try {
+      if (!outputProcessorExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+        LOG.error("Output processor executor did not shutdown cleanly.");
+      }
+    } catch (final InterruptedException e) {
+      LOG.error("Interrupted while already shutting down", e);
+      Thread.currentThread().interrupt();
+    }
   }
 
   @Override
   public boolean isActive(final String nodeName) {
     final Process process = pantheonProcesses.get(nodeName);
-    return process.isAlive();
+    return process != null && process.isAlive();
   }
 
   private void killPantheonProcess(final String name, final Process process) {

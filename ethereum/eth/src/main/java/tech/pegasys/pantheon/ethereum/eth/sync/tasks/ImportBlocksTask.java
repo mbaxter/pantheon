@@ -22,11 +22,11 @@ import tech.pegasys.pantheon.ethereum.eth.manager.task.GetHeadersFromPeerByHashT
 import tech.pegasys.pantheon.ethereum.mainnet.HeaderValidationMode;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection.PeerNotConnected;
-import tech.pegasys.pantheon.metrics.LabelledMetric;
-import tech.pegasys.pantheon.metrics.OperationTimer;
+import tech.pegasys.pantheon.metrics.MetricsSystem;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -47,6 +47,7 @@ public class ImportBlocksTask<C> extends AbstractPeerTask<List<Block>> {
 
   private final BlockHeader referenceHeader;
   private final int maxBlocks;
+  private final MetricsSystem metricsSystem;
   private EthPeer peer;
 
   protected ImportBlocksTask(
@@ -55,12 +56,13 @@ public class ImportBlocksTask<C> extends AbstractPeerTask<List<Block>> {
       final EthContext ethContext,
       final BlockHeader referenceHeader,
       final int maxBlocks,
-      final LabelledMetric<OperationTimer> ethTasksTimer) {
-    super(ethContext, ethTasksTimer);
+      final MetricsSystem metricsSystem) {
+    super(ethContext, metricsSystem);
     this.protocolSchedule = protocolSchedule;
     this.protocolContext = protocolContext;
     this.referenceHeader = referenceHeader;
     this.maxBlocks = maxBlocks;
+    this.metricsSystem = metricsSystem;
 
     this.startNumber = referenceHeader.getNumber();
   }
@@ -71,9 +73,9 @@ public class ImportBlocksTask<C> extends AbstractPeerTask<List<Block>> {
       final EthContext ethContext,
       final BlockHeader previousHeader,
       final int maxBlocks,
-      final LabelledMetric<OperationTimer> ethTasksTimer) {
+      final MetricsSystem metricsSystem) {
     return new ImportBlocksTask<>(
-        protocolSchedule, protocolContext, ethContext, previousHeader, maxBlocks, ethTasksTimer);
+        protocolSchedule, protocolContext, ethContext, previousHeader, maxBlocks, metricsSystem);
   }
 
   @Override
@@ -95,6 +97,11 @@ public class ImportBlocksTask<C> extends AbstractPeerTask<List<Block>> {
             });
   }
 
+  @Override
+  protected Optional<EthPeer> findSuitablePeer() {
+    return ethContext.getEthPeers().idlePeer(referenceHeader.getNumber());
+  }
+
   private CompletableFuture<PeerTaskResult<List<BlockHeader>>> downloadHeaders() {
     final AbstractPeerTask<List<BlockHeader>> task =
         GetHeadersFromPeerByHashTask.startingAtHash(
@@ -103,7 +110,7 @@ public class ImportBlocksTask<C> extends AbstractPeerTask<List<Block>> {
                 referenceHeader.getHash(),
                 referenceHeader.getNumber(),
                 maxBlocks,
-                ethTasksTimer)
+                metricsSystem)
             .assignPeer(peer);
     return executeSubTask(task::run);
   }
@@ -115,7 +122,7 @@ public class ImportBlocksTask<C> extends AbstractPeerTask<List<Block>> {
     }
     final CompleteBlocksTask<C> task =
         CompleteBlocksTask.forHeaders(
-            protocolSchedule, ethContext, headers.getResult(), ethTasksTimer);
+            protocolSchedule, ethContext, headers.getResult(), metricsSystem);
     task.assignPeer(peer);
     return executeSubTask(() -> ethContext.getScheduler().timeout(task));
   }
@@ -130,7 +137,7 @@ public class ImportBlocksTask<C> extends AbstractPeerTask<List<Block>> {
     }
     final Supplier<CompletableFuture<List<Block>>> task =
         PersistBlockTask.forSequentialBlocks(
-            protocolSchedule, protocolContext, blocks, HeaderValidationMode.FULL, ethTasksTimer);
+            protocolSchedule, protocolContext, blocks, HeaderValidationMode.FULL, metricsSystem);
     return executeWorkerSubTask(ethContext.getScheduler(), task);
   }
 }

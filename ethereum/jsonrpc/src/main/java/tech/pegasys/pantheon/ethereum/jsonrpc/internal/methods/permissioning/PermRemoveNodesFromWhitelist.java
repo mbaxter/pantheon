@@ -22,7 +22,7 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import tech.pegasys.pantheon.ethereum.p2p.P2pDisabledException;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
-import tech.pegasys.pantheon.ethereum.permissioning.NodeWhitelistController;
+import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
 
 import java.util.List;
 
@@ -50,7 +50,7 @@ public class PermRemoveNodesFromWhitelist implements JsonRpcMethod {
       if (p2pNetwork.getNodeWhitelistController().isPresent()) {
         try {
           final List<String> enodeURLs = enodeListParam.getStringList();
-          final NodeWhitelistController.NodesWhitelistResult nodesWhitelistResult =
+          final NodeLocalConfigPermissioningController.NodesWhitelistResult nodesWhitelistResult =
               p2pNetwork.getNodeWhitelistController().get().removeNodes(enodeURLs);
 
           switch (nodesWhitelistResult.result()) {
@@ -68,6 +68,9 @@ public class PermRemoveNodesFromWhitelist implements JsonRpcMethod {
               return new JsonRpcErrorResponse(req.getId(), JsonRpcError.WHITELIST_PERSIST_FAILURE);
             case ERROR_WHITELIST_FILE_SYNC:
               return new JsonRpcErrorResponse(req.getId(), JsonRpcError.WHITELIST_FILE_SYNC);
+            case ERROR_BOOTNODE_CANNOT_BE_REMOVED:
+              return new JsonRpcErrorResponse(
+                  req.getId(), JsonRpcError.NODE_WHITELIST_BOOTNODE_CANNOT_BE_REMOVED);
             default:
               throw new Exception();
           }

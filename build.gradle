@@ -14,11 +14,11 @@
 import net.ltgt.gradle.errorprone.CheckSeverity
 
 plugins {
-  id 'com.diffplug.gradle.spotless' version '3.17.0'
+  id 'com.diffplug.gradle.spotless' version '3.19.0'
   id 'com.jfrog.bintray' version '1.8.4'
-  id 'com.github.ben-manes.versions' version '0.20.0'
+  id 'com.github.ben-manes.versions' version '0.21.0'
   id 'com.github.hierynomus.license' version '0.15.0'
-  id 'io.spring.dependency-management' version '1.0.6.RELEASE'
+  id 'io.spring.dependency-management' version '1.0.7.RELEASE'
   id 'me.champeau.gradle.jmh' version '0.4.8' apply false
   id 'net.ltgt.errorprone' version '0.6.1'
   id 'net.researchgate.release' version '2.7.0'
@@ -72,7 +72,12 @@ allprojects {
 
   version = rootProject.version
 
-  jacoco { toolVersion = '0.8.2' }
+  jacoco {
+    toolVersion = '0.8.2'
+    if (project.tasks.findByName('referenceTests')) {
+      applyTo referenceTests
+    }
+  }
 
   sourceCompatibility = '1.8'
   targetCompatibility = '1.8'
@@ -333,9 +338,21 @@ run {
 }
 
 startScripts {
+
+  def shortenWindowsClasspath = { line ->
+    line = line.replaceAll(/^set CLASSPATH=.*$/, "set CLASSPATH=%APP_HOME%/lib/*")
+  }
+
   doLast {
     unixScript.text = unixScript.text.replace('PANTHEON_HOME', '\$APP_HOME')
     windowsScript.text = windowsScript.text.replace('PANTHEON_HOME', '%~dp0..')
+
+    // Prevent the error originating from the 8191 chars limit on Windows
+    windowsScript.text =
+      windowsScript
+      .readLines()
+      .collect(shortenWindowsClasspath)
+      .join('\r\n')
   }
 }
 
@@ -377,16 +394,13 @@ task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
   additionalSourceDirs.from files(subprojects.sourceSets.main.allSource.srcDirs)
   sourceDirectories.from files(subprojects.sourceSets.main.allSource.srcDirs)
   classDirectories.from files(subprojects.sourceSets.main.output)
-  executionData.from files(subprojects.jacocoTestReport.executionData) //how to exclude some package/classes com.test.**
+  executionData.from fileTree(dir: '.', includes: ['**/jacoco/*.exec'])
   reports {
     xml.enabled true
     csv.enabled true
     html.destination file("build/reports/jacocoHtml")
   }
   onlyIf = { true }
-  doFirst {
-    executionData = files(executionData.findAll { it.exists() })
-  }
 }
 
 configurations { annotationProcessor }

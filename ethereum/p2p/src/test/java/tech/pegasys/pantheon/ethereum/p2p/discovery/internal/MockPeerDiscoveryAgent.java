@@ -16,8 +16,10 @@ import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerDiscoveryController.AsyncExecutor;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
-import tech.pegasys.pantheon.ethereum.permissioning.NodeWhitelistController;
+import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
+import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.net.InetSocketAddress;
@@ -39,9 +41,16 @@ public class MockPeerDiscoveryAgent extends PeerDiscoveryAgent {
       final DiscoveryConfiguration config,
       final PeerRequirement peerRequirement,
       final PeerBlacklist peerBlacklist,
-      final Optional<NodeWhitelistController> nodeWhitelistController,
+      final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController,
+      final Optional<NodePermissioningController> nodePermissioningController,
       final Map<BytesValue, MockPeerDiscoveryAgent> agentNetwork) {
-    super(keyPair, config, peerRequirement, peerBlacklist, nodeWhitelistController);
+    super(
+        keyPair,
+        config,
+        peerRequirement,
+        peerBlacklist,
+        nodeWhitelistController,
+        nodePermissioningController);
     this.agentNetwork = agentNetwork;
   }
 
@@ -50,7 +59,7 @@ public class MockPeerDiscoveryAgent extends PeerDiscoveryAgent {
     // This ensures that any data passed between agents is not shared
     final Packet packetClone = Packet.decode(packet.encode());
     incomingPackets.add(new IncomingPacket(fromAgent, packetClone));
-    handleIncomingPacket(fromAgent.getAdvertisedPeer().getEndpoint(), packetClone);
+    handleIncomingPacket(fromAgent.getAdvertisedPeer().get().getEndpoint(), packetClone);
   }
 
   /**
@@ -91,6 +100,11 @@ public class MockPeerDiscoveryAgent extends PeerDiscoveryAgent {
   @Override
   protected TimerUtil createTimer() {
     return new MockTimerUtil();
+  }
+
+  @Override
+  protected AsyncExecutor createWorkerExecutor() {
+    return new BlockingAsyncExecutor();
   }
 
   @Override

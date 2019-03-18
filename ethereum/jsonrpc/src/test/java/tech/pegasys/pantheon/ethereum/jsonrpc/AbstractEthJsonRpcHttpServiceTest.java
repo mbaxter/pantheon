@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
 import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
 
+import tech.pegasys.pantheon.config.StubGenesisConfigOptions;
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
 import tech.pegasys.pantheon.ethereum.blockcreation.EthHashMiningCoordinator;
 import tech.pegasys.pantheon.ethereum.chain.GenesisState;
@@ -27,6 +28,7 @@ import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.BlockImporter;
 import tech.pegasys.pantheon.ethereum.core.PendingTransactions;
+import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Synchronizer;
 import tech.pegasys.pantheon.ethereum.core.Transaction;
 import tech.pegasys.pantheon.ethereum.core.TransactionPool;
@@ -44,7 +46,6 @@ import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSpec;
 import tech.pegasys.pantheon.ethereum.mainnet.ValidationResult;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
-import tech.pegasys.pantheon.ethereum.privacy.PrivateTransactionHandler;
 import tech.pegasys.pantheon.ethereum.util.RawBlockIterator;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
@@ -93,6 +94,8 @@ public abstract class AbstractEthJsonRpcHttpServiceTest {
   protected final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
   protected final String CLIENT_VERSION = "TestClientVersion/0.1.0";
+
+  protected final int NETWORK_ID = 123;
 
   protected static final Collection<RpcApi> JSON_RPC_APIS =
       Arrays.asList(RpcApis.ETH, RpcApis.NET, RpcApis.WEB3);
@@ -148,8 +151,7 @@ public abstract class AbstractEthJsonRpcHttpServiceTest {
         .thenReturn(ValidationResult.valid());
     final PendingTransactions pendingTransactionsMock = mock(PendingTransactions.class);
     when(transactionPoolMock.getPendingTransactions()).thenReturn(pendingTransactionsMock);
-    final PrivateTransactionHandler privateTransactionHandlerMock =
-        mock(PrivateTransactionHandler.class);
+    final PrivacyParameters privacyParameters = mock(PrivacyParameters.class);
     stateArchive = createInMemoryWorldStateArchive();
     GENESIS_CONFIG.writeStateTo(stateArchive.getMutable());
 
@@ -172,6 +174,8 @@ public abstract class AbstractEthJsonRpcHttpServiceTest {
         new JsonRpcMethodsFactory()
             .methods(
                 CLIENT_VERSION,
+                NETWORK_ID,
+                new StubGenesisConfigOptions(),
                 peerDiscoveryMock,
                 blockchainQueries,
                 synchronizerMock,
@@ -183,7 +187,7 @@ public abstract class AbstractEthJsonRpcHttpServiceTest {
                 supportedCapabilities,
                 Optional.empty(),
                 JSON_RPC_APIS,
-                privateTransactionHandlerMock);
+                privacyParameters);
     final JsonRpcConfiguration config = JsonRpcConfiguration.createDefault();
     config.setPort(0);
     service =

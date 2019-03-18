@@ -29,7 +29,6 @@ import tech.pegasys.pantheon.ethereum.mainnet.MainnetProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.permissioning.AccountWhitelistController;
-import tech.pegasys.pantheon.ethereum.privacy.PrivateTransactionHandler;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 
 import java.io.IOException;
@@ -87,6 +86,8 @@ public class JsonRpcHttpServiceHostWhitelistTest {
             new JsonRpcMethodsFactory()
                 .methods(
                     CLIENT_VERSION,
+                    CHAIN_ID,
+                    new StubGenesisConfigOptions(),
                     peerDiscoveryMock,
                     blockchainQueries,
                     synchronizer,
@@ -100,7 +101,7 @@ public class JsonRpcHttpServiceHostWhitelistTest {
                     supportedCapabilities,
                     Optional.of(mock(AccountWhitelistController.class)),
                     JSON_RPC_APIS,
-                    mock(PrivateTransactionHandler.class)));
+                    mock(PrivacyParameters.class)));
     service = createJsonRpcHttpService();
     service.start().join();
 

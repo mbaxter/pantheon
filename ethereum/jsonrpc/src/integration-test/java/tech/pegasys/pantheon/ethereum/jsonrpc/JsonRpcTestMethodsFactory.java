@@ -16,11 +16,13 @@ import static org.mockito.Mockito.mock;
 import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
 import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
 
+import tech.pegasys.pantheon.config.StubGenesisConfigOptions;
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
 import tech.pegasys.pantheon.ethereum.blockcreation.EthHashMiningCoordinator;
 import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
 import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.core.BlockImporter;
+import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Synchronizer;
 import tech.pegasys.pantheon.ethereum.core.TransactionPool;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.filter.FilterIdGenerator;
@@ -34,7 +36,6 @@ import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSpec;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.permissioning.AccountWhitelistController;
-import tech.pegasys.pantheon.ethereum.privacy.PrivateTransactionHandler;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
@@ -47,6 +48,7 @@ import java.util.Optional;
 public class JsonRpcTestMethodsFactory {
 
   private static final String CLIENT_VERSION = "TestClientVersion/0.1.0";
+  private static final int NETWORK_ID = 123;
 
   private final BlockchainImporter importer;
 
@@ -82,12 +84,13 @@ public class JsonRpcTestMethodsFactory {
     final MetricsSystem metricsSystem = new NoOpMetricsSystem();
     final Optional<AccountWhitelistController> accountWhitelistController =
         Optional.of(mock(AccountWhitelistController.class));
-    final PrivateTransactionHandler privateTransactionHandler =
-        mock(PrivateTransactionHandler.class);
+    final PrivacyParameters privacyParameters = mock(PrivacyParameters.class);
 
     return new JsonRpcMethodsFactory()
         .methods(
             CLIENT_VERSION,
+            NETWORK_ID,
+            new StubGenesisConfigOptions(),
             peerDiscovery,
             blockchainQueries,
             synchronizer,
@@ -99,6 +102,6 @@ public class JsonRpcTestMethodsFactory {
             new HashSet<>(),
             accountWhitelistController,
             RpcApis.DEFAULT_JSON_RPC_APIS,
-            privateTransactionHandler);
+            privacyParameters);
   }
 }

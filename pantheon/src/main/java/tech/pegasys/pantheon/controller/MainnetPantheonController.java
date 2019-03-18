@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.controller;
 
 import tech.pegasys.pantheon.config.GenesisConfigFile;
+import tech.pegasys.pantheon.config.GenesisConfigOptions;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
 import tech.pegasys.pantheon.ethereum.blockcreation.DefaultBlockScheduler;
@@ -26,14 +27,16 @@ import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Synchronizer;
 import tech.pegasys.pantheon.ethereum.core.TransactionPool;
 import tech.pegasys.pantheon.ethereum.eth.EthProtocol;
+import tech.pegasys.pantheon.ethereum.eth.manager.EthContext;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManager;
+import tech.pegasys.pantheon.ethereum.eth.peervalidation.DaoForkPeerValidator;
+import tech.pegasys.pantheon.ethereum.eth.peervalidation.PeerValidatorRunner;
 import tech.pegasys.pantheon.ethereum.eth.sync.DefaultSynchronizer;
 import tech.pegasys.pantheon.ethereum.eth.sync.SyncMode;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
 import tech.pegasys.pantheon.ethereum.eth.sync.state.SyncState;
 import tech.pegasys.pantheon.ethereum.eth.transactions.TransactionPoolFactory;
 import tech.pegasys.pantheon.ethereum.mainnet.MainnetBlockHeaderValidator;
-import tech.pegasys.pantheon.ethereum.mainnet.MainnetProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.p2p.api.ProtocolManager;
 import tech.pegasys.pantheon.ethereum.p2p.config.SubProtocolConfiguration;
@@ -43,6 +46,7 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.OptionalLong;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -56,6 +60,7 @@ public class MainnetPantheonController implements PantheonController<Void> {
 
   private final ProtocolSchedule<Void> protocolSchedule;
   private final ProtocolContext<Void> protocolContext;
+  private final GenesisConfigOptions genesisConfigOptions;
   private final ProtocolManager ethProtocolManager;
   private final KeyPair keyPair;
   private final Synchronizer synchronizer;
@@ -65,9 +70,10 @@ public class MainnetPantheonController implements PantheonController<Void> {
   private final PrivacyParameters privacyParameters;
   private final Runnable close;
 
-  public MainnetPantheonController(
+  private MainnetPantheonController(
       final ProtocolSchedule<Void> protocolSchedule,
       final ProtocolContext<Void> protocolContext,
+      final GenesisConfigOptions genesisConfigOptions,
       final ProtocolManager ethProtocolManager,
       final Synchronizer synchronizer,
       final KeyPair keyPair,
@@ -77,6 +83,7 @@ public class MainnetPantheonController implements PantheonController<Void> {
       final Runnable close) {
     this.protocolSchedule = protocolSchedule;
     this.protocolContext = protocolContext;
+    this.genesisConfigOptions = genesisConfigOptions;
     this.ethProtocolManager = ethProtocolManager;
     this.synchronizer = synchronizer;
     this.keyPair = keyPair;
@@ -92,10 +99,13 @@ public class MainnetPantheonController implements PantheonController<Void> {
       final ProtocolSchedule<Void> protocolSchedule,
       final SynchronizerConfiguration syncConfig,
       final MiningParameters miningParams,
+      final int networkId,
       final KeyPair nodeKeys,
       final PrivacyParameters privacyParameters,
       final Path dataDirectory,
-      final MetricsSystem metricsSystem) {
+      final MetricsSystem metricsSystem,
+      final Clock clock,
+      final int maxPendingTransactions) {
 
     final GenesisState genesisState = GenesisState.fromConfig(genesisConfig, protocolSchedule);
     final ProtocolContext<Void> protocolContext =
@@ -108,10 +118,7 @@ public class MainnetPantheonController implements PantheonController<Void> {
         new EthProtocolManager(
             blockchain,
             protocolContext.getWorldStateArchive(),
-            genesisConfig
-                .getConfigOptions()
-                .getChainId()
-                .orElse(MainnetProtocolSchedule.DEFAULT_CHAIN_ID),
+            networkId,
             fastSyncEnabled,
             syncConfig.downloaderParallelism(),
             syncConfig.transactionsParallelism(),
@@ -130,9 +137,23 @@ public class MainnetPantheonController implements PantheonController<Void> {
             dataDirectory,
             metricsSystem);
 
+    final OptionalLong daoBlock = genesisConfig.getConfigOptions().getDaoForkBlock();
+    if (daoBlock.isPresent()) {
+      // Setup dao validator
+      final EthContext ethContext = ethProtocolManager.ethContext();
+      final DaoForkPeerValidator daoForkPeerValidator =
+          new DaoForkPeerValidator(
+              ethContext, protocolSchedule, metricsSystem, daoBlock.getAsLong());
+      PeerValidatorRunner.runValidator(ethContext, daoForkPeerValidator);
+    }
+
     final TransactionPool transactionPool =
         TransactionPoolFactory.createTransactionPool(
-            protocolSchedule, protocolContext, ethProtocolManager.ethContext());
+            protocolSchedule,
+            protocolContext,
+            ethProtocolManager.ethContext(),
+            clock,
+            maxPendingTransactions);
 
     final ExecutorService minerThreadPool = Executors.newCachedThreadPool();
     final EthHashMinerExecutor executor =
@@ -145,7 +166,7 @@ public class MainnetPantheonController implements PantheonController<Void> {
             new DefaultBlockScheduler(
                 MainnetBlockHeaderValidator.MINIMUM_SECONDS_SINCE_PARENT,
                 MainnetBlockHeaderValidator.TIMESTAMP_TOLERANCE_S,
-                Clock.systemUTC()));
+                clock));
 
     final EthHashMiningCoordinator miningCoordinator =
         new EthHashMiningCoordinator(blockchain, executor, syncState);
@@ -157,6 +178,7 @@ public class MainnetPantheonController implements PantheonController<Void> {
     return new MainnetPantheonController(
         protocolSchedule,
         protocolContext,
+        genesisConfig.getConfigOptions(),
         ethProtocolManager,
         synchronizer,
         nodeKeys,
@@ -173,6 +195,9 @@ public class MainnetPantheonController implements PantheonController<Void> {
           }
           try {
             storageProvider.close();
+            if (privacyParameters.getPrivateStorageProvider() != null) {
+              privacyParameters.getPrivateStorageProvider().close();
+            }
           } catch (final IOException e) {
             LOG.error("Failed to close storage provider", e);
           }
@@ -187,6 +212,11 @@ public class MainnetPantheonController implements PantheonController<Void> {
   @Override
   public ProtocolSchedule<Void> getProtocolSchedule() {
     return protocolSchedule;
+  }
+
+  @Override
+  public GenesisConfigOptions getGenesisConfigOptions() {
+    return genesisConfigOptions;
   }
 
   @Override

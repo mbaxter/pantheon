@@ -7,6 +7,10 @@ A permissioned network is a network where only specified nodes and accounts (par
 Nodes and accounts outside those specified are prevented from participating. Permissioned networks can have node permissions enabled, 
 account permissions enabled, or both. 
 
+![Node Permissions](../images/node-permissioning-bad-actor.png)
+
+![Account Permissions](../images/account-permissioning.png)
+
 ## Node Whitelisting 
 
 Node whitelisting is specified by the nodes whitelist in the [permissions configuration file](#permissions-configuration-file) file. 
@@ -26,6 +30,8 @@ To update the nodes whitelist when the node is running, use the JSON-RPC API met
 Alternatively, update the [`permissions_config.toml`](#permissions-configuration-file) file directly and use the 
 [`perm_reloadPermissionsFromFile`](../Reference/JSON-RPC-API-Methods.md#perm_reloadpermissionsfromfile) method 
 to update the whitelists. 
+
+Updates to the permissions configuration file persist across node restarts. 
 
 To view the nodes whitelist, use the [perm_getNodesWhitelist](../Reference/JSON-RPC-API-Methods.md#perm_getNodesWhiteList) method. 
 
@@ -117,6 +123,8 @@ Alternatively, update the [`permissions_config.toml`](#permissions-configuration
 [`perm_reloadPermissionsFromFile`](../Reference/JSON-RPC-API-Methods.md#perm_reloadpermissionsfromfile) method 
 to update the whitelists.
 
+Updates to the permissions configuration file persist across node restarts.
+
 To view the accounts whitelist, use the [`perm_getAccountsWhitelist`](../Reference/JSON-RPC-API-Methods.md#perm_getAccountsWhitelist) method.
 
 ### Enabling Account Whitelisting 
@@ -135,6 +143,11 @@ must be in the [data directory](../Reference/Pantheon-CLI-Syntax.md#data-path) f
 
 Use the [`--permissions-config-file`](../Reference/Pantheon-CLI-Syntax.md#permissions-config-file) option to specify a permissions configuration file
  in any location.
+ 
+!!!note
+    The [`--permissions-config-file`](../Reference/Pantheon-CLI-Syntax.md#permissions-config-file) option is 
+    not used when running Pantheon from the [Docker image](../Getting-Started/Run-Docker-Image.md). 
+    Use a bind mount to [specify a permissions configuration file with Docker](../Getting-Started/Run-Docker-Image.md#permissions-configuration-file).
 
 !!! example "Example Permissions Configuration File"  
     ```toml 

@@ -12,6 +12,8 @@
  */
 package tech.pegasys.pantheon.ethereum.eth.sync.worldstate;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
@@ -19,16 +21,14 @@ import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 public abstract class NodeDataRequest {
-
   private final RequestType requestType;
   private final Hash hash;
   private BytesValue data;
-  private final AtomicInteger failedRequestCount = new AtomicInteger(0);
+  private boolean requiresPersisting = true;
 
   protected NodeDataRequest(final RequestType requestType, final Hash hash) {
     this.requestType = requestType;
@@ -52,14 +52,13 @@ public abstract class NodeDataRequest {
   }
 
   public static NodeDataRequest deserialize(final BytesValue encoded) {
-    RLPInput in = RLP.input(encoded);
+    final RLPInput in = RLP.input(encoded);
     in.enterList();
-    RequestType requestType = RequestType.fromValue(in.readByte());
-    Hash hash = Hash.wrap(in.readBytes32());
-    int failureCount = in.readIntScalar();
+    final RequestType requestType = RequestType.fromValue(in.readByte());
+    final Hash hash = Hash.wrap(in.readBytes32());
     in.leaveList();
 
-    NodeDataRequest deserialized;
+    final NodeDataRequest deserialized;
     switch (requestType) {
       case ACCOUNT_TRIE_NODE:
         deserialized = createAccountDataRequest(hash);
@@ -76,7 +75,6 @@ public abstract class NodeDataRequest {
                 + NodeDataRequest.class.getSimpleName());
     }
 
-    deserialized.setFailureCount(failureCount);
     return deserialized;
   }
 
@@ -84,7 +82,6 @@ public abstract class NodeDataRequest {
     out.startList();
     out.writeByte(requestType.getValue());
     out.writeBytesValue(hash);
-    out.writeIntScalar(failedRequestCount.get());
     out.endList();
   }
 
@@ -105,17 +102,21 @@ public abstract class NodeDataRequest {
     return this;
   }
 
-  public int trackFailure() {
-    return failedRequestCount.incrementAndGet();
+  public NodeDataRequest setRequiresPersisting(final boolean requiresPersisting) {
+    this.requiresPersisting = requiresPersisting;
+    return this;
   }
 
-  private void setFailureCount(final int failures) {
-    failedRequestCount.set(failures);
+  public final void persist(final WorldStateStorage.Updater updater) {
+    if (requiresPersisting) {
+      checkNotNull(getData(), "Must set data before node can be persisted.");
+      doPersist(updater);
+    }
   }
 
-  public abstract void persist(final WorldStateStorage.Updater updater);
+  protected abstract void doPersist(final WorldStateStorage.Updater updater);
 
-  public abstract Stream<NodeDataRequest> getChildRequests();
+  public abstract List<NodeDataRequest> getChildRequests();
 
   public abstract Optional<BytesValue> getExistingData(final WorldStateStorage worldStateStorage);
 }
