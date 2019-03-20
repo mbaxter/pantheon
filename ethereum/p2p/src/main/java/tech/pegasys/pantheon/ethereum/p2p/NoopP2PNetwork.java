@@ -58,12 +58,6 @@ public class NoopP2PNetwork implements P2PNetwork {
   }
 
   @Override
-  public void checkMaintainedConnectionPeers() {}
-
-  @Override
-  public void attemptPeerConnections() {}
-
-  @Override
   public void stop() {}
 
   @Override

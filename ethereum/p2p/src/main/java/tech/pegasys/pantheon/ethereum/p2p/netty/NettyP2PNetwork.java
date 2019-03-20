@@ -60,6 +60,8 @@ import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
@@ -128,6 +130,8 @@ public class NettyP2PNetwork implements P2PNetwork {
 
   private static final Logger LOG = LogManager.getLogger();
   private static final int TIMEOUT_SECONDS = 30;
+
+  private ScheduledExecutorService scheduledExecutorService;
 
   final Map<Capability, Subscribers<Consumer<Message>>> protocolCallbacks =
       new ConcurrentHashMap<>();
@@ -410,7 +414,6 @@ public class NettyP2PNetwork implements P2PNetwork {
     return removed;
   }
 
-  @Override
   public void checkMaintainedConnectionPeers() {
     for (final Peer peer : peerMaintainConnectionList) {
       if (!(isConnecting(peer) || isConnected(peer))) {
@@ -419,7 +422,6 @@ public class NettyP2PNetwork implements P2PNetwork {
     }
   }
 
-  @Override
   public void attemptPeerConnections() {
     // Start more connections until either we reach max peers or half our max peers quota is spent
     // on pending connections. The limit on pending connections is to allow room for
@@ -541,6 +543,7 @@ public class NettyP2PNetwork implements P2PNetwork {
 
   @Override
   public void start() {
+    scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     peerDiscoveryAgent.start(ourPeerInfo.getPort()).join();
     peerBondedObserverId =
         OptionalLong.of(peerDiscoveryAgent.observePeerBondedEvents(handlePeerBondedEvent()));
@@ -563,6 +566,11 @@ public class NettyP2PNetwork implements P2PNetwork {
 
     this.ourEnodeURL = buildSelfEnodeURL();
     LOG.info("Enode URL {}", ourEnodeURL.toString());
+
+    scheduledExecutorService.scheduleWithFixedDelay(
+        this::checkMaintainedConnectionPeers, 60, 60, TimeUnit.SECONDS);
+    scheduledExecutorService.scheduleWithFixedDelay(
+        this::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
   }
 
   @VisibleForTesting
@@ -654,6 +662,7 @@ public class NettyP2PNetwork implements P2PNetwork {
   @Override
   public void stop() {
     sendClientQuittingToPeers();
+    scheduledExecutorService.shutdownNow();
     peerDiscoveryAgent.stop().join();
     peerBondedObserverId.ifPresent(peerDiscoveryAgent::removePeerBondedObserver);
     peerBondedObserverId = OptionalLong.empty();
