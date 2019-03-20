@@ -16,6 +16,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static tech.pegasys.pantheon.crypto.Hash.keccak256;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
+import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.ethereum.rlp.RLPException;
 import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
@@ -406,6 +407,19 @@ public class Transaction {
       return Optional.of(Address.contractAddress(getSender(), getNonce()));
     }
     return Optional.empty();
+  }
+
+  public static void main(String[] args) {
+    KeyPair keyPair = KeyPair.generate();
+    Transaction t = Transaction.builder()
+      .gasLimit(21_000)
+      .gasPrice(Wei.ZERO)
+      .value(Wei.ZERO)
+      .to(Address.fromHexString("0x0011223344556677889900112233445566778899"))
+      .payload(BytesValue.EMPTY)
+      .nonce(0)
+      .signAndBuild(keyPair);
+    System.out.println(RLP.encode(t::writeTo));
   }
 
   public static class Builder {
