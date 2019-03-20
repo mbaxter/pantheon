@@ -79,7 +79,7 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-/** Tests for {@link tech.pegasys.pantheon.ethereum.p2p.netty.NettyP2PNetwork}. */
+/** Tests for {@link NettyP2PNetwork}. */
 @RunWith(MockitoJUnitRunner.StrictStubs.class)
 public final class NettyP2PNetworkTest {
 
