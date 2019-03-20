@@ -86,15 +86,6 @@ public interface P2PNetwork extends Closeable {
    */
   boolean removeMaintainedConnectionPeer(final Peer peer);
 
-  /**
-   * Trigger that an external clock can use to make the network attempt connections to maintained
-   * peers
-   */
-  void checkMaintainedConnectionPeers();
-
-  /** Attempt to connect to additional peers from the peer table. */
-  void attemptPeerConnections();
-
   /** Stops the P2P network layer. */
   void stop();
 

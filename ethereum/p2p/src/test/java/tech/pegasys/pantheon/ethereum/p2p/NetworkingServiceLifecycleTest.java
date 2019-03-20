@@ -47,7 +47,7 @@ public class NetworkingServiceLifecycleTest {
   }
 
   @Test
-  public void createPeerDiscoveryAgent() {
+  public void createP2PNetwork() {
     final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
     final NetworkingConfiguration config = configWithRandomPorts();
     try (final NettyP2PNetwork service =
@@ -75,7 +75,7 @@ public class NetworkingServiceLifecycleTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void createPeerDiscoveryAgent_NullHost() throws IOException {
+  public void createP2PNetwork_NullHost() throws IOException {
     final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
     final NetworkingConfiguration config =
         NetworkingConfiguration.create()
@@ -95,7 +95,7 @@ public class NetworkingServiceLifecycleTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void createPeerDiscoveryAgent_InvalidHost() throws IOException {
+  public void createP2PNetwork_InvalidHost() throws IOException {
     final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
     final NetworkingConfiguration config =
         NetworkingConfiguration.create()
@@ -115,7 +115,7 @@ public class NetworkingServiceLifecycleTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void createPeerDiscoveryAgent_InvalidPort() throws IOException {
+  public void createP2PNetwork_InvalidPort() throws IOException {
     final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
     final NetworkingConfiguration config =
         NetworkingConfiguration.create()
@@ -135,7 +135,7 @@ public class NetworkingServiceLifecycleTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void createPeerDiscoveryAgent_NullKeyPair() throws IOException {
+  public void createP2PNetwork_NullKeyPair() throws IOException {
     try (final P2PNetwork broken =
         new NettyP2PNetwork(
             vertx,
@@ -151,7 +151,7 @@ public class NetworkingServiceLifecycleTest {
   }
 
   @Test
-  public void startStopPeerDiscoveryAgent() {
+  public void startStopP2PNetwork() {
     final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
     try (final NettyP2PNetwork service =
         new NettyP2PNetwork(
@@ -165,7 +165,6 @@ public class NetworkingServiceLifecycleTest {
             Optional.empty())) {
       service.start();
       service.stop();
-      service.start();
     }
   }
 
@@ -245,7 +244,7 @@ public class NetworkingServiceLifecycleTest {
   }
 
   @Test
-  public void createPeerDiscoveryAgent_NoActivePeers() {
+  public void createP2PNetwork_NoActivePeers() {
     final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
     try (final NettyP2PNetwork agent =
         new NettyP2PNetwork(
