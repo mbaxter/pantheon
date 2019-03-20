@@ -530,7 +530,8 @@ public class NettyP2PNetwork implements P2PNetwork {
     LOG.info("Enode URL {}", ourEnodeURL.toString());
   }
 
-  private Consumer<PeerBondedEvent> handlePeerBondedEvent() {
+  @VisibleForTesting
+  Consumer<PeerBondedEvent> handlePeerBondedEvent() {
     return event -> {
       final Peer peer = event.getPeer();
       if (connectionCount() < maxPeers && !isConnecting(peer) && !isConnected(peer)) {
