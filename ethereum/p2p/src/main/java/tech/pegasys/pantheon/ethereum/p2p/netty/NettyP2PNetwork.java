@@ -424,13 +424,11 @@ public class NettyP2PNetwork implements P2PNetwork {
     // Start more connections until either we reach max peers or half our max peers quota is spent
     // on pending connections. The limit on pending connections is to allow room for
     // additional incoming connections
-    final int availablePeerSlots =
-        Math.min(maxPeers - connectionCount(), (maxPeers / 2) - pendingConnections.size());
+    final int availablePeerSlots = Math.max(0, maxPeers - connectionCount());
     if (availablePeerSlots > 0) {
       final List<DiscoveryPeer> peers =
           peerDiscoveryAgent
               .getPeers()
-              .filter(peer -> peer.getEndpoint().getTcpPort().isPresent())
               .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED)
               .filter(peer -> !isConnected(peer) && !isConnecting(peer))
               .collect(Collectors.toList());
