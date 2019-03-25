@@ -64,6 +64,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -178,6 +179,7 @@ public class NettyP2PNetwork implements P2PNetwork {
   private final Optional<NodePermissioningController> nodePermissioningController;
   private final Optional<Blockchain> blockchain;
   private OptionalLong blockAddedObserverId = OptionalLong.empty();
+  private final AtomicBoolean isRunning = new AtomicBoolean(false);
 
   public NettyP2PNetwork(
       final Vertx vertx,
@@ -540,34 +542,36 @@ public class NettyP2PNetwork implements P2PNetwork {
 
   @Override
   public void start() {
-    scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-    peerDiscoveryAgent.start(ourPeerInfo.getPort()).join();
-    peerBondedObserverId =
-        OptionalLong.of(peerDiscoveryAgent.observePeerBondedEvents(handlePeerBondedEvent()));
-    peerDroppedObserverId =
-        OptionalLong.of(peerDiscoveryAgent.observePeerDroppedEvents(handlePeerDroppedEvents()));
+    if (isRunning.compareAndSet(false, true)) {
+      scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+      peerDiscoveryAgent.start(ourPeerInfo.getPort()).join();
+      peerBondedObserverId =
+          OptionalLong.of(peerDiscoveryAgent.observePeerBondedEvents(handlePeerBondedEvent()));
+      peerDroppedObserverId =
+          OptionalLong.of(peerDiscoveryAgent.observePeerDroppedEvents(handlePeerDroppedEvents()));
 
-    if (nodePermissioningController.isPresent()) {
-      if (blockchain.isPresent()) {
-        synchronized (this) {
-          if (!blockAddedObserverId.isPresent()) {
-            blockAddedObserverId =
-                OptionalLong.of(blockchain.get().observeBlockAdded(this::handleBlockAddedEvent));
+      if (nodePermissioningController.isPresent()) {
+        if (blockchain.isPresent()) {
+          synchronized (this) {
+            if (!blockAddedObserverId.isPresent()) {
+              blockAddedObserverId =
+                  OptionalLong.of(blockchain.get().observeBlockAdded(this::handleBlockAddedEvent));
+            }
           }
+        } else {
+          throw new IllegalStateException(
+              "NettyP2PNetwork permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
         }
-      } else {
-        throw new IllegalStateException(
-            "NettyP2PNetwork permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
       }
+
+      this.ourEnodeURL = buildSelfEnodeURL();
+      LOG.info("Enode URL {}", ourEnodeURL.toString());
+
+      scheduledExecutorService.scheduleWithFixedDelay(
+          this::checkMaintainedConnectionPeers, 60, 60, TimeUnit.SECONDS);
+      scheduledExecutorService.scheduleWithFixedDelay(
+          this::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
     }
-
-    this.ourEnodeURL = buildSelfEnodeURL();
-    LOG.info("Enode URL {}", ourEnodeURL.toString());
-
-    scheduledExecutorService.scheduleWithFixedDelay(
-        this::checkMaintainedConnectionPeers, 60, 60, TimeUnit.SECONDS);
-    scheduledExecutorService.scheduleWithFixedDelay(
-        this::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
   }
 
   @VisibleForTesting
@@ -658,18 +662,20 @@ public class NettyP2PNetwork implements P2PNetwork {
 
   @Override
   public void stop() {
-    sendClientQuittingToPeers();
-    scheduledExecutorService.shutdownNow();
-    peerDiscoveryAgent.stop().join();
-    peerBondedObserverId.ifPresent(peerDiscoveryAgent::removePeerBondedObserver);
-    peerBondedObserverId = OptionalLong.empty();
-    peerDroppedObserverId.ifPresent(peerDiscoveryAgent::removePeerDroppedObserver);
-    peerDroppedObserverId = OptionalLong.empty();
-    blockchain.ifPresent(b -> blockAddedObserverId.ifPresent(b::removeObserver));
-    blockAddedObserverId = OptionalLong.empty();
-    peerDiscoveryAgent.stop().join();
-    workers.shutdownGracefully();
-    boss.shutdownGracefully();
+    if (isRunning.compareAndSet(true, false)) {
+      sendClientQuittingToPeers();
+      scheduledExecutorService.shutdownNow();
+      peerDiscoveryAgent.stop().join();
+      peerBondedObserverId.ifPresent(peerDiscoveryAgent::removePeerBondedObserver);
+      peerBondedObserverId = OptionalLong.empty();
+      peerDroppedObserverId.ifPresent(peerDiscoveryAgent::removePeerDroppedObserver);
+      peerDroppedObserverId = OptionalLong.empty();
+      blockchain.ifPresent(b -> blockAddedObserverId.ifPresent(b::removeObserver));
+      blockAddedObserverId = OptionalLong.empty();
+      peerDiscoveryAgent.stop().join();
+      workers.shutdownGracefully();
+      boss.shutdownGracefully();
+    }
   }
 
   private void sendClientQuittingToPeers() {

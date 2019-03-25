@@ -639,6 +639,7 @@ public final class NettyP2PNetworkTest {
     final Peer peer = mockPeer();
     final PeerConnection peerConnection = mockPeerConnection();
 
+    nettyP2PNetwork.start();
     nettyP2PNetwork.connect(peer).complete(peerConnection);
     nettyP2PNetwork.stop();
 
