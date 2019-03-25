@@ -424,9 +424,6 @@ public class NettyP2PNetwork implements P2PNetwork {
   }
 
   public void attemptPeerConnections() {
-    // Start more connections until either we reach max peers or half our max peers quota is spent
-    // on pending connections. The limit on pending connections is to allow room for
-    // additional incoming connections
     final int availablePeerSlots = Math.max(0, maxPeers - connectionCount());
     if (availablePeerSlots > 0) {
       final List<DiscoveryPeer> peers =
