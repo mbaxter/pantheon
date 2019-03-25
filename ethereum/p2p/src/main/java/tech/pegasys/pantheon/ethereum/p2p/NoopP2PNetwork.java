@@ -19,7 +19,7 @@ import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
-import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -50,6 +50,11 @@ public class NoopP2PNetwork implements P2PNetwork {
   @Override
   public boolean addMaintainConnectionPeer(final Peer peer) {
     throw new P2pDisabledException("P2P networking disabled.  Unable to connect to add peer.");
+  }
+
+  @Override
+  public boolean removeMaintainedConnectionPeer(final Peer peer) {
+    throw new P2pDisabledException("P2P networking disabled.  Unable to remove a connected peer.");
   }
 
   @Override
@@ -85,7 +90,7 @@ public class NoopP2PNetwork implements P2PNetwork {
   }
 
   @Override
-  public Optional<NodeLocalConfigPermissioningController> getNodeWhitelistController() {
+  public Optional<EnodeURL> getSelfEnodeURL() {
     return Optional.empty();
   }
 

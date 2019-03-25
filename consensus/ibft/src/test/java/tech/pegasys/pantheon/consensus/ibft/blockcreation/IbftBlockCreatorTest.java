@@ -20,7 +20,6 @@ import static tech.pegasys.pantheon.consensus.ibft.IbftContextBuilder.setupConte
 import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
 
 import tech.pegasys.pantheon.config.GenesisConfigFile;
-import tech.pegasys.pantheon.consensus.common.VoteTally;
 import tech.pegasys.pantheon.consensus.ibft.IbftBlockHashing;
 import tech.pegasys.pantheon.consensus.ibft.IbftBlockHeaderValidationRulesetFactory;
 import tech.pegasys.pantheon.consensus.ibft.IbftContext;
@@ -34,6 +33,7 @@ import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.BlockHeaderTestFixture;
 import tech.pegasys.pantheon.ethereum.core.PendingTransactions;
+import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Wei;
 import tech.pegasys.pantheon.ethereum.mainnet.BlockHeaderValidator;
 import tech.pegasys.pantheon.ethereum.mainnet.HeaderValidationMode;
@@ -69,12 +69,11 @@ public class IbftBlockCreatorTest {
       initialValidatorList.add(AddressHelpers.ofValue(i));
     }
 
-    final VoteTally voteTally = new VoteTally(initialValidatorList);
-
     final ProtocolSchedule<IbftContext> protocolSchedule =
         IbftProtocolSchedule.create(
             GenesisConfigFile.fromConfig("{\"config\": {\"spuriousDragonBlock\":0}}")
-                .getConfigOptions());
+                .getConfigOptions(),
+            PrivacyParameters.noPrivacy());
     final ProtocolContext<IbftContext> protContext =
         new ProtocolContext<>(
             blockchain,

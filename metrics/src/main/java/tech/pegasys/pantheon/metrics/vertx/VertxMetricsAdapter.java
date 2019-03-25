@@ -10,23 +10,24 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.services.pipeline;
+package tech.pegasys.pantheon.metrics.vertx;
 
-import java.util.List;
+import tech.pegasys.pantheon.metrics.MetricsSystem;
 
-class BatchingProcessor<T> implements Processor<T, List<T>> {
+import io.vertx.core.spi.metrics.PoolMetrics;
+import io.vertx.core.spi.metrics.VertxMetrics;
 
-  private final int maximumBatchSize;
+public class VertxMetricsAdapter implements VertxMetrics {
 
-  public BatchingProcessor(final int maximumBatchSize) {
-    this.maximumBatchSize = maximumBatchSize;
+  private final MetricsSystem metricsSystem;
+
+  public VertxMetricsAdapter(final MetricsSystem metricsSystem) {
+    this.metricsSystem = metricsSystem;
   }
 
   @Override
-  public void processNextInput(final ReadPipe<T> inputPipe, final WritePipe<List<T>> outputPipe) {
-    final List<T> batch = inputPipe.getBatch(maximumBatchSize);
-    if (!batch.isEmpty()) {
-      outputPipe.put(batch);
-    }
+  public PoolMetrics<?> createPoolMetrics(
+      final String poolType, final String poolName, final int maxPoolSize) {
+    return new PoolMetricsAdapter(metricsSystem, poolType, poolName);
   }
 }
