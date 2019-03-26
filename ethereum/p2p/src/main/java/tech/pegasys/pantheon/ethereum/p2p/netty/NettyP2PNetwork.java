@@ -423,27 +423,31 @@ public class NettyP2PNetwork implements P2PNetwork {
     }
   }
 
-  public void attemptPeerConnections() {
+  @VisibleForTesting
+  void attemptPeerConnections() {
     final int availablePeerSlots = Math.max(0, maxPeers - connectionCount());
-    if (availablePeerSlots > 0) {
-      final List<DiscoveryPeer> peers =
-          peerDiscoveryAgent
-              .getPeers()
-              .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED)
-              .filter(peer -> !isConnected(peer) && !isConnecting(peer))
-              .collect(Collectors.toList());
-      Collections.shuffle(peers);
-      LOG.info("Initiating connection to {} peers from the peer table", availablePeerSlots);
-      peers.stream().limit(availablePeerSlots).forEach(this::connect);
-      LOG.info(
-          "Connection count {} (pending: {}, connected: {})",
-          this.connectionCount(),
-          pendingConnections.size(),
-          connections.size());
+    if (availablePeerSlots <= 0) {
+      return;
     }
+
+    final List<DiscoveryPeer> peers =
+        getDiscoveryPeers()
+            .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED)
+            .filter(peer -> !isConnected(peer) && !isConnecting(peer))
+            .collect(Collectors.toList());
+    Collections.shuffle(peers);
+    if (peers.size() == 0) {
+      return;
+    }
+
+    LOG.trace(
+        "Initiating connection to {} peers from the peer table",
+        Math.min(availablePeerSlots, peers.size()));
+    peers.stream().limit(availablePeerSlots).forEach(this::connect);
   }
 
-  private int connectionCount() {
+  @VisibleForTesting
+  int connectionCount() {
     return pendingConnections.size() + connections.size();
   }
 
@@ -648,11 +652,13 @@ public class NettyP2PNetwork implements P2PNetwork {
     return new EnodeURL(localNodeId, localHostAddress, localPort);
   }
 
-  private boolean isConnecting(final Peer peer) {
+  @VisibleForTesting
+  boolean isConnecting(final Peer peer) {
     return pendingConnections.containsKey(peer);
   }
 
-  private boolean isConnected(final Peer peer) {
+  @VisibleForTesting
+  boolean isConnected(final Peer peer) {
     return connections.isAlreadyConnected(peer.getId());
   }
 
