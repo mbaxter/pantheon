@@ -324,6 +324,59 @@ public class NettyP2PNetwork implements P2PNetwork {
     this.advertisedHost = config.getDiscovery().getAdvertisedHost();
   }
 
+  @Override
+  public void start() {
+    if (isRunning.compareAndSet(false, true)) {
+      scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+      peerDiscoveryAgent.start(ourPeerInfo.getPort()).join();
+      peerBondedObserverId =
+          OptionalLong.of(peerDiscoveryAgent.observePeerBondedEvents(handlePeerBondedEvent()));
+      peerDroppedObserverId =
+          OptionalLong.of(peerDiscoveryAgent.observePeerDroppedEvents(handlePeerDroppedEvents()));
+
+      if (nodePermissioningController.isPresent()) {
+        if (blockchain.isPresent()) {
+          synchronized (this) {
+            if (!blockAddedObserverId.isPresent()) {
+              blockAddedObserverId =
+                  OptionalLong.of(blockchain.get().observeBlockAdded(this::handleBlockAddedEvent));
+            }
+          }
+        } else {
+          throw new IllegalStateException(
+              "NettyP2PNetwork permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
+        }
+      }
+
+      this.ourEnodeURL = buildSelfEnodeURL();
+      LOG.info("Enode URL {}", ourEnodeURL.toString());
+
+      scheduledExecutorService.scheduleWithFixedDelay(
+          this::checkMaintainedConnectionPeers, 60, 60, TimeUnit.SECONDS);
+      scheduledExecutorService.scheduleWithFixedDelay(
+          this::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
+    }
+  }
+
+  @Override
+  public void stop() {
+    if (isRunning.compareAndSet(true, false)) {
+      sendClientQuittingToPeers();
+      scheduledExecutorService.shutdownNow();
+      peerDiscoveryAgent.stop().join();
+      peerBondedObserverId.ifPresent(peerDiscoveryAgent::removePeerBondedObserver);
+      peerBondedObserverId = OptionalLong.empty();
+      peerDroppedObserverId.ifPresent(peerDiscoveryAgent::removePeerDroppedObserver);
+      peerDroppedObserverId = OptionalLong.empty();
+      blockchain.ifPresent(b -> blockAddedObserverId.ifPresent(b::removeObserver));
+      blockAddedObserverId = OptionalLong.empty();
+      peerDiscoveryAgent.stop().join();
+    }
+    // Boss and workers are run from the constructor
+    workers.shutdownGracefully();
+    boss.shutdownGracefully();
+  }
+
   private Supplier<Integer> pendingTaskCounter(final EventLoopGroup eventLoopGroup) {
     return () ->
         StreamSupport.stream(eventLoopGroup.spliterator(), false)
@@ -544,40 +597,6 @@ public class NettyP2PNetwork implements P2PNetwork {
     disconnectCallbacks.subscribe(callback);
   }
 
-  @Override
-  public void start() {
-    if (isRunning.compareAndSet(false, true)) {
-      scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-      peerDiscoveryAgent.start(ourPeerInfo.getPort()).join();
-      peerBondedObserverId =
-          OptionalLong.of(peerDiscoveryAgent.observePeerBondedEvents(handlePeerBondedEvent()));
-      peerDroppedObserverId =
-          OptionalLong.of(peerDiscoveryAgent.observePeerDroppedEvents(handlePeerDroppedEvents()));
-
-      if (nodePermissioningController.isPresent()) {
-        if (blockchain.isPresent()) {
-          synchronized (this) {
-            if (!blockAddedObserverId.isPresent()) {
-              blockAddedObserverId =
-                  OptionalLong.of(blockchain.get().observeBlockAdded(this::handleBlockAddedEvent));
-            }
-          }
-        } else {
-          throw new IllegalStateException(
-              "NettyP2PNetwork permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
-        }
-      }
-
-      this.ourEnodeURL = buildSelfEnodeURL();
-      LOG.info("Enode URL {}", ourEnodeURL.toString());
-
-      scheduledExecutorService.scheduleWithFixedDelay(
-          this::checkMaintainedConnectionPeers, 60, 60, TimeUnit.SECONDS);
-      scheduledExecutorService.scheduleWithFixedDelay(
-          this::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
-    }
-  }
-
   @VisibleForTesting
   Consumer<PeerBondedEvent> handlePeerBondedEvent() {
     return event -> {
@@ -664,24 +683,6 @@ public class NettyP2PNetwork implements P2PNetwork {
   @VisibleForTesting
   boolean isConnected(final Peer peer) {
     return connections.isAlreadyConnected(peer.getId());
-  }
-
-  @Override
-  public void stop() {
-    if (isRunning.compareAndSet(true, false)) {
-      sendClientQuittingToPeers();
-      scheduledExecutorService.shutdownNow();
-      peerDiscoveryAgent.stop().join();
-      peerBondedObserverId.ifPresent(peerDiscoveryAgent::removePeerBondedObserver);
-      peerBondedObserverId = OptionalLong.empty();
-      peerDroppedObserverId.ifPresent(peerDiscoveryAgent::removePeerDroppedObserver);
-      peerDroppedObserverId = OptionalLong.empty();
-      blockchain.ifPresent(b -> blockAddedObserverId.ifPresent(b::removeObserver));
-      blockAddedObserverId = OptionalLong.empty();
-      peerDiscoveryAgent.stop().join();
-      workers.shutdownGracefully();
-      boss.shutdownGracefully();
-    }
   }
 
   private void sendClientQuittingToPeers() {
