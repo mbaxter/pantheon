@@ -131,8 +131,8 @@ public class NettyP2PNetwork implements P2PNetwork {
   private static final Logger LOG = LogManager.getLogger();
   private static final int TIMEOUT_SECONDS = 30;
 
-  private final ScheduledExecutorService scheduledExecutorService =
-      Executors.newSingleThreadScheduledExecutor();;
+  private final ScheduledExecutorService peerConnectionScheduler =
+      Executors.newSingleThreadScheduledExecutor();
 
   final Map<Capability, Subscribers<Consumer<Message>>> protocolCallbacks =
       new ConcurrentHashMap<>();
@@ -568,9 +568,9 @@ public class NettyP2PNetwork implements P2PNetwork {
     this.ourEnodeURL = buildSelfEnodeURL();
     LOG.info("Enode URL {}", ourEnodeURL.toString());
 
-    scheduledExecutorService.scheduleWithFixedDelay(
+    peerConnectionScheduler.scheduleWithFixedDelay(
         this::checkMaintainedConnectionPeers, 60, 60, TimeUnit.SECONDS);
-    scheduledExecutorService.scheduleWithFixedDelay(
+    peerConnectionScheduler.scheduleWithFixedDelay(
         this::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
   }
 
@@ -665,7 +665,7 @@ public class NettyP2PNetwork implements P2PNetwork {
   @Override
   public void stop() {
     sendClientQuittingToPeers();
-    scheduledExecutorService.shutdownNow();
+    peerConnectionScheduler.shutdownNow();
     peerDiscoveryAgent.stop().join();
     peerBondedObserverId.ifPresent(peerDiscoveryAgent::removePeerBondedObserver);
     peerBondedObserverId = OptionalLong.empty();
