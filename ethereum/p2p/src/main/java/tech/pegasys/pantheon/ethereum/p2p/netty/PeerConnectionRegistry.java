@@ -28,7 +28,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-public class PeerConnectionRegistry implements DisconnectCallback {
+public class PeerConnectionRegistry {
 
   private final ConcurrentMap<BytesValue, PeerConnection> connections = new ConcurrentHashMap<>();
 
@@ -74,8 +74,7 @@ public class PeerConnectionRegistry implements DisconnectCallback {
     return Optional.ofNullable(connections.get(nodeID));
   }
 
-  @Override
-  public void onDisconnect(
+  public void handleDisconnect(
       final PeerConnection connection,
       final DisconnectReason reason,
       final boolean initiatedByPeer) {

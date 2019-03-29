@@ -12,6 +12,8 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.testing;
 
+import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicLong;
 import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.Message;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
@@ -26,7 +28,6 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.Discon
 import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -46,6 +47,7 @@ import java.util.function.Consumer;
  * MockNetwork.MockP2PNetwork}s.
  */
 public final class MockNetwork {
+  private static final AtomicLong NEXT_CONNECTION_ID = new AtomicLong(0);
 
   private final Map<Peer, MockNetwork.MockP2PNetwork> nodes = new HashMap<>();
   private final List<Capability> capabilities;
@@ -229,11 +231,13 @@ public final class MockNetwork {
     private final Peer to;
 
     private final MockNetwork network;
+    private final long id;
 
     MockPeerConnection(final Peer source, final Peer target, final MockNetwork network) {
       from = source;
       to = target;
       this.network = network;
+      this.id = NEXT_CONNECTION_ID.incrementAndGet();
     }
 
     @Override
@@ -257,6 +261,11 @@ public final class MockNetwork {
     @Override
     public Set<Capability> getAgreedCapabilities() {
       return new HashSet<>(capabilities);
+    }
+
+    @Override
+    public long getConnectedAt() {
+      return id;
     }
 
     @Override
@@ -287,12 +296,12 @@ public final class MockNetwork {
     }
 
     @Override
-    public SocketAddress getLocalAddress() {
+    public InetSocketAddress getLocalAddress() {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public SocketAddress getRemoteAddress() {
+    public InetSocketAddress getRemoteAddress() {
       throw new UnsupportedOperationException();
     }
   }

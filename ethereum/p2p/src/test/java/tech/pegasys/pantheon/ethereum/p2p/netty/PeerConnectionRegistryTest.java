@@ -57,7 +57,7 @@ public class PeerConnectionRegistryTest {
   public void shouldUnregisterConnections() {
     registry.registerConnection(connection1);
     registry.registerConnection(connection2);
-    registry.onDisconnect(connection1, DisconnectReason.TCP_SUBSYSTEM_ERROR, false);
+    registry.handleDisconnect(connection1, DisconnectReason.TCP_SUBSYSTEM_ERROR, false);
     assertThat(registry.getPeerConnections()).containsOnly(connection2);
     assertThat(registry.size()).isEqualTo(1);
   }

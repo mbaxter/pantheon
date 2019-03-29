@@ -12,13 +12,15 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.api;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.util.Set;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 /** A P2P connection to another node. */
 public interface PeerConnection {
@@ -64,6 +66,11 @@ public interface PeerConnection {
   }
 
   /**
+   * @return The unix timestamp representing the time at which this connection was established.
+   */
+  long getConnectedAt();
+
+  /**
    * Returns the Peer's Description.
    *
    * @return Peer Description
@@ -88,9 +95,16 @@ public interface PeerConnection {
   /** @return True if the peer is disconnected */
   boolean isDisconnected();
 
-  SocketAddress getLocalAddress();
+  InetSocketAddress getLocalAddress();
 
-  SocketAddress getRemoteAddress();
+  InetSocketAddress getRemoteAddress();
+
+  default EnodeURL getRemoteEnodeURL() {
+    final PeerInfo peerInfo = getPeer();
+    final String nodeId = peerInfo.getNodeId().toString().substring(2);
+    final int localPort = peerInfo.getPort();
+    return new EnodeURL(nodeId, getRemoteAddress().getAddress(), localPort);
+  }
 
   class PeerNotConnected extends IOException {
 

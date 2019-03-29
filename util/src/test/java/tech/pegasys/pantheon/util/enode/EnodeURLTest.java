@@ -38,7 +38,7 @@ public class EnodeURLTest {
     final String enodeURLString =
         "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + P2P_PORT + "?" + DISCOVERY_QUERY;
 
-    final EnodeURL enodeURL = new EnodeURL(enodeURLString);
+    final EnodeURL enodeURL = EnodeURL.fromString(enodeURLString);
 
     assertThat(enodeURL).isEqualTo(expectedEnodeURL);
   }
@@ -48,7 +48,7 @@ public class EnodeURLTest {
     final EnodeURL expectedEnodeURL = new EnodeURL(VALID_NODE_ID, IPV4_ADDRESS, P2P_PORT);
     final String enodeURLString = "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + P2P_PORT;
 
-    final EnodeURL enodeURL = new EnodeURL(enodeURLString);
+    final EnodeURL enodeURL = EnodeURL.fromString(enodeURLString);
 
     assertThat(enodeURL).isEqualTo(expectedEnodeURL);
   }
@@ -67,7 +67,7 @@ public class EnodeURLTest {
             + "?"
             + DISCOVERY_QUERY;
 
-    final EnodeURL enodeURL = new EnodeURL(enodeURLString);
+    final EnodeURL enodeURL = EnodeURL.fromString(enodeURLString);
 
     assertThat(enodeURL).isEqualTo(expectedEnodeURL);
   }
@@ -86,7 +86,7 @@ public class EnodeURLTest {
             + "?"
             + DISCOVERY_QUERY;
 
-    final EnodeURL enodeURL = new EnodeURL(enodeURLString);
+    final EnodeURL enodeURL = EnodeURL.fromString(enodeURLString);
 
     assertThat(enodeURL).isEqualTo(expectedEnodeURL);
   }
@@ -94,7 +94,7 @@ public class EnodeURLTest {
   @Test
   public void createEnodeURLWithoutNodeIdShouldFail() {
     final String enodeURLString = "enode://@" + IPV4_ADDRESS + ":" + P2P_PORT;
-    final Throwable thrown = catchThrowable(() -> new EnodeURL(enodeURLString));
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
@@ -105,7 +105,7 @@ public class EnodeURLTest {
   @Test
   public void createEnodeURLWithInvalidSizeNodeIdShouldFail() {
     final String enodeURLString = "enode://wrong_size_string@" + IPV4_ADDRESS + ":" + P2P_PORT;
-    final Throwable thrown = catchThrowable(() -> new EnodeURL(enodeURLString));
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
@@ -120,7 +120,7 @@ public class EnodeURLTest {
             + IPV4_ADDRESS
             + ":"
             + P2P_PORT;
-    final Throwable thrown = catchThrowable(() -> new EnodeURL(enodeURLString));
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
@@ -131,7 +131,7 @@ public class EnodeURLTest {
   @Test
   public void createEnodeURLWithoutIpShouldFail() {
     final String enodeURLString = "enode://" + VALID_NODE_ID + "@:" + P2P_PORT;
-    final Throwable thrown = catchThrowable(() -> new EnodeURL(enodeURLString));
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
@@ -141,7 +141,7 @@ public class EnodeURLTest {
   @Test
   public void createEnodeURLWithInvalidIpFormatShouldFail() {
     final String enodeURLString = "enode://" + VALID_NODE_ID + "@192.0.1:" + P2P_PORT;
-    final Throwable thrown = catchThrowable(() -> new EnodeURL(enodeURLString));
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
@@ -151,7 +151,7 @@ public class EnodeURLTest {
   @Test
   public void createEnodeURLWithoutListeningPortShouldFail() {
     final String enodeURLString = "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":";
-    final Throwable thrown = catchThrowable(() -> new EnodeURL(enodeURLString));
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
@@ -162,7 +162,7 @@ public class EnodeURLTest {
   @Test
   public void createEnodeURLWithoutListeningPortAndWithDiscoveryPortShouldFail() {
     final String enodeURLString = "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":?30301";
-    final Throwable thrown = catchThrowable(() -> new EnodeURL(enodeURLString));
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
@@ -173,7 +173,7 @@ public class EnodeURLTest {
   @Test
   public void createEnodeURLWithAboveRangeListeningPortShouldFail() {
     final String enodeURLString = "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":98765";
-    final Throwable thrown = catchThrowable(() -> new EnodeURL(enodeURLString));
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
@@ -184,7 +184,7 @@ public class EnodeURLTest {
   public void createEnodeURLWithAboveRangeDiscoveryPortShouldFail() {
     final String enodeURLString =
         "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + P2P_PORT + "?discport=98765";
-    final Throwable thrown = catchThrowable(() -> new EnodeURL(enodeURLString));
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
@@ -193,7 +193,7 @@ public class EnodeURLTest {
 
   @Test
   public void createEnodeURLWithNullEnodeURLShouldFail() {
-    final Throwable thrown = catchThrowable(() -> new EnodeURL(null));
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(null));
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
@@ -202,7 +202,7 @@ public class EnodeURLTest {
 
   @Test
   public void createEnodeURLWithEmptyEnodeURLShouldFail() {
-    final Throwable thrown = catchThrowable(() -> new EnodeURL(""));
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(""));
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
@@ -214,7 +214,7 @@ public class EnodeURLTest {
     final String enodeURLString =
         "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + P2P_PORT + "?" + DISCOVERY_QUERY;
     final URI expectedURI = URI.create(enodeURLString);
-    final URI createdURI = new EnodeURL(enodeURLString).toURI();
+    final URI createdURI = EnodeURL.fromString(enodeURLString).toURI();
 
     assertThat(createdURI).isEqualTo(expectedURI);
   }
@@ -223,7 +223,7 @@ public class EnodeURLTest {
   public void toURIWithoutDiscoveryPortCreateExpectedURI() {
     final String enodeURLString = "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + P2P_PORT;
     final URI expectedURI = URI.create(enodeURLString);
-    final URI createdURI = new EnodeURL(enodeURLString).toURI();
+    final URI createdURI = EnodeURL.fromString(enodeURLString).toURI();
 
     assertThat(createdURI).isEqualTo(expectedURI);
   }

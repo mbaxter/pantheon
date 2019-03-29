@@ -41,6 +41,7 @@ public class EnodeURL {
   private final String nodeId;
   private final InetAddress ip;
   private final Integer listeningPort;
+  // DiscoveryPort will only be present if it differs from listening port
   private final OptionalInt discoveryPort;
 
   public EnodeURL(
@@ -51,12 +52,16 @@ public class EnodeURL {
     this(nodeId, InetAddresses.forUriString(ip), listeningPort, discoveryPort);
   }
 
-  public EnodeURL(final String nodeId, final String ip, final Integer listeningPort) {
+  public EnodeURL(final String nodeId, final String ip, final int listeningPort) {
     this(nodeId, ip, listeningPort, OptionalInt.empty());
   }
 
-  public EnodeURL(final String nodeId, final InetAddress address, final Integer listeningPort) {
+  public EnodeURL(final String nodeId, final InetAddress address, final int listeningPort) {
     this(nodeId, address, listeningPort, OptionalInt.empty());
+  }
+
+  public EnodeURL(final String nodeId, final String address, final int listeningPort, final int discoveryPort) {
+    this(nodeId, address, listeningPort, OptionalInt.of(discoveryPort));
   }
 
   public EnodeURL(
@@ -71,22 +76,27 @@ public class EnodeURL {
     }
     this.ip = address;
     this.listeningPort = listeningPort;
-    this.discoveryPort = discoveryPort;
+    if (discoveryPort.isPresent() && discoveryPort.getAsInt() != listeningPort) {
+      this.discoveryPort = discoveryPort;
+    } else {
+      this.discoveryPort = OptionalInt.empty();
+    }
   }
 
-  public EnodeURL(final String value) {
+  public static EnodeURL fromString(final String value) {
     checkArgument(
-        value != null && !value.isEmpty(), "Can't convert null/empty string to EnodeURLProperty.");
+      value != null && !value.isEmpty(), "Can't convert null/empty string to EnodeURLProperty.");
 
     final Matcher enodeMatcher = Pattern.compile(ENODE_URL_PATTERN_NEW).matcher(value);
     checkArgument(
-        enodeMatcher.matches(),
-        "Invalid enode URL syntax. Enode URL should have the following format 'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.");
+      enodeMatcher.matches(),
+      "Invalid enode URL syntax. Enode URL should have the following format 'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.");
 
-    this.nodeId = getAndValidateNodeId(enodeMatcher);
-    this.ip = getAndValidateIp(enodeMatcher);
-    this.listeningPort = getAndValidatePort(enodeMatcher, "listening");
-    this.discoveryPort = getAndValidateDiscoveryPort(enodeMatcher);
+    String nodeId = getAndValidateNodeId(enodeMatcher);
+    InetAddress ip = getAndValidateIp(enodeMatcher);
+    int listeningPort = getAndValidatePort(enodeMatcher, "listening");
+    OptionalInt discoveryPort = getAndValidateDiscoveryPort(enodeMatcher);
+    return new EnodeURL(nodeId, ip, listeningPort, discoveryPort);
   }
 
   public URI toURI() {
@@ -100,7 +110,7 @@ public class EnodeURL {
   }
 
   public static URI asURI(final String url) {
-    return new EnodeURL(url).toURI();
+    return fromString(url).toURI();
   }
 
   private static String getAndValidateNodeId(final Matcher matcher) {
@@ -128,7 +138,7 @@ public class EnodeURL {
     }
   }
 
-  private static Integer getAndValidatePort(final Matcher matcher, final String portName) {
+  private static int getAndValidatePort(final Matcher matcher, final String portName) {
     int port = Integer.valueOf(matcher.group(portName));
     checkArgument(
         NetworkUtility.isValidPort(port),

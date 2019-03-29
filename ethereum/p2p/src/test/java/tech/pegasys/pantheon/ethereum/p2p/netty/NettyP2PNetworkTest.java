@@ -42,11 +42,12 @@ import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
-import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.IncompatiblePeerException;
+import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.IncompatiblePeerConnectionException;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
@@ -98,7 +99,7 @@ public final class NettyP2PNetworkTest {
 
   private final String selfEnodeString =
       "enode://5f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0@192.168.0.10:1111";
-  private final EnodeURL selfEnode = new EnodeURL(selfEnodeString);
+  private final EnodeURL selfEnode = EnodeURL.fromString(selfEnodeString);
 
   @Before
   public void before() {
@@ -358,7 +359,7 @@ public final class NettyP2PNetworkTest {
                   listenPort,
                   OptionalInt.of(listenPort)));
       final CompletableFuture<PeerConnection> connectFuture = connector.connect(listenerPeer);
-      assertThatThrownBy(connectFuture::get).hasCauseInstanceOf(IncompatiblePeerException.class);
+      assertThatThrownBy(connectFuture::get).hasCauseInstanceOf(IncompatiblePeerConnectionException.class);
     }
   }
 
@@ -526,69 +527,6 @@ public final class NettyP2PNetworkTest {
     }
   }
 
-  @Test
-  public void addingMaintainedNetworkPeerStartsConnection() {
-    final NettyP2PNetwork network = mockNettyP2PNetwork();
-    final Peer peer = mockPeer();
-
-    assertThat(network.addMaintainConnectionPeer(peer)).isTrue();
-
-    assertThat(network.peerMaintainConnectionList).contains(peer);
-    verify(network, times(1)).connect(peer);
-  }
-
-  @Test
-  public void addingRepeatMaintainedPeersReturnsFalse() {
-    final NettyP2PNetwork network = nettyP2PNetwork();
-    final Peer peer = mockPeer();
-    assertThat(network.addMaintainConnectionPeer(peer)).isTrue();
-    assertThat(network.addMaintainConnectionPeer(peer)).isFalse();
-  }
-
-  @Test
-  public void checkMaintainedConnectionPeersTriesToConnect() {
-    final NettyP2PNetwork network = mockNettyP2PNetwork();
-    final Peer peer = mockPeer();
-    network.peerMaintainConnectionList.add(peer);
-
-    network.checkMaintainedConnectionPeers();
-    verify(network, times(1)).connect(peer);
-  }
-
-  @Test
-  public void checkMaintainedConnectionPeersDoesntReconnectPendingPeers() {
-    final NettyP2PNetwork network = mockNettyP2PNetwork();
-    final Peer peer = mockPeer();
-
-    network.pendingConnections.put(peer, new CompletableFuture<>());
-
-    network.checkMaintainedConnectionPeers();
-    verify(network, times(0)).connect(peer);
-  }
-
-  @Test
-  public void checkMaintainedConnectionPeersDoesntReconnectConnectedPeers() {
-    final NettyP2PNetwork network = spy(nettyP2PNetwork());
-    final Peer peer = mockPeer();
-    verify(network, never()).connect(peer);
-    assertThat(network.addMaintainConnectionPeer(peer)).isTrue();
-    verify(network, times(1)).connect(peer);
-
-    {
-      final CompletableFuture<PeerConnection> connection;
-      connection = network.pendingConnections.remove(peer);
-      assertThat(connection).isNotNull();
-      assertThat(connection.cancel(true)).isTrue();
-    }
-
-    {
-      final PeerConnection peerConnection = mockPeerConnection(peer.getId());
-      network.connections.registerConnection(peerConnection);
-      network.checkMaintainedConnectionPeers();
-      verify(network, times(1)).connect(peer);
-    }
-  }
-
   private SubProtocol subProtocol() {
     return new SubProtocol() {
       @Override
@@ -723,8 +661,8 @@ public final class NettyP2PNetworkTest {
     final PeerConnection notPermittedPeerConnection =
         mockPeerConnection(localPeer, notPermittedPeer);
 
-    final EnodeURL permittedEnodeURL = new EnodeURL(permittedPeer.getEnodeURLString());
-    final EnodeURL notPermittedEnodeURL = new EnodeURL(notPermittedPeer.getEnodeURLString());
+    final EnodeURL permittedEnodeURL = EnodeURL.fromString(permittedPeer.getEnodeURLString());
+    final EnodeURL notPermittedEnodeURL = EnodeURL.fromString(notPermittedPeer.getEnodeURLString());
 
     nettyP2PNetwork.start();
     nettyP2PNetwork.connect(permittedPeer).complete(permittedPeerConnection);
@@ -744,51 +682,6 @@ public final class NettyP2PNetworkTest {
 
     verify(notPermittedPeerConnection).disconnect(eq(DisconnectReason.REQUESTED));
     verify(permittedPeerConnection, never()).disconnect(any());
-  }
-
-  @Test
-  public void removePeerReturnsTrueIfNodeWasInMaintaineConnectionsAndDisconnectsIfInPending() {
-    final NettyP2PNetwork nettyP2PNetwork = nettyP2PNetwork();
-    nettyP2PNetwork.start();
-
-    final Peer localPeer = mockPeer("127.0.0.1", 30301);
-    final Peer remotePeer = mockPeer("127.0.0.2", 30302);
-    final PeerConnection peerConnection = mockPeerConnection(localPeer, remotePeer);
-
-    nettyP2PNetwork.addMaintainConnectionPeer(remotePeer);
-    assertThat(nettyP2PNetwork.peerMaintainConnectionList.contains(remotePeer)).isTrue();
-    assertThat(nettyP2PNetwork.pendingConnections.containsKey(remotePeer)).isTrue();
-    assertThat(nettyP2PNetwork.removeMaintainedConnectionPeer(remotePeer)).isTrue();
-    assertThat(nettyP2PNetwork.peerMaintainConnectionList.contains(remotePeer)).isFalse();
-
-    // Note: The pendingConnection future is not removed.
-    assertThat(nettyP2PNetwork.pendingConnections.containsKey(remotePeer)).isTrue();
-
-    // Complete the connection, and ensure "disconnect is automatically called.
-    nettyP2PNetwork.pendingConnections.get(remotePeer).complete(peerConnection);
-    verify(peerConnection).disconnect(DisconnectReason.REQUESTED);
-  }
-
-  @Test
-  public void removePeerReturnsFalseIfNotInMaintainedListButDisconnectsPeer() {
-    final NettyP2PNetwork nettyP2PNetwork = nettyP2PNetwork();
-    nettyP2PNetwork.start();
-
-    final Peer localPeer = mockPeer("127.0.0.1", 30301);
-    final Peer remotePeer = mockPeer("127.0.0.2", 30302);
-    final PeerConnection peerConnection = mockPeerConnection(localPeer, remotePeer);
-
-    CompletableFuture<PeerConnection> future = nettyP2PNetwork.connect(remotePeer);
-
-    assertThat(nettyP2PNetwork.peerMaintainConnectionList.contains(remotePeer)).isFalse();
-    assertThat(nettyP2PNetwork.pendingConnections.containsKey(remotePeer)).isTrue();
-    future.complete(peerConnection);
-    assertThat(nettyP2PNetwork.pendingConnections.containsKey(remotePeer)).isFalse();
-
-    assertThat(nettyP2PNetwork.removeMaintainedConnectionPeer(remotePeer)).isFalse();
-    assertThat(nettyP2PNetwork.peerMaintainConnectionList.contains(remotePeer)).isFalse();
-
-    verify(peerConnection).disconnect(DisconnectReason.REQUESTED);
   }
 
   @Test
@@ -815,130 +708,6 @@ public final class NettyP2PNetworkTest {
 
     network.handlePeerBondedEvent().accept(peerBondedEvent);
     verify(network, times(1)).connect(peer);
-  }
-
-  @Test
-  public void attemptPeerConnections_connectsToValidPeer() {
-    final int maxPeers = 5;
-    final NettyP2PNetwork network =
-        mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-
-    doReturn(2).when(network).connectionCount();
-    DiscoveryPeer peer = createDiscoveryPeer(0);
-    peer.setStatus(PeerDiscoveryStatus.BONDED);
-
-    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
-    ArgumentCaptor<DiscoveryPeer> peerCapture = ArgumentCaptor.forClass(DiscoveryPeer.class);
-    doReturn(CompletableFuture.completedFuture(mock(PeerConnection.class)))
-        .when(network)
-        .connect(peerCapture.capture());
-
-    network.attemptPeerConnections();
-    verify(network, times(1)).connect(any());
-    assertThat(peerCapture.getValue()).isEqualTo(peer);
-  }
-
-  @Test
-  public void attemptPeerConnections_ignoresUnbondedPeer() {
-    final int maxPeers = 5;
-    final NettyP2PNetwork network =
-        mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-
-    doReturn(2).when(network).connectionCount();
-    DiscoveryPeer peer = createDiscoveryPeer(0);
-    peer.setStatus(PeerDiscoveryStatus.KNOWN);
-
-    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
-
-    network.attemptPeerConnections();
-    verify(network, times(0)).connect(any());
-  }
-
-  @Test
-  public void attemptPeerConnections_ignoresConnectingPeer() {
-    final int maxPeers = 5;
-    final NettyP2PNetwork network =
-        mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-
-    doReturn(2).when(network).connectionCount();
-    DiscoveryPeer peer = createDiscoveryPeer(0);
-    peer.setStatus(PeerDiscoveryStatus.BONDED);
-
-    doReturn(true).when(network).isConnecting(peer);
-    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
-
-    network.attemptPeerConnections();
-    verify(network, times(0)).connect(any());
-  }
-
-  @Test
-  public void attemptPeerConnections_ignoresConnectedPeer() {
-    final int maxPeers = 5;
-    final NettyP2PNetwork network =
-        mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-
-    doReturn(2).when(network).connectionCount();
-    DiscoveryPeer peer = createDiscoveryPeer(0);
-    peer.setStatus(PeerDiscoveryStatus.BONDED);
-
-    doReturn(true).when(network).isConnected(peer);
-    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
-
-    network.attemptPeerConnections();
-    verify(network, times(0)).connect(any());
-  }
-
-  @Test
-  public void attemptPeerConnections_withSlotsAvailable() {
-    final int maxPeers = 5;
-    final NettyP2PNetwork network =
-        mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-
-    doReturn(2).when(network).connectionCount();
-    List<DiscoveryPeer> peers =
-        Stream.iterate(1, n -> n + 1)
-            .limit(10)
-            .map(
-                (seed) -> {
-                  DiscoveryPeer peer = createDiscoveryPeer(seed);
-                  peer.setStatus(PeerDiscoveryStatus.BONDED);
-                  return peer;
-                })
-            .collect(Collectors.toList());
-
-    doReturn(peers.stream()).when(network).getDiscoveryPeers();
-    ArgumentCaptor<DiscoveryPeer> peerCapture = ArgumentCaptor.forClass(DiscoveryPeer.class);
-    doReturn(CompletableFuture.completedFuture(mock(PeerConnection.class)))
-        .when(network)
-        .connect(peerCapture.capture());
-
-    network.attemptPeerConnections();
-    verify(network, times(3)).connect(any());
-    assertThat(peers.containsAll(peerCapture.getAllValues())).isTrue();
-  }
-
-  @Test
-  public void attemptPeerConnections_withNoSlotsAvailable() {
-    final int maxPeers = 5;
-    final NettyP2PNetwork network =
-        mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-
-    doReturn(maxPeers).when(network).connectionCount();
-    List<DiscoveryPeer> peers =
-        Stream.iterate(1, n -> n + 1)
-            .limit(10)
-            .map(
-                (seed) -> {
-                  DiscoveryPeer peer = createDiscoveryPeer(seed);
-                  peer.setStatus(PeerDiscoveryStatus.BONDED);
-                  return peer;
-                })
-            .collect(Collectors.toList());
-
-    lenient().doReturn(peers.stream()).when(network).getDiscoveryPeers();
-
-    network.attemptPeerConnections();
-    verify(network, times(0)).connect(any());
   }
 
   private DiscoveryPeer createDiscoveryPeer(final int seed) {
@@ -1026,31 +795,11 @@ public final class NettyP2PNetworkTest {
   }
 
   private Peer mockPeer() {
-    return mockPeer(
-        SECP256K1.KeyPair.generate().getPublicKey().getEncodedBytes(), "127.0.0.1", 30303);
+    return PeerTestHelper.mockPeer();
   }
 
   private Peer mockPeer(final String host, final int port) {
-    final BytesValue id = SECP256K1.KeyPair.generate().getPublicKey().getEncodedBytes();
-    return mockPeer(id, host, port);
-  }
-
-  private Peer mockPeer(final BytesValue id, final String host, final int port) {
-    final Peer peer = mock(Peer.class);
-    final Endpoint endpoint = new Endpoint(host, port, OptionalInt.of(port));
-    final String enodeURL =
-        String.format(
-            "enode://%s@%s:%d?discport=%d",
-            id.toString().substring(2),
-            endpoint.getHost(),
-            endpoint.getUdpPort(),
-            endpoint.getTcpPort().getAsInt());
-
-    when(peer.getId()).thenReturn(id);
-    when(peer.getEndpoint()).thenReturn(endpoint);
-    when(peer.getEnodeURLString()).thenReturn(enodeURL);
-
-    return peer;
+    return PeerTestHelper.mockPeer(host, port);
   }
 
   public static class EnodeURLMatcher implements ArgumentMatcher<EnodeURL> {

@@ -14,7 +14,7 @@ package tech.pegasys.pantheon.ethereum.p2p.netty;
 
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
-import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.IncompatiblePeerException;
+import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.IncompatiblePeerConnectionException;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.Framer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.FramingException;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
@@ -101,7 +101,7 @@ final class DeFramer extends ByteToMessageDecoder {
           LOG.debug(
               "Disconnecting from {} because no capabilities are shared.", peerInfo.getClientId());
           connectFuture.completeExceptionally(
-              new IncompatiblePeerException("No shared capabilities"));
+              new IncompatiblePeerConnectionException("No shared capabilities"));
           connection.disconnect(DisconnectReason.USELESS_PEER);
           return;
         }

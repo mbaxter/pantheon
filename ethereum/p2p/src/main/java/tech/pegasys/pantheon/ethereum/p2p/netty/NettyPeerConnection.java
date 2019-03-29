@@ -15,6 +15,7 @@ package tech.pegasys.pantheon.ethereum.p2p.netty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason.TCP_SUBSYSTEM_ERROR;
 
+import java.net.InetSocketAddress;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
@@ -26,7 +27,6 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.WireMessageCodes;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
 
-import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -53,6 +53,7 @@ final class NettyPeerConnection implements PeerConnection {
   private final Callbacks callbacks;
   private final CapabilityMultiplexer multiplexer;
   private final LabelledMetric<Counter> outboundMessagesCounter;
+  private final long connectedAt;
 
   public NettyPeerConnection(
       final ChannelHandlerContext ctx,
@@ -69,7 +70,13 @@ final class NettyPeerConnection implements PeerConnection {
     }
     this.callbacks = callbacks;
     this.outboundMessagesCounter = outboundMessagesCounter;
+    this.connectedAt = System.currentTimeMillis();
     ctx.channel().closeFuture().addListener(f -> terminateConnection(TCP_SUBSYSTEM_ERROR, false));
+  }
+
+  @Override
+  public long getConnectedAt() {
+    return connectedAt;
   }
 
   @Override
@@ -156,13 +163,13 @@ final class NettyPeerConnection implements PeerConnection {
   }
 
   @Override
-  public SocketAddress getLocalAddress() {
-    return ctx.channel().localAddress();
+  public InetSocketAddress getLocalAddress() {
+    return (InetSocketAddress) ctx.channel().localAddress();
   }
 
   @Override
-  public SocketAddress getRemoteAddress() {
-    return ctx.channel().remoteAddress();
+  public InetSocketAddress getRemoteAddress() {
+    return (InetSocketAddress) ctx.channel().remoteAddress();
   }
 
   @Override

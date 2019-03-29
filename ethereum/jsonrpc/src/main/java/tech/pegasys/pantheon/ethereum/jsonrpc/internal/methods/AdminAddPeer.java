@@ -17,8 +17,8 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcError;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcErrorResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcSuccessResponse;
-import tech.pegasys.pantheon.ethereum.p2p.ConnectingToLocalNodeException;
-import tech.pegasys.pantheon.ethereum.p2p.PeerNotPermittedException;
+import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.ConnectingToLocalNodeException;
+import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.PeerNotPermittedException;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
@@ -44,7 +44,7 @@ public class AdminAddPeer extends AdminModifyPeer {
   protected JsonRpcResponse performOperation(final Object id, final String enode) {
     try {
       LOG.debug("Adding ({}) to peers", enode);
-      final EnodeURL enodeURL = new EnodeURL(enode);
+      final EnodeURL enodeURL = EnodeURL.fromString(enode);
       final Peer peer = DefaultPeer.fromEnodeURL(enodeURL);
       boolean addedToNetwork = peerNetwork.addMaintainConnectionPeer(peer);
       return new JsonRpcSuccessResponse(id, addedToNetwork);

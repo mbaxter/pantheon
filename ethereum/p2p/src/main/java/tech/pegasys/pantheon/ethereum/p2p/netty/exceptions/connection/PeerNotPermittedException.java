@@ -10,9 +10,11 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p;
+package tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection;
 
-public class PeerNotPermittedException extends RuntimeException {
+import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.ConnectionException;
+
+public class PeerNotPermittedException extends ConnectionException {
   public PeerNotPermittedException(final String message) {
     super(message);
   }
