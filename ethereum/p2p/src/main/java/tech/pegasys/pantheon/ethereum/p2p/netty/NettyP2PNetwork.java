@@ -361,7 +361,6 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
                     ourPeerInfo,
                     connectionFuture,
                     peerConnectionEventHandler,
-                    peerConnectionManager.getActiveConnections(),
                     outboundMessagesCounter));
 
         connectionFuture.thenAccept(
@@ -423,7 +422,6 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
                             ourPeerInfo,
                             connectionFuture,
                             peerConnectionEventHandler,
-                            peerConnectionManager.getActiveConnections(),
                             outboundMessagesCounter));
               }
             })

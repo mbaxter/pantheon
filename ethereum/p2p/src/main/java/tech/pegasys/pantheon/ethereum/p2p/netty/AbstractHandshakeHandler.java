@@ -47,7 +47,6 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
   private final PeerInfo ourInfo;
 
   private final PeerConnectionEventDispatcher peerEventDispatcher;
-  private final PeerConnectionRegistry peerConnectionRegistry;
 
   private final CompletableFuture<PeerConnection> connectionFuture;
   private final List<SubProtocol> subProtocols;
@@ -59,13 +58,11 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
       final PeerInfo ourInfo,
       final CompletableFuture<PeerConnection> connectionFuture,
       final PeerConnectionEventDispatcher peerEventDispatcher,
-      final PeerConnectionRegistry peerConnectionRegistry,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     this.subProtocols = subProtocols;
     this.ourInfo = ourInfo;
     this.connectionFuture = connectionFuture;
     this.peerEventDispatcher = peerEventDispatcher;
-    this.peerConnectionRegistry = peerConnectionRegistry;
     this.outboundMessagesCounter = outboundMessagesCounter;
   }
 
@@ -85,22 +82,6 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
     } else if (handshaker.getStatus() != Handshaker.HandshakeStatus.SUCCESS) {
       LOG.debug("waiting for more bytes");
     } else {
-
-      final BytesValue nodeId = handshaker.partyPubKey().getEncodedBytes();
-      if (peerConnectionRegistry.isAlreadyConnected(nodeId)) {
-        LOG.debug("Rejecting connection from already connected client {}", nodeId);
-        ctx.writeAndFlush(
-                new OutboundMessage(
-                    null, DisconnectMessage.create(DisconnectReason.ALREADY_CONNECTED)))
-            .addListener(
-                ff -> {
-                  ctx.close();
-                  connectionFuture.completeExceptionally(
-                      new IllegalStateException("Client already connected"));
-                });
-        return;
-      }
-
       LOG.debug("Sending framed hello");
 
       // Exchange keys done
