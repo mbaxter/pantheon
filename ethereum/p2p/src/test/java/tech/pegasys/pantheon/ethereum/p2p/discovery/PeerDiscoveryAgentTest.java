@@ -116,7 +116,7 @@ public class PeerDiscoveryAgentTest {
   }
 
   @Test
-  public void shouldEvictPeerOnDisconnect() {
+  public void dropPeer() {
     final MockPeerDiscoveryAgent peerDiscoveryAgent1 = helper.startDiscoveryAgent();
     peerDiscoveryAgent1.start(BROADCAST_TCP_PORT).join();
     final DiscoveryPeer peer = peerDiscoveryAgent1.getAdvertisedPeer().get();
@@ -126,8 +126,7 @@ public class PeerDiscoveryAgentTest {
 
     assertThat(peerDiscoveryAgent2.getPeers().collect(toList()).size()).isEqualTo(1);
 
-    final PeerConnection peerConnection = createAnonymousPeerConnection(peer.getId());
-    peerDiscoveryAgent2.onDisconnect(peerConnection, DisconnectReason.REQUESTED, true);
+    peerDiscoveryAgent2.dropPeer(peer.getId());
 
     assertThat(peerDiscoveryAgent2.getPeers().collect(toList()).size()).isEqualTo(0);
   }
@@ -148,7 +147,7 @@ public class PeerDiscoveryAgentTest {
 
     // Disconnect with innocuous reason
     blacklist.onDisconnect(wirePeer, DisconnectReason.TOO_MANY_PEERS, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.TOO_MANY_PEERS, false);
+    agent.dropPeer(wirePeer.getPeer().getNodeId());
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -181,7 +180,7 @@ public class PeerDiscoveryAgentTest {
 
     // Disconnect with problematic reason
     blacklist.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, false);
+    agent.dropPeer(wirePeer.getPeer().getNodeId());
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -208,7 +207,7 @@ public class PeerDiscoveryAgentTest {
 
     // Disconnect with problematic reason
     blacklist.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, true);
-    agent.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, true);
+    agent.dropPeer(wirePeer.getPeer().getNodeId());
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -235,7 +234,7 @@ public class PeerDiscoveryAgentTest {
 
     // Disconnect
     blacklist.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, false);
+    agent.dropPeer(wirePeer.getPeer().getNodeId());
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -262,7 +261,7 @@ public class PeerDiscoveryAgentTest {
 
     // Disconnect
     blacklist.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, true);
-    agent.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, true);
+    agent.dropPeer(wirePeer.getPeer().getNodeId());
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 

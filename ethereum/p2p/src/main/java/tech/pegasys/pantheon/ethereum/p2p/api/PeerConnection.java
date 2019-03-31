@@ -12,15 +12,14 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.api;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Set;
-import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 /** A P2P connection to another node. */
 public interface PeerConnection {
@@ -65,9 +64,7 @@ public interface PeerConnection {
     send(capability(protocol), message);
   }
 
-  /**
-   * @return The unix timestamp representing the time at which this connection was established.
-   */
+  /** @return The unix timestamp representing the time at which this connection was established. */
   long getConnectedAt();
 
   /**

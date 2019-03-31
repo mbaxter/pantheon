@@ -12,7 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.eth.manager;
 
-import java.net.InetSocketAddress;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
@@ -20,6 +19,7 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -45,8 +45,7 @@ public class MockPeerConnection implements PeerConnection {
 
   private Bytes32 generateUsefulNodeId() {
     // EthPeer only shows the first 20 characters of the node ID so add some padding.
-    return Bytes32.fromHexStringLenient(
-        "0x" + this.id + Strings.repeat("0", 46));
+    return Bytes32.fromHexStringLenient("0x" + this.id + Strings.repeat("0", 46));
   }
 
   public MockPeerConnection(final Set<Capability> caps) {

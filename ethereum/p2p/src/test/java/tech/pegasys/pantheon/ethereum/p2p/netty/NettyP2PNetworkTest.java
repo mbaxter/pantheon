@@ -41,7 +41,6 @@ import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.IncompatiblePeerConnectionException;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
@@ -71,8 +70,6 @@ import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import io.vertx.core.Vertx;
 import org.junit.After;
@@ -359,7 +356,8 @@ public final class NettyP2PNetworkTest {
                   listenPort,
                   OptionalInt.of(listenPort)));
       final CompletableFuture<PeerConnection> connectFuture = connector.connect(listenerPeer);
-      assertThatThrownBy(connectFuture::get).hasCauseInstanceOf(IncompatiblePeerConnectionException.class);
+      assertThatThrownBy(connectFuture::get)
+          .hasCauseInstanceOf(IncompatiblePeerConnectionException.class);
     }
   }
 

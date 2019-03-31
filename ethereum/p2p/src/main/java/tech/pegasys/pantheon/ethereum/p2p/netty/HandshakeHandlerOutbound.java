@@ -42,14 +42,14 @@ public final class HandshakeHandlerOutbound extends AbstractHandshakeHandler {
       final List<SubProtocol> subProtocols,
       final PeerInfo ourInfo,
       final CompletableFuture<PeerConnection> connectionFuture,
-      final Callbacks callbacks,
+      final PeerConnectionEventDispatcher peerEventDispatcher,
       final PeerConnectionRegistry peerConnectionRegistry,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     super(
         subProtocols,
         ourInfo,
         connectionFuture,
-        callbacks,
+        peerEventDispatcher,
         peerConnectionRegistry,
         outboundMessagesCounter);
     handshaker.prepareInitiator(kp, SECP256K1.PublicKey.create(peerId));

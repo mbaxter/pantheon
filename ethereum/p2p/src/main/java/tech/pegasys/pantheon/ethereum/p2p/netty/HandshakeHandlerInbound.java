@@ -33,14 +33,14 @@ public final class HandshakeHandlerInbound extends AbstractHandshakeHandler {
       final List<SubProtocol> subProtocols,
       final PeerInfo ourInfo,
       final CompletableFuture<PeerConnection> connectionFuture,
-      final Callbacks callbacks,
+      final PeerConnectionEventDispatcher peerConnectionEventDispatcher,
       final PeerConnectionRegistry peerConnectionRegistry,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     super(
         subProtocols,
         ourInfo,
         connectionFuture,
-        callbacks,
+        peerConnectionEventDispatcher,
         peerConnectionRegistry,
         outboundMessagesCounter);
     handshaker.prepareResponder(kp);

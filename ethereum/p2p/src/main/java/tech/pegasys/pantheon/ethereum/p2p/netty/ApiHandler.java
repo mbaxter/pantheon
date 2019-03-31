@@ -35,17 +35,17 @@ final class ApiHandler extends SimpleChannelInboundHandler<MessageData> {
   private final CapabilityMultiplexer multiplexer;
   private final AtomicBoolean waitingForPong;
 
-  private final Callbacks callbacks;
+  private final PeerConnectionEventDispatcher peerEventDispatcher;
 
   private final PeerConnection connection;
 
   ApiHandler(
       final CapabilityMultiplexer multiplexer,
       final PeerConnection connection,
-      final Callbacks callbacks,
+      final PeerConnectionEventDispatcher peerEventDispatcher,
       final AtomicBoolean waitingForPong) {
     this.multiplexer = multiplexer;
-    this.callbacks = callbacks;
+    this.peerEventDispatcher = peerEventDispatcher;
     this.connection = connection;
     this.waitingForPong = waitingForPong;
   }
@@ -95,13 +95,14 @@ final class ApiHandler extends SimpleChannelInboundHandler<MessageData> {
       }
       return;
     }
-    callbacks.invokeSubProtocol(connection, demultiplexed.getCapability(), message);
+    peerEventDispatcher.dispatchMessageReceived(connection, demultiplexed.getCapability(), message);
   }
 
   @Override
   public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable throwable) {
     LOG.error("Error:", throwable);
-    callbacks.invokeDisconnect(connection, DisconnectReason.TCP_SUBSYSTEM_ERROR, false);
+    peerEventDispatcher.dispatchPeerDisconnected(
+        connection, DisconnectReason.TCP_SUBSYSTEM_ERROR, false);
     ctx.close();
   }
 }

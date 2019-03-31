@@ -15,7 +15,6 @@ package tech.pegasys.pantheon.ethereum.p2p.netty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason.TCP_SUBSYSTEM_ERROR;
 
-import java.net.InetSocketAddress;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
@@ -27,6 +26,7 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.WireMessageCodes;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
 
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -50,7 +50,7 @@ final class NettyPeerConnection implements PeerConnection {
   private final Map<String, Capability> protocolToCapability = new HashMap<>();
   private final AtomicBoolean disconnectDispatched = new AtomicBoolean(false);
   private final AtomicBoolean disconnected = new AtomicBoolean(false);
-  private final Callbacks callbacks;
+  private final PeerConnectionEventDispatcher peerEventDispatcher;
   private final CapabilityMultiplexer multiplexer;
   private final LabelledMetric<Counter> outboundMessagesCounter;
   private final long connectedAt;
@@ -59,7 +59,7 @@ final class NettyPeerConnection implements PeerConnection {
       final ChannelHandlerContext ctx,
       final PeerInfo peerInfo,
       final CapabilityMultiplexer multiplexer,
-      final Callbacks callbacks,
+      final PeerConnectionEventDispatcher peerEventDispatcher,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     this.ctx = ctx;
     this.peerInfo = peerInfo;
@@ -68,7 +68,7 @@ final class NettyPeerConnection implements PeerConnection {
     for (final Capability cap : agreedCapabilities) {
       protocolToCapability.put(cap.getName(), cap);
     }
-    this.callbacks = callbacks;
+    this.peerEventDispatcher = peerEventDispatcher;
     this.outboundMessagesCounter = outboundMessagesCounter;
     this.connectedAt = System.currentTimeMillis();
     ctx.channel().closeFuture().addListener(f -> terminateConnection(TCP_SUBSYSTEM_ERROR, false));
@@ -133,7 +133,7 @@ final class NettyPeerConnection implements PeerConnection {
   public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {
     if (disconnectDispatched.compareAndSet(false, true)) {
       LOG.debug("Disconnected ({}) from {}", reason, peerInfo);
-      callbacks.invokeDisconnect(this, reason, peerInitiated);
+      peerEventDispatcher.dispatchPeerDisconnected(this, reason, peerInitiated);
       disconnected.set(true);
     }
     // Always ensure the context gets closed immediately even if we previously sent a disconnect
@@ -145,7 +145,7 @@ final class NettyPeerConnection implements PeerConnection {
   public void disconnect(final DisconnectReason reason) {
     if (disconnectDispatched.compareAndSet(false, true)) {
       LOG.debug("Disconnecting ({}) from {}", reason, peerInfo);
-      callbacks.invokeDisconnect(this, reason, false);
+      peerEventDispatcher.dispatchPeerDisconnected(this, reason, false);
       try {
         send(null, DisconnectMessage.create(reason));
       } catch (final PeerNotConnected e) {

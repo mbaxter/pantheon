@@ -12,8 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection;
 
-import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.ConnectionException;
-
 public class PeerNotPermittedException extends ConnectionException {
   public PeerNotPermittedException(final String message) {
     super(message);

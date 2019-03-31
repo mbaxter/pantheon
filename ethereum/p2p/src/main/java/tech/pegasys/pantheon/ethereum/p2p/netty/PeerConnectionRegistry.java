@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.ethereum.p2p.netty;
 
 import static java.util.Collections.unmodifiableCollection;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.metrics.Counter;

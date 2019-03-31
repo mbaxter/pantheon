@@ -38,7 +38,8 @@ public class NettyPeerConnectionTest {
   private final ChannelFuture closeFuture = mock(ChannelFuture.class);
   private final EventLoop eventLoop = mock(EventLoop.class);
   private final CapabilityMultiplexer multiplexer = mock(CapabilityMultiplexer.class);
-  private final Callbacks callbacks = mock(Callbacks.class);
+  private final PeerConnectionEventDispatcher peerEventDispatcher =
+      mock(PeerConnectionEventDispatcher.class);
   private final PeerInfo peerInfo = new PeerInfo(5, "foo", emptyList(), 0, BytesValue.of(1));
 
   private NettyPeerConnection connection;
@@ -50,7 +51,11 @@ public class NettyPeerConnectionTest {
     when(channel.eventLoop()).thenReturn(eventLoop);
     connection =
         new NettyPeerConnection(
-            context, peerInfo, multiplexer, callbacks, NoOpMetricsSystem.NO_OP_LABELLED_COUNTER);
+            context,
+            peerInfo,
+            multiplexer,
+            peerEventDispatcher,
+            NoOpMetricsSystem.NO_OP_LABELLED_COUNTER);
   }
 
   @Test

@@ -12,8 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.testing;
 
-import java.net.InetSocketAddress;
-import java.util.concurrent.atomic.AtomicLong;
 import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.Message;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
@@ -28,6 +26,7 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.Discon
 import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -38,6 +37,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**

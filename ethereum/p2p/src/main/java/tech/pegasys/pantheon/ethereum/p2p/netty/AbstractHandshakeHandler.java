@@ -46,7 +46,7 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
 
   private final PeerInfo ourInfo;
 
-  private final Callbacks callbacks;
+  private final PeerConnectionEventDispatcher peerEventDispatcher;
   private final PeerConnectionRegistry peerConnectionRegistry;
 
   private final CompletableFuture<PeerConnection> connectionFuture;
@@ -58,13 +58,13 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
       final List<SubProtocol> subProtocols,
       final PeerInfo ourInfo,
       final CompletableFuture<PeerConnection> connectionFuture,
-      final Callbacks callbacks,
+      final PeerConnectionEventDispatcher peerEventDispatcher,
       final PeerConnectionRegistry peerConnectionRegistry,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     this.subProtocols = subProtocols;
     this.ourInfo = ourInfo;
     this.connectionFuture = connectionFuture;
-    this.callbacks = callbacks;
+    this.peerEventDispatcher = peerEventDispatcher;
     this.peerConnectionRegistry = peerConnectionRegistry;
     this.outboundMessagesCounter = outboundMessagesCounter;
   }
@@ -108,7 +108,12 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
 
       final ByteToMessageDecoder deFramer =
           new DeFramer(
-              framer, subProtocols, ourInfo, callbacks, connectionFuture, outboundMessagesCounter);
+              framer,
+              subProtocols,
+              ourInfo,
+              peerEventDispatcher,
+              connectionFuture,
+              outboundMessagesCounter);
 
       ctx.channel()
           .pipeline()

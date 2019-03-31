@@ -12,8 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection;
 
-import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.ConnectionException;
-
 public class IncompatiblePeerConnectionException extends ConnectionException {
 
   public IncompatiblePeerConnectionException(final String message) {

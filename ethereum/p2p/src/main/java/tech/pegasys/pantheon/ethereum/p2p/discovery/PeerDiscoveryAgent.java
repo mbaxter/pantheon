@@ -18,8 +18,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static tech.pegasys.pantheon.util.bytes.BytesValue.wrapBuffer;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
-import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
-import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
@@ -33,7 +31,6 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.TimerUtil;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeerId;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
@@ -61,7 +58,7 @@ import org.apache.logging.log4j.Logger;
  * The peer discovery agent is the network component that sends and receives peer discovery messages
  * via UDP.
  */
-public abstract class PeerDiscoveryAgent implements DisconnectCallback {
+public abstract class PeerDiscoveryAgent {
   protected static final Logger LOG = LogManager.getLogger();
 
   // The devp2p specification says only accept packets up to 1280, but some
@@ -309,12 +306,7 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
     checkArgument(config.getBucketSize() > 0, "bucket size cannot be negative nor zero");
   }
 
-  @Override
-  public void onDisconnect(
-      final PeerConnection connection,
-      final DisconnectMessage.DisconnectReason reason,
-      final boolean initiatedByPeer) {
-    final BytesValue nodeId = connection.getPeer().getNodeId();
+  public void dropPeer(final BytesValue nodeId) {
     peerTable.tryEvict(new DefaultPeerId(nodeId));
   }
 

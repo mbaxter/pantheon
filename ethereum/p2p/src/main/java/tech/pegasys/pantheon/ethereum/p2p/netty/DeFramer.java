@@ -45,7 +45,7 @@ final class DeFramer extends ByteToMessageDecoder {
 
   private final CompletableFuture<PeerConnection> connectFuture;
 
-  private final Callbacks callbacks;
+  private final PeerConnectionEventDispatcher peerEventDispatcher;
 
   private final Framer framer;
   private final PeerInfo ourInfo;
@@ -57,14 +57,14 @@ final class DeFramer extends ByteToMessageDecoder {
       final Framer framer,
       final List<SubProtocol> subProtocols,
       final PeerInfo ourInfo,
-      final Callbacks callbacks,
+      final PeerConnectionEventDispatcher peerEventDispatcher,
       final CompletableFuture<PeerConnection> connectFuture,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     this.framer = framer;
     this.subProtocols = subProtocols;
     this.ourInfo = ourInfo;
     this.connectFuture = connectFuture;
-    this.callbacks = callbacks;
+    this.peerEventDispatcher = peerEventDispatcher;
     this.outboundMessagesCounter = outboundMessagesCounter;
   }
 
@@ -96,7 +96,7 @@ final class DeFramer extends ByteToMessageDecoder {
                 subProtocols, ourInfo.getCapabilities(), peerInfo.getCapabilities());
         final PeerConnection connection =
             new NettyPeerConnection(
-                ctx, peerInfo, capabilityMultiplexer, callbacks, outboundMessagesCounter);
+                ctx, peerInfo, capabilityMultiplexer, peerEventDispatcher, outboundMessagesCounter);
         if (capabilityMultiplexer.getAgreedCapabilities().size() == 0) {
           LOG.debug(
               "Disconnecting from {} because no capabilities are shared.", peerInfo.getClientId());
@@ -113,7 +113,8 @@ final class DeFramer extends ByteToMessageDecoder {
             .addLast(
                 new IdleStateHandler(15, 0, 0),
                 new WireKeepAlive(connection, waitingForPong),
-                new ApiHandler(capabilityMultiplexer, connection, callbacks, waitingForPong),
+                new ApiHandler(
+                    capabilityMultiplexer, connection, peerEventDispatcher, waitingForPong),
                 new MessageFramer(capabilityMultiplexer, framer));
         connectFuture.complete(connection);
       } else {

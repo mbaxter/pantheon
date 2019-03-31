@@ -68,7 +68,7 @@ public class NodeLocalConfigPermissioningControllerTest {
         new NodeLocalConfigPermissioningController(
             LocalPermissioningConfiguration.createDefault(),
             bootnodesList,
-          EnodeURL.fromString(selfEnode),
+            EnodeURL.fromString(selfEnode),
             whitelistPersistor);
   }
 
@@ -219,8 +219,10 @@ public class NodeLocalConfigPermissioningControllerTest {
   @Test
   public void whenCheckingIfNodeIsPermittedOrderDoesNotMatter() {
     controller.addNodes(Arrays.asList(enode1));
-    assertThat(controller.isPermitted(EnodeURL.fromString(enode1), EnodeURL.fromString(selfEnode))).isTrue();
-    assertThat(controller.isPermitted(EnodeURL.fromString(selfEnode), EnodeURL.fromString(enode1))).isTrue();
+    assertThat(controller.isPermitted(EnodeURL.fromString(enode1), EnodeURL.fromString(selfEnode)))
+        .isTrue();
+    assertThat(controller.isPermitted(EnodeURL.fromString(selfEnode), EnodeURL.fromString(enode1)))
+        .isTrue();
   }
 
   @Test
@@ -370,8 +372,8 @@ public class NodeLocalConfigPermissioningControllerTest {
     final Consumer<NodeWhitelistUpdatedEvent> consumer = mock(Consumer.class);
     final NodeWhitelistUpdatedEvent expectedEvent =
         new NodeWhitelistUpdatedEvent(
-            Lists.newArrayList(EnodeURL.fromString(enode2)), Lists.newArrayList(
-          EnodeURL.fromString(enode1)));
+            Lists.newArrayList(EnodeURL.fromString(enode2)),
+            Lists.newArrayList(EnodeURL.fromString(enode1)));
 
     when(permissioningConfig.getNodePermissioningConfigFilePath())
         .thenReturn(permissionsFile.toAbsolutePath().toString());

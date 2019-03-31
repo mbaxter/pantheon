@@ -34,7 +34,8 @@ public class DeFramerTest {
 
   private final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
   private final Framer framer = mock(Framer.class);
-  private final Callbacks callbacks = mock(Callbacks.class);
+  private final PeerConnectionEventDispatcher peerEventDispatcher =
+      mock(PeerConnectionEventDispatcher.class);
   private final PeerConnection peerConnection = mock(PeerConnection.class);
   private final CompletableFuture<PeerConnection> connectFuture = new CompletableFuture<>();
   private final DeFramer deFramer =
@@ -42,7 +43,7 @@ public class DeFramerTest {
           framer,
           Collections.emptyList(),
           new PeerInfo(5, "abc", Collections.emptyList(), 0, BytesValue.fromHexString("0x01")),
-          callbacks,
+          peerEventDispatcher,
           connectFuture,
           NoOpMetricsSystem.NO_OP_LABELLED_COUNTER);
 

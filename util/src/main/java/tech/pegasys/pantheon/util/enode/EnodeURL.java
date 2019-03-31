@@ -60,7 +60,8 @@ public class EnodeURL {
     this(nodeId, address, listeningPort, OptionalInt.empty());
   }
 
-  public EnodeURL(final String nodeId, final String address, final int listeningPort, final int discoveryPort) {
+  public EnodeURL(
+      final String nodeId, final String address, final int listeningPort, final int discoveryPort) {
     this(nodeId, address, listeningPort, OptionalInt.of(discoveryPort));
   }
 
@@ -85,12 +86,12 @@ public class EnodeURL {
 
   public static EnodeURL fromString(final String value) {
     checkArgument(
-      value != null && !value.isEmpty(), "Can't convert null/empty string to EnodeURLProperty.");
+        value != null && !value.isEmpty(), "Can't convert null/empty string to EnodeURLProperty.");
 
     final Matcher enodeMatcher = Pattern.compile(ENODE_URL_PATTERN_NEW).matcher(value);
     checkArgument(
-      enodeMatcher.matches(),
-      "Invalid enode URL syntax. Enode URL should have the following format 'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.");
+        enodeMatcher.matches(),
+        "Invalid enode URL syntax. Enode URL should have the following format 'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.");
 
     String nodeId = getAndValidateNodeId(enodeMatcher);
     InetAddress ip = getAndValidateIp(enodeMatcher);

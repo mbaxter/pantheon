@@ -40,7 +40,6 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.subscription.logs.LogsSu
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.subscription.pending.PendingTransactionSubscriptionService;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.subscription.syncing.SyncingSubscriptionService;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
-import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.ConnectingToLocalNodeException;
 import tech.pegasys.pantheon.ethereum.p2p.NetworkRunner;
 import tech.pegasys.pantheon.ethereum.p2p.NoopP2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
@@ -50,6 +49,7 @@ import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.SubProtocolConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.netty.NettyP2PNetwork;
+import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.ConnectingToLocalNodeException;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
