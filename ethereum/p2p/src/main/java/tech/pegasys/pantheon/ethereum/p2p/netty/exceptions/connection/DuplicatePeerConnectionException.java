@@ -13,7 +13,7 @@
 package tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection;
 
 public class DuplicatePeerConnectionException extends ConnectionException {
-  public DuplicatePeerConnectionException(String message) {
+  public DuplicatePeerConnectionException(final String message) {
     super(message);
   }
 }

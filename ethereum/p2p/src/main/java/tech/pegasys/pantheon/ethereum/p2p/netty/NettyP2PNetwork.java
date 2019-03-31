@@ -292,7 +292,7 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
   }
 
   private ChannelFuture startListeningForConnections(
-      NetworkingConfiguration config, List<Capability> supportedCapabilities) {
+      final NetworkingConfiguration config, final List<Capability> supportedCapabilities) {
     final ChannelFuture server =
         new ServerBootstrap()
             .group(boss, workers)
@@ -471,7 +471,6 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
   @VisibleForTesting
   Consumer<PeerBondedEvent> handlePeerBondedEvent() {
     return event -> {
-      final Peer peer = event.getPeer();
       peerConnectionManager.maybeConnect(event.getPeer());
     };
   }

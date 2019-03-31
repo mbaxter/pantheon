@@ -37,7 +37,7 @@ public class PeerConnectionManagerTest {
   final PeerBlacklist peerBlacklist = new PeerBlacklist();
   final MetricsSystem metrics = new NoOpMetricsSystem();
 
-  private PeerConnectionManager getPeerConnectionManager(int maxPeers) {
+  private PeerConnectionManager getPeerConnectionManager(final int maxPeers) {
     return new PeerConnectionManager(
         peerConnector, () -> discoveryPeers.stream(), maxPeers, peerBlacklist, metrics);
   }
@@ -277,4 +277,8 @@ public class PeerConnectionManagerTest {
   //    network.connectToAvailablePeers();
   //    verify(network, times(0)).connect(any());
   //  }
+  //  private DiscoveryPeer createDiscoveryPeer(final int seed) {
+  //    return new DiscoveryPeer(generatePeerId(seed), "127.0.0.1", 999, OptionalInt.empty());
+  //  }
+
 }

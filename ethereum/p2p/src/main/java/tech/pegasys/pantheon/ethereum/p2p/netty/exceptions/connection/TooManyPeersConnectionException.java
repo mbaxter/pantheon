@@ -13,7 +13,7 @@
 package tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection;
 
 public class TooManyPeersConnectionException extends ConnectionException {
-  public TooManyPeersConnectionException(String message) {
+  public TooManyPeersConnectionException(final String message) {
     super(message);
   }
 

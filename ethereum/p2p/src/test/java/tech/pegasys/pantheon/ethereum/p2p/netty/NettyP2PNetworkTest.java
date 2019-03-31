@@ -708,10 +708,6 @@ public final class NettyP2PNetworkTest {
     verify(network, times(1)).connect(peer);
   }
 
-  private DiscoveryPeer createDiscoveryPeer(final int seed) {
-    return new DiscoveryPeer(generatePeerId(seed), "127.0.0.1", 999, OptionalInt.empty());
-  }
-
   private BytesValue generatePeerId(final int seed) {
     BlockDataGenerator gen = new BlockDataGenerator(seed);
     return gen.bytesValue(DefaultPeer.PEER_ID_SIZE);

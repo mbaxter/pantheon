@@ -92,8 +92,8 @@ class PeerConnectionManager {
     shutdownCallbacks.add(() -> blockchain.removeObserver(blockAddedObserverId));
   }
 
-  public void setEnodeUrl(final EnodeURL ourEnodeURL) {
-    this.ourEnodeUrl = ourEnodeURL;
+  public void setEnodeUrl(final EnodeURL ourEnodeUrl) {
+    this.ourEnodeUrl = ourEnodeUrl;
   }
 
   public void setEnabled() {
@@ -347,7 +347,9 @@ class PeerConnectionManager {
   }
 
   public void handleDisconnect(
-      final PeerConnection connection, final DisconnectReason reason, final boolean initiatedByPeer) {
+      final PeerConnection connection,
+      final DisconnectReason reason,
+      final boolean initiatedByPeer) {
     activeConnections.handleDisconnect(connection, reason, initiatedByPeer);
   }
 
