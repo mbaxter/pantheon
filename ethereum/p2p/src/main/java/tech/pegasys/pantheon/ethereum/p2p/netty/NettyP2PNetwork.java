@@ -17,54 +17,28 @@ import static com.google.common.base.Preconditions.checkState;
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
-import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
-import tech.pegasys.pantheon.ethereum.p2p.api.Message;
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
-import tech.pegasys.pantheon.ethereum.p2p.wire.DefaultMessage;
-import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
-import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
 import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
-import tech.pegasys.pantheon.util.Subscribers;
-import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.net.InetSocketAddress;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import com.google.common.annotations.VisibleForTesting;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -80,75 +54,16 @@ import io.vertx.core.Vertx;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-/**
- * The peer network service (defunct PeerNetworkingService) is the entrypoint to the peer-to-peer
- * components of the Ethereum client. It implements the devp2p framework from the Ethereum
- * specifications.
- *
- * <p>This component manages the peer discovery layer, the RLPx wire protocol and the subprotocols
- * supported by this client.
- *
- * <h2>Peer Discovery</h2>
- *
- * Ethereum nodes discover one another via a simple UDP protocol that follows some of the techniques
- * described in the Kademlia DHT paper. Particularly nodes are classified in a k-bucket table
- * composed of 256 buckets, where each bucket contains at most 16 peers whose <i>XOR(SHA3(x))</i>
- * distance from us is equal to the index of the bucket. The value <i>x</i> in the distance function
- * corresponds to our node ID (public key).
- *
- * <p>Upper layers in the stack subscribe to events from the peer discovery layer and initiate/drop
- * connections accordingly.
- *
- * <h2>RLPx Wire Protocol</h2>
- *
- * The RLPx wire protocol is responsible for selecting peers to engage with, authenticating and
- * encrypting communications with peers, multiplexing subprotocols, framing messages, controlling
- * legality of messages, keeping connections alive, and keeping track of peer reputation.
- *
- * <h2>Subprotocols</h2>
- *
- * Subprotocols are pluggable elements on top of the RLPx framework, which can handle a specific set
- * of messages. Each subprotocol has a 3-char ASCII denominator and a version number, and statically
- * defines a count of messages it can handle.
- *
- * <p>The RLPx wire protocol dispatches messages to subprotocols based on the capabilities agreed by
- * each of the two peers during the protocol handshake.
- *
- * @see <a href="https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf">Kademlia DHT
- *     paper</a>
- * @see <a href="https://github.com/ethereum/wiki/wiki/Kademlia-Peer-Selection">Kademlia Peer
- *     Selection</a>
- * @see <a href="https://github.com/ethereum/devp2p/blob/master/rlpx.md">devp2p RLPx</a>
- */
-public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatcher {
+public class NettyP2PNetwork extends AbstractP2PNetwork
+    implements P2PNetwork, PeerConnectionEventDispatcher {
 
   private static final Logger LOG = LogManager.getLogger();
   private static final int TIMEOUT_SECONDS = 30;
 
-  private final ChannelFuture server;
+  private ChannelFuture server;
   private final EventLoopGroup boss = new NioEventLoopGroup(1);
   private final EventLoopGroup workers = new NioEventLoopGroup(1);
 
-  private final ScheduledExecutorService peerConnectionScheduler =
-      Executors.newSingleThreadScheduledExecutor();
-
-  private final Map<Capability, Subscribers<Consumer<Message>>> protocolCallbacks =
-      new ConcurrentHashMap<>();
-  private final Subscribers<Consumer<PeerConnection>> connectCallbacks = new Subscribers<>();
-  private final Subscribers<DisconnectCallback> disconnectCallbacks = new Subscribers<>();
-
-  private final PeerDiscoveryAgent peerDiscoveryAgent;
-  private OptionalLong peerBondedObserverId = OptionalLong.empty();
-  private OptionalLong peerDroppedObserverId = OptionalLong.empty();
-
-  @VisibleForTesting final PeerConnectionManager peerConnectionManager;
-
-  private Optional<EnodeURL> ourEnodeURL = Optional.empty();
-  private volatile PeerInfo ourPeerInfo;
-  private final SECP256K1.KeyPair keyPair;
-
-  private final int maxPeers;
-  private final List<SubProtocol> subProtocols;
   private final LabelledMetric<Counter> outboundMessagesCounter;
 
   public NettyP2PNetwork(
@@ -199,6 +114,17 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
       final Optional<NodeLocalConfigPermissioningController> nodeLocalConfigPermissioningController,
       final Optional<NodePermissioningController> nodePermissioningController,
       final Blockchain blockchain) {
+    super(
+        vertx,
+        keyPair,
+        config,
+        supportedCapabilities,
+        peerBlacklist,
+        metricsSystem,
+        nodeLocalConfigPermissioningController,
+        nodePermissioningController,
+        blockchain);
+
     outboundMessagesCounter =
         metricsSystem.createLabelledCounter(
             MetricCategory.NETWORK,
@@ -225,82 +151,37 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
         "vertx_eventloop_pending_tasks",
         "The number of pending tasks in the Vertx event loop",
         pendingTaskCounter(vertx.nettyEventLoopGroup()));
-
-    maxPeers = config.getRlpx().getMaxPeers();
-    this.peerConnectionManager =
-        new PeerConnectionManager(
-            this::initiateConnection,
-            this::getDiscoveryPeers,
-            maxPeers,
-            peerBlacklist,
-            metricsSystem);
-    nodePermissioningController.ifPresent(
-        c -> peerConnectionManager.setNodePermissioningController(c, blockchain));
-    peerDiscoveryAgent =
-        new VertxPeerDiscoveryAgent(
-            vertx,
-            keyPair,
-            config.getDiscovery(),
-            () -> peerConnectionManager.countActiveConnections() >= maxPeers,
-            peerBlacklist,
-            nodeLocalConfigPermissioningController,
-            nodePermissioningController,
-            metricsSystem);
-
-    subscribeDisconnect(peerBlacklist);
-
-    this.keyPair = keyPair;
-    this.subProtocols = config.getSupportedProtocols();
-
-    // Start server and wait for it to initialize so we can be sure that peerInfo is setup
-    // before returning.
-    server = startListeningForConnections(config, supportedCapabilities);
   }
 
   @Override
-  public void start() {
-    peerDiscoveryAgent.start(ourPeerInfo.getPort()).join();
-    // We can only derive our enode after wire and discovery listeners have been set up and our
-    // listening ports are fully determined
-    this.ourEnodeURL = Optional.of(buildSelfEnodeURL());
-    LOG.info("Enode URL {}", ourEnodeURL.toString());
-    peerConnectionManager.setEnodeUrl(ourEnodeURL.get());
-    peerConnectionManager.setEnabled();
-
-    peerBondedObserverId =
-        OptionalLong.of(peerDiscoveryAgent.observePeerBondedEvents(handlePeerBondedEvent()));
-    peerDroppedObserverId =
-        OptionalLong.of(peerDiscoveryAgent.observePeerDroppedEvents(handlePeerDroppedEvents()));
-
-    peerConnectionScheduler.scheduleWithFixedDelay(
-        peerConnectionManager::checkMaintainedPeers, 60, 60, TimeUnit.SECONDS);
-    peerConnectionScheduler.scheduleWithFixedDelay(
-        peerConnectionManager::connectToAvailablePeers, 30, 30, TimeUnit.SECONDS);
-  }
-
-  @Override
-  public void stop() {
-    peerConnectionManager.shutdown();
-    peerConnectionScheduler.shutdownNow();
-    peerDiscoveryAgent.stop().join();
-    peerBondedObserverId.ifPresent(peerDiscoveryAgent::removePeerBondedObserver);
-    peerBondedObserverId = OptionalLong.empty();
-    peerDroppedObserverId.ifPresent(peerDiscoveryAgent::removePeerDroppedObserver);
-    peerDroppedObserverId = OptionalLong.empty();
-    peerDiscoveryAgent.stop().join();
+  protected CompletableFuture<Void> stopNetwork() {
+    CompletableFuture<Void> stoppedFuture = new CompletableFuture<>();
     workers.shutdownGracefully();
     boss.shutdownGracefully();
+    server
+        .channel()
+        .closeFuture()
+        .addListener(
+            (future) -> {
+              if (future.isSuccess()) {
+                stoppedFuture.complete(null);
+              } else {
+                stoppedFuture.completeExceptionally(future.cause());
+              }
+            });
+    return stoppedFuture;
   }
 
-  private ChannelFuture startListeningForConnections(
+  @Override
+  protected CompletableFuture<Integer> startListeningForConnections(
       final NetworkingConfiguration config, final List<Capability> supportedCapabilities) {
-    final ChannelFuture server =
+    CompletableFuture<Integer> listeningPortFuture = new CompletableFuture<>();
+    this.server =
         new ServerBootstrap()
             .group(boss, workers)
             .channel(NioServerSocketChannel.class)
             .childHandler(inboundChannelInitializer())
             .bind(config.getRlpx().getBindHost(), config.getRlpx().getBindPort());
-    final CountDownLatch latch = new CountDownLatch(1);
     server.addListener(
         future -> {
           final InetSocketAddress socketAddress =
@@ -315,81 +196,16 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
           }
           checkState(socketAddress != null, message);
 
-          final int listeningPort = socketAddress.getPort();
-          ourPeerInfo =
-              new PeerInfo(
-                  5,
-                  config.getClientId(),
-                  supportedCapabilities,
-                  listeningPort,
-                  this.keyPair.getPublicKey().getEncodedBytes());
-
           LOG.info("P2PNetwork started and listening on {}", socketAddress);
-          latch.countDown();
+          final int listeningPort = socketAddress.getPort();
+          listeningPortFuture.complete(listeningPort);
         });
 
-    // Ensure ourPeerInfo has been set before returning.
-    try {
-      if (!latch.await(1, TimeUnit.MINUTES)) {
-        throw new RuntimeException("Timed out while waiting for network startup");
-      }
-    } catch (final InterruptedException e) {
-      throw new RuntimeException("Interrupted before startup completed", e);
-    }
-
-    return server;
-  }
-
-  /** @return a channel initializer for inbound connections */
-  public ChannelInitializer<SocketChannel> inboundChannelInitializer() {
-    final PeerConnectionEventDispatcher peerConnectionEventHandler = this;
-    return new ChannelInitializer<SocketChannel>() {
-      @Override
-      protected void initChannel(final SocketChannel ch) {
-        final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
-        ch.pipeline()
-            .addLast(
-                new TimeoutHandler<>(
-                    connectionFuture::isDone,
-                    TIMEOUT_SECONDS,
-                    () ->
-                        connectionFuture.completeExceptionally(
-                            new TimeoutException(
-                                "Timed out waiting to fully establish incoming connection"))),
-                new HandshakeHandlerInbound(
-                    keyPair,
-                    subProtocols,
-                    ourPeerInfo,
-                    connectionFuture,
-                    peerConnectionEventHandler,
-                    outboundMessagesCounter));
-
-        connectionFuture.thenAccept(
-            (peerConnection) -> {
-              if (peerConnectionManager.handleIncomingConnection(peerConnection)) {
-                handlePeerConnected(peerConnection);
-              }
-            });
-      }
-    };
+    return listeningPortFuture;
   }
 
   @Override
-  public CompletableFuture<PeerConnection> connect(final Peer peer) {
-    return peerConnectionManager
-        .maybeConnect(peer)
-        .whenComplete(
-            (connection, t) -> {
-              if (t == null) {
-                handlePeerConnected(connection);
-                LOG.debug("Connection established to peer: {}", peer.getId());
-              } else {
-                LOG.debug("Failed to connect to peer {}: {}", peer.getId(), t);
-              }
-            });
-  }
-
-  private CompletableFuture<PeerConnection> initiateConnection(final Peer peer) {
+  protected CompletableFuture<PeerConnection> initiateConnection(final Peer peer) {
     final PeerConnectionEventDispatcher peerConnectionEventHandler = this;
     final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
     final Endpoint endpoint = peer.getEndpoint();
@@ -437,126 +253,34 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
     return connectionFuture;
   }
 
-  @Override
-  public boolean addMaintainConnectionPeer(final Peer peer) {
-    return peerConnectionManager.addMaintainedPeer(peer);
-  }
+  /** @return a channel initializer for inbound connections */
+  private ChannelInitializer<SocketChannel> inboundChannelInitializer() {
+    final NettyP2PNetwork self = this;
+    final PeerConnectionEventDispatcher peerConnectionEventHandler = this;
+    return new ChannelInitializer<SocketChannel>() {
+      @Override
+      protected void initChannel(final SocketChannel ch) {
+        final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
+        ch.pipeline()
+            .addLast(
+                new TimeoutHandler<>(
+                    connectionFuture::isDone,
+                    TIMEOUT_SECONDS,
+                    () ->
+                        connectionFuture.completeExceptionally(
+                            new TimeoutException(
+                                "Timed out waiting to fully establish incoming connection"))),
+                new HandshakeHandlerInbound(
+                    keyPair,
+                    subProtocols,
+                    ourPeerInfo,
+                    connectionFuture,
+                    peerConnectionEventHandler,
+                    outboundMessagesCounter));
 
-  @Override
-  public boolean removeMaintainedConnectionPeer(final Peer peer) {
-    return peerConnectionManager.removeMaintainedPeer(peer);
-  }
-
-  @Override
-  public Collection<PeerConnection> getPeers() {
-    return peerConnectionManager.getConnections().collect(Collectors.toList());
-  }
-
-  @Override
-  public void subscribe(final Capability capability, final Consumer<Message> callback) {
-    protocolCallbacks.computeIfAbsent(capability, key -> new Subscribers<>()).subscribe(callback);
-  }
-
-  @Override
-  public void subscribeConnect(final Consumer<PeerConnection> callback) {
-    connectCallbacks.subscribe(callback);
-  }
-
-  @Override
-  public void subscribeDisconnect(final DisconnectCallback callback) {
-    disconnectCallbacks.subscribe(callback);
-  }
-
-  @VisibleForTesting
-  Consumer<PeerBondedEvent> handlePeerBondedEvent() {
-    return event -> {
-      peerConnectionManager.maybeConnect(event.getPeer());
+        connectionFuture.thenAccept(self::handleIncomingConnection);
+      }
     };
-  }
-
-  private Consumer<PeerDroppedEvent> handlePeerDroppedEvents() {
-    return event -> {
-      final Peer peer = event.getPeer();
-      getPeers().stream()
-          .filter(p -> p.getPeerInfo().getNodeId().equals(peer.getId()))
-          .findFirst()
-          .ifPresent(p -> p.disconnect(DisconnectReason.REQUESTED));
-    };
-  }
-
-  @Override
-  public void awaitStop() {
-    try {
-      server.channel().closeFuture().sync();
-    } catch (final InterruptedException ex) {
-      throw new IllegalStateException(ex);
-    }
-  }
-
-  @Override
-  public void close() {
-    stop();
-  }
-
-  @VisibleForTesting
-  public Stream<DiscoveryPeer> getDiscoveryPeers() {
-    return peerDiscoveryAgent.getPeers();
-  }
-
-  @Override
-  public Optional<? extends Peer> getAdvertisedPeer() {
-    return peerDiscoveryAgent.getAdvertisedPeer();
-  }
-
-  @Override
-  public PeerInfo getLocalPeerInfo() {
-    return ourPeerInfo;
-  }
-
-  @Override
-  public boolean isListening() {
-    return peerDiscoveryAgent.isActive();
-  }
-
-  @Override
-  public boolean isP2pEnabled() {
-    return true;
-  }
-
-  @Override
-  public Optional<EnodeURL> getSelfEnodeURL() {
-    return ourEnodeURL;
-  }
-
-  @Override
-  public void dispatchPeerDisconnected(
-      final PeerConnection connection,
-      final DisconnectReason reason,
-      final boolean initatedByPeer) {
-    disconnectCallbacks.forEach(
-        consumer -> consumer.onDisconnect(connection, reason, initatedByPeer));
-    peerDiscoveryAgent.dropPeer(connection.getPeer().getId());
-    peerConnectionManager.handleDisconnect(connection, reason, initatedByPeer);
-  }
-
-  @Override
-  public void dispatchMessageReceived(
-      final PeerConnection connection, final Capability capability, final MessageData message) {
-    final Message fullMessage = new DefaultMessage(connection, message);
-    protocolCallbacks
-        .getOrDefault(capability, Subscribers.none())
-        .forEach(
-            consumer -> {
-              try {
-                consumer.accept(fullMessage);
-              } catch (final Throwable t) {
-                LOG.error("Error in callback:", t);
-              }
-            });
-  }
-
-  private void handlePeerConnected(final PeerConnection connection) {
-    connectCallbacks.forEach(callback -> callback.accept(connection));
   }
 
   private Supplier<Integer> pendingTaskCounter(final EventLoopGroup eventLoopGroup) {
@@ -565,15 +289,5 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
             .filter(eventExecutor -> eventExecutor instanceof SingleThreadEventExecutor)
             .mapToInt(eventExecutor -> ((SingleThreadEventExecutor) eventExecutor).pendingTasks())
             .sum();
-  }
-
-  private EnodeURL buildSelfEnodeURL() {
-    return peerDiscoveryAgent
-        .getAdvertisedPeer()
-        .map(DiscoveryPeer::getEnodeURL)
-        .orElseThrow(
-            () ->
-                new IllegalStateException(
-                    "Attempt to build enode before discovery agent is ready."));
   }
 }
