@@ -24,6 +24,7 @@ import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -43,6 +44,7 @@ public class DeFramerTest {
           framer,
           Collections.emptyList(),
           new PeerInfo(5, "abc", Collections.emptyList(), 0, BytesValue.fromHexString("0x01")),
+          Optional.empty(),
           peerEventDispatcher,
           connectFuture,
           NoOpMetricsSystem.NO_OP_LABELLED_COUNTER);

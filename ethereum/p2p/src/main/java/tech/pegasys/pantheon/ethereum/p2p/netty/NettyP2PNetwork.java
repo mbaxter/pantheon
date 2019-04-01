@@ -60,6 +60,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -417,7 +418,7 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
                                             + peer.getId()))),
                         new HandshakeHandlerOutbound(
                             keyPair,
-                            peer.getId(),
+                            peer,
                             subProtocols,
                             ourPeerInfo,
                             connectionFuture,
@@ -448,7 +449,7 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
 
   @Override
   public Collection<PeerConnection> getPeers() {
-    return peerConnectionManager.getActiveConnections().getPeerConnections();
+    return peerConnectionManager.getConnections().collect(Collectors.toList());
   }
 
   @Override
@@ -477,7 +478,7 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
     return event -> {
       final Peer peer = event.getPeer();
       getPeers().stream()
-          .filter(p -> p.getPeer().getNodeId().equals(peer.getId()))
+          .filter(p -> p.getPeerInfo().getNodeId().equals(peer.getId()))
           .findFirst()
           .ifPresent(p -> p.disconnect(DisconnectReason.REQUESTED));
     };
@@ -534,7 +535,7 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
       final boolean initatedByPeer) {
     disconnectCallbacks.forEach(
         consumer -> consumer.onDisconnect(connection, reason, initatedByPeer));
-    peerDiscoveryAgent.dropPeer(connection.getPeer().getNodeId());
+    peerDiscoveryAgent.dropPeer(connection.getPeer().getId());
     peerConnectionManager.handleDisconnect(connection, reason, initatedByPeer);
   }
 
@@ -567,20 +568,12 @@ public class NettyP2PNetwork implements P2PNetwork, PeerConnectionEventDispatche
   }
 
   private EnodeURL buildSelfEnodeURL() {
-    final String nodeId = ourPeerInfo.getNodeId().toUnprefixedString();
-    Endpoint ourEndpoint =
-        peerDiscoveryAgent
-            .getAdvertisedPeer()
-            .map(DiscoveryPeer::getEndpoint)
-            .orElseThrow(
-                () ->
-                    new IllegalStateException(
-                        "Attempt to build enode before discovery agent is ready."));
-
-    return new EnodeURL(
-        nodeId,
-        ourEndpoint.getHost(),
-        ourEndpoint.getFunctionalTcpPort(),
-        ourEndpoint.getUdpPort());
+    return peerDiscoveryAgent
+        .getAdvertisedPeer()
+        .map(DiscoveryPeer::getEnodeURL)
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "Attempt to build enode before discovery agent is ready."));
   }
 }

@@ -82,7 +82,7 @@ public abstract class PeerDiscoveryAgent {
   protected final DiscoveryConfiguration config;
 
   /* This is the {@link tech.pegasys.pantheon.ethereum.p2p.Peer} object holding who we are. */
-  private DiscoveryPeer advertisedPeer;
+  private volatile DiscoveryPeer advertisedPeer;
 
   /* Is discovery enabled? */
   private boolean isActive = false;
@@ -146,6 +146,8 @@ public abstract class PeerDiscoveryAgent {
               });
     } else {
       this.isActive = false;
+      advertisedPeer =
+          new DiscoveryPeer(id, config.getAdvertisedHost(), config.getBindPort(), tcpPort);
       return CompletableFuture.completedFuture(null);
     }
   }

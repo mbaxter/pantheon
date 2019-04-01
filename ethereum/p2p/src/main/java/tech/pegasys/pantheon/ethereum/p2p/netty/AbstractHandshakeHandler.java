@@ -13,18 +13,16 @@
 package tech.pegasys.pantheon.ethereum.p2p.netty;
 
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.Framer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.Handshaker;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.ecies.ECIESHandshaker;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.HelloMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.WireMessageCodes;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
-import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,23 +42,24 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
 
   protected final Handshaker handshaker = new ECIESHandshaker();
 
-  private final PeerInfo ourInfo;
-
-  private final PeerConnectionEventDispatcher peerEventDispatcher;
-
-  private final CompletableFuture<PeerConnection> connectionFuture;
   private final List<SubProtocol> subProtocols;
+  private final PeerInfo ourInfo;
+  private final Optional<Peer> expectedPeer;
+  private final CompletableFuture<PeerConnection> connectionFuture;
+  private final PeerConnectionEventDispatcher peerEventDispatcher;
 
   private final LabelledMetric<Counter> outboundMessagesCounter;
 
   AbstractHandshakeHandler(
       final List<SubProtocol> subProtocols,
       final PeerInfo ourInfo,
+      final Optional<Peer> expectedPeer,
       final CompletableFuture<PeerConnection> connectionFuture,
       final PeerConnectionEventDispatcher peerEventDispatcher,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     this.subProtocols = subProtocols;
     this.ourInfo = ourInfo;
+    this.expectedPeer = expectedPeer;
     this.connectionFuture = connectionFuture;
     this.peerEventDispatcher = peerEventDispatcher;
     this.outboundMessagesCounter = outboundMessagesCounter;
@@ -92,6 +91,7 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
               framer,
               subProtocols,
               ourInfo,
+              expectedPeer,
               peerEventDispatcher,
               connectionFuture,
               outboundMessagesCounter);

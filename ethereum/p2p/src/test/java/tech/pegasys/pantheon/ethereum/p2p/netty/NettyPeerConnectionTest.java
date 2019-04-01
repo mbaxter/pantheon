@@ -12,16 +12,22 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.netty;
 
-import static java.util.Collections.emptyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection.PeerNotConnected;
+import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.HelloMessage;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
+
+import java.util.Arrays;
+import java.util.OptionalInt;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -40,7 +46,12 @@ public class NettyPeerConnectionTest {
   private final CapabilityMultiplexer multiplexer = mock(CapabilityMultiplexer.class);
   private final PeerConnectionEventDispatcher peerEventDispatcher =
       mock(PeerConnectionEventDispatcher.class);
-  private final PeerInfo peerInfo = new PeerInfo(5, "foo", emptyList(), 0, BytesValue.of(1));
+  private final BytesValue peerId = Peer.randomId();
+  private final int peerPort = 30303;
+  private final Peer peer =
+      new DefaultPeer(peerId, new Endpoint("127.0.0.1", peerPort, OptionalInt.empty()));
+  private final PeerInfo peerInfo =
+      new PeerInfo(5, "foo", Arrays.asList(Capability.create("eth", 63)), peerPort, peerId);
 
   private NettyPeerConnection connection;
 
@@ -52,6 +63,7 @@ public class NettyPeerConnectionTest {
     connection =
         new NettyPeerConnection(
             context,
+            peer,
             peerInfo,
             multiplexer,
             peerEventDispatcher,

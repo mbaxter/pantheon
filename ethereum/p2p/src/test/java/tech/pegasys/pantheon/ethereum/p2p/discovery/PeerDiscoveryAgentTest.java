@@ -147,7 +147,7 @@ public class PeerDiscoveryAgentTest {
 
     // Disconnect with innocuous reason
     blacklist.onDisconnect(wirePeer, DisconnectReason.TOO_MANY_PEERS, false);
-    agent.dropPeer(wirePeer.getPeer().getNodeId());
+    agent.dropPeer(wirePeer.getPeerInfo().getNodeId());
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -180,7 +180,7 @@ public class PeerDiscoveryAgentTest {
 
     // Disconnect with problematic reason
     blacklist.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, false);
-    agent.dropPeer(wirePeer.getPeer().getNodeId());
+    agent.dropPeer(wirePeer.getPeerInfo().getNodeId());
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -207,7 +207,7 @@ public class PeerDiscoveryAgentTest {
 
     // Disconnect with problematic reason
     blacklist.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, true);
-    agent.dropPeer(wirePeer.getPeer().getNodeId());
+    agent.dropPeer(wirePeer.getPeerInfo().getNodeId());
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -234,7 +234,7 @@ public class PeerDiscoveryAgentTest {
 
     // Disconnect
     blacklist.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, false);
-    agent.dropPeer(wirePeer.getPeer().getNodeId());
+    agent.dropPeer(wirePeer.getPeerInfo().getNodeId());
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -261,7 +261,7 @@ public class PeerDiscoveryAgentTest {
 
     // Disconnect
     blacklist.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, true);
-    agent.dropPeer(wirePeer.getPeer().getNodeId());
+    agent.dropPeer(wirePeer.getPeerInfo().getNodeId());
     // Confirm peer was removed
     assertThat(agent.getPeers()).hasSize(0);
 
@@ -291,7 +291,7 @@ public class PeerDiscoveryAgentTest {
   private PeerConnection createAnonymousPeerConnection(final BytesValue id) {
     PeerConnection conn = mock(PeerConnection.class);
     PeerInfo peerInfo = new PeerInfo(0, null, null, 0, id);
-    when(conn.getPeer()).thenReturn(peerInfo);
+    when(conn.getPeerInfo()).thenReturn(peerInfo);
     return conn;
   }
 }

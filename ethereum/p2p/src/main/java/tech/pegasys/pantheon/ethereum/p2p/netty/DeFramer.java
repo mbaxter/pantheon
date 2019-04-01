@@ -15,6 +15,9 @@ package tech.pegasys.pantheon.ethereum.p2p.netty;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.IncompatiblePeerConnectionException;
+import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.UnexpectedPeerConnectionException;
+import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.Framer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.FramingException;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
@@ -27,7 +30,10 @@ import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -49,6 +55,7 @@ final class DeFramer extends ByteToMessageDecoder {
 
   private final Framer framer;
   private final PeerInfo ourInfo;
+  private final Optional<Peer> expectedPeer;
   private final List<SubProtocol> subProtocols;
   private boolean hellosExchanged;
   private final LabelledMetric<Counter> outboundMessagesCounter;
@@ -57,12 +64,14 @@ final class DeFramer extends ByteToMessageDecoder {
       final Framer framer,
       final List<SubProtocol> subProtocols,
       final PeerInfo ourInfo,
+      final Optional<Peer> expectedPeer,
       final PeerConnectionEventDispatcher peerEventDispatcher,
       final CompletableFuture<PeerConnection> connectFuture,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     this.framer = framer;
     this.subProtocols = subProtocols;
     this.ourInfo = ourInfo;
+    this.expectedPeer = expectedPeer;
     this.connectFuture = connectFuture;
     this.peerEventDispatcher = peerEventDispatcher;
     this.outboundMessagesCounter = outboundMessagesCounter;
@@ -91,12 +100,31 @@ final class DeFramer extends ByteToMessageDecoder {
           framer.enableCompression();
         }
 
+        // Set up PeerConnection
         final CapabilityMultiplexer capabilityMultiplexer =
             new CapabilityMultiplexer(
                 subProtocols, ourInfo.getCapabilities(), peerInfo.getCapabilities());
+        final Peer peer = expectedPeer.orElse(createPeer(peerInfo, ctx));
         final PeerConnection connection =
             new NettyPeerConnection(
-                ctx, peerInfo, capabilityMultiplexer, peerEventDispatcher, outboundMessagesCounter);
+                ctx,
+                peer,
+                peerInfo,
+                capabilityMultiplexer,
+                peerEventDispatcher,
+                outboundMessagesCounter);
+
+        // Check peer is who we expected
+        if (expectedPeer.isPresent()
+            && !Objects.equals(expectedPeer.get().getId(), peerInfo.getNodeId())) {
+          String unexpectedMsg =
+              String.format(
+                  "Expected id %s, but got %s", expectedPeer.get().getId(), peerInfo.getNodeId());
+          connectFuture.completeExceptionally(new UnexpectedPeerConnectionException(unexpectedMsg));
+          connection.disconnect(DisconnectReason.UNEXPECTED_ID);
+        }
+
+        // Check that we have shared caps
         if (capabilityMultiplexer.getAgreedCapabilities().size() == 0) {
           LOG.debug(
               "Disconnecting from {} because no capabilities are shared.", peerInfo.getClientId());
@@ -121,6 +149,12 @@ final class DeFramer extends ByteToMessageDecoder {
         out.add(message);
       }
     }
+  }
+
+  private Peer createPeer(final PeerInfo peerInfo, final ChannelHandlerContext ctx) {
+    InetSocketAddress remoteAddress = ((InetSocketAddress) ctx.channel().remoteAddress());
+    String ipAddress = remoteAddress.getHostString();
+    return new DefaultPeer(peerInfo.getNodeId(), ipAddress, peerInfo.getPort(), peerInfo.getPort());
   }
 
   @Override

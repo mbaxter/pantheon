@@ -28,6 +28,9 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
+import tech.pegasys.pantheon.metrics.Counter;
+import tech.pegasys.pantheon.metrics.LabelledMetric;
+import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
@@ -41,7 +44,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -53,9 +57,7 @@ import org.apache.logging.log4j.Logger;
 class PeerConnectionManager {
   private static final Logger LOG = LogManager.getLogger();
 
-  private final PeerConnectionRegistry activeConnections;
-  private final Map<BytesValue, CompletableFuture<PeerConnection>> pendingConnections =
-      new ConcurrentHashMap<>();
+  private final Map<BytesValue, ManagedPeerConnection> connections = new ConcurrentHashMap<>();
 
   private final PeerConnector peerConnector;
   private final DiscoveryPeerSupplier discoveryPeers;
@@ -69,18 +71,48 @@ class PeerConnectionManager {
   private boolean enabled = false;
   private List<ShutdownCallback> shutdownCallbacks = new ArrayList<>();
 
+  private final LabelledMetric<Counter> disconnectCounter;
+  private final Counter connectedPeersCounter;
+
+  @VisibleForTesting final Comparator<PeerConnection> peerPriorityComparator;
+
   public PeerConnectionManager(
       final PeerConnector peerConnector,
       final DiscoveryPeerSupplier discoveryPeers,
       final int maxPeers,
       final PeerBlacklist peerBlacklist,
       final MetricsSystem metrics) {
+    disconnectCounter =
+        metrics.createLabelledCounter(
+            MetricCategory.PEERS,
+            "disconnected_total",
+            "Total number of peers disconnected",
+            "initiator",
+            "disconnectReason");
+    connectedPeersCounter =
+        metrics.createCounter(
+            MetricCategory.PEERS, "connected_total", "Total number of peers connected");
+    metrics.createGauge(
+        MetricCategory.PEERS,
+        "peer_count_current",
+        "Number of peers currently connected",
+        () -> (double) countActiveConnections());
     this.peerConnector = peerConnector;
     this.discoveryPeers = discoveryPeers;
     this.maxPeers = maxPeers;
-    this.activeConnections = new PeerConnectionRegistry(metrics);
     this.peerBlacklist = peerBlacklist;
     this.shutdownCallbacks.add(this::shutdownPeerConnections);
+    this.peerPriorityComparator = createPeerPriorityComparator();
+  }
+
+  private Comparator<PeerConnection> createPeerPriorityComparator() {
+    final Comparator<PeerConnection> maintainedPeerComparator =
+        Comparator.comparing((PeerConnection p) -> maintainedPeers.contains(p.getPeer()) ? 0 : 1);
+    final Comparator<PeerConnection> longestConnectionComparator =
+        Comparator.comparing(PeerConnection::getConnectedAt);
+
+    // Prefer maintained peers, and then peers who have been connected longer
+    return maintainedPeerComparator.thenComparing(longestConnectionComparator);
   }
 
   public void setNodePermissioningController(
@@ -88,7 +120,7 @@ class PeerConnectionManager {
     checkNotNull(nodePermissioningController);
     checkNotNull(blockchain);
     final long blockAddedObserverId =
-        blockchain.observeBlockAdded((e, b) -> disconnectInvalidPeers());
+        blockchain.observeBlockAdded((e, b) -> disconnectDisallowed());
     shutdownCallbacks.add(() -> blockchain.removeObserver(blockAddedObserverId));
   }
 
@@ -103,103 +135,79 @@ class PeerConnectionManager {
     enabled = true;
   }
 
-  public void disconnectInvalidPeers() {
-    activeConnections.getPeerConnections().stream()
-        .filter(p -> !isPeerAllowed(p))
-        .forEach(p -> p.disconnect(DisconnectReason.REQUESTED));
+  private void disconnectDisallowed() {
+    connections.values().forEach(this::disconnectIfDisallowed);
+  }
+
+  private void disconnectIfDisallowed(final ManagedPeerConnection managedPeerConnection) {
+    managedPeerConnection.manage(
+        (peerConnection) -> {
+          if (!isPeerAllowed(peerConnection)) {
+            peerConnection.disconnect(DisconnectReason.REQUESTED);
+          }
+        });
   }
 
   public int countActiveConnections() {
-    return activeConnections.size();
+    return Math.toIntExact(getConnections().count());
   }
 
-  public int countPendingConnections() {
-    return pendingConnections.size();
-  }
-
-  public int countAllConnections() {
-    return countActiveConnections() + countPendingConnections();
-  }
-
-  public PeerConnectionRegistry getActiveConnections() {
-    return activeConnections;
-  }
-
-  @VisibleForTesting
-  boolean isConnecting(final BytesValue peerId) {
-    return pendingConnections.containsKey(peerId);
-  }
-
-  @VisibleForTesting
-  boolean isConnected(final BytesValue peerId) {
-    return activeConnections.isAlreadyConnected(peerId);
+  public Stream<PeerConnection> getConnections() {
+    return connections.values().stream()
+        .map(ManagedPeerConnection::getConnection)
+        .filter(Optional::isPresent)
+        .map(Optional::get);
   }
 
   public boolean handleIncomingConnection(final PeerConnection connection) {
+    registerConnection();
     boolean connectionAccepted = true;
-    BytesValue peerId = connection.getPeer().getNodeId();
-    final CompletableFuture<PeerConnection> connectionFuture =
-        CompletableFuture.completedFuture(connection);
-    final CompletableFuture<PeerConnection> existingPendingConnection =
-        pendingConnections.put(peerId, connectionFuture);
-    if (existingPendingConnection != null) {
-      // Disconnect any existing pending connection since we know this connection is already live
-      existingPendingConnection.whenComplete(
-          (peerConnection, err) -> {
-            if (err != null) {
-              return;
-            }
-            peerConnection.disconnect(DisconnectReason.ALREADY_CONNECTED);
-          });
+    BytesValue peerId = connection.getPeer().getId();
+    final ManagedPeerConnection incomingConnection = new IncomingConnection(connection);
+    final ManagedPeerConnection existingConnection =
+        connections.putIfAbsent(peerId, incomingConnection);
+    if (existingConnection != null) {
+      if (!existingConnection.isDisconnected()) {
+        // We're already talking to this peer
+        connection.disconnect(DisconnectReason.ALREADY_CONNECTED);
+      } else {
+        // Replace the existing connection
+        connections.put(peerId, incomingConnection);
+      }
     }
 
     if (!isPeerAllowed(connection)) {
       LOG.debug("Disconnect incoming connection from disallowed peer: {}", peerId);
       connection.disconnect(DisconnectReason.UNKNOWN);
+      connections.remove(peerId);
       connectionAccepted = false;
     }
 
     if (connectionAccepted) {
-      activeConnections.registerConnection(connection);
-      LOG.debug("Successfully accepted connection from {}", connection.getPeer().getNodeId());
-      logConnections();
-    }
-    pendingConnections.remove(peerId);
-
-    // Reject incoming connections if we've reached our limit
-    if (countActiveConnections() > maxPeers) {
-      LOG.debug(
-          "Disconnecting incoming connection because connection limit of {} has been reached: {}",
-          maxPeers,
-          connection.getPeer().getNodeId());
-      connection.disconnect(DisconnectReason.TOO_MANY_PEERS);
+      LOG.debug("Successfully accepted connection from {}", peerId);
     }
 
-    // Make sure we are still within maxPeers limit
-    enforceMaxPeers();
+    enforceLimits();
     return connectionAccepted;
   }
 
   public CompletableFuture<PeerConnection> maybeConnect(final Peer peer) {
     final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
-
-    final CompletableFuture<PeerConnection> existingPendingConnection =
-        pendingConnections.putIfAbsent(peer.getId(), connectionFuture);
-    if (existingPendingConnection != null) {
-      LOG.debug("Attempted to connect to peer with pending connection: {}", peer.getId());
+    final ManagedPeerConnection outgoingConnection = new OutgoingConnection(connectionFuture);
+    final ManagedPeerConnection existingConnection =
+        connections.putIfAbsent(peer.getId(), outgoingConnection);
+    if (existingConnection != null) {
+      LOG.debug("Attempted to connect to already connected peer: {}", peer.getId());
       ConnectionException exception =
           new DuplicatePeerConnectionException("Attempt to connect to already connecting peer");
       connectionFuture.completeExceptionally(exception);
       return connectionFuture;
     }
 
-    if (countAllConnections() >= maxPeers) {
+    if (connections.size() >= maxPeers) {
       connectionFuture.completeExceptionally(new TooManyPeersConnectionException());
     } else if (!isPeerAllowed(peer)) {
       connectionFuture.completeExceptionally(new PeerNotPermittedException());
-    } else if (isConnected(peer.getId())) {
-      connectionFuture.completeExceptionally(
-          new DuplicatePeerConnectionException("Attempt to connect to already connected peer"));
     }
 
     if (!connectionFuture.isCompletedExceptionally()) {
@@ -221,42 +229,44 @@ class PeerConnectionManager {
           if (err != null) {
             LOG.debug("Unable to connect to peer {}. {}", peer.getId(), err.toString());
           } else {
-            activeConnections.registerConnection(peerConnection);
-            logConnections();
+            registerConnection();
+            // Make sure we are still within maxPeers limit
+            enforceLimits();
           }
-
-          pendingConnections.remove(peer.getId());
-
-          // Make sure we are still within maxPeers limit
-          enforceMaxPeers();
         });
   }
 
-  private void enforceMaxPeers() {
-    if (countActiveConnections() > maxPeers) {
-      final AtomicInteger disconnected = new AtomicInteger(0);
-      activeConnections.getPeerConnections().stream()
-          .sorted(Comparator.comparingLong(PeerConnection::getConnectedAt))
-          .skip(maxPeers)
-          .forEach(
-              (peer) -> {
-                disconnected.incrementAndGet();
-                peer.disconnect(DisconnectReason.TOO_MANY_PEERS);
-              });
+  private void enforceLimits() {
+    AtomicBoolean limitsExceeded = new AtomicBoolean(false);
+    getConnections()
+        .sorted(peerPriorityComparator)
+        .skip(maxPeers)
+        .filter(
+            (p) -> {
+              boolean isMaintained = isMaintained(p);
+              if (isMaintained) {
+                limitsExceeded.set(true);
+              }
+              return !isMaintained;
+            })
+        .forEach(p -> p.disconnect(DisconnectReason.TOO_MANY_PEERS));
 
-      if (disconnected.get() > 0) {
-        LOG.debug(
-            "Disconnected {} peers because connection limit of {} exceeded",
-            disconnected.get(),
-            maxPeers);
-      }
+    if (limitsExceeded.get()) {
+      LOG.warn(
+          "Max peer limit ({}) exceeded due to too many maintained peers ({}).",
+          maxPeers,
+          maintainedPeers.size());
     }
+  }
+
+  private boolean isMaintained(final PeerConnection peerConnection) {
+    return maintainedPeers.contains(peerConnection.getPeer());
   }
 
   public void checkMaintainedPeers() {
     for (final Peer peer : maintainedPeers) {
       BytesValue peerId = peer.getId();
-      if (!(isConnecting(peerId) || isConnected(peerId))) {
+      if (!connections.containsKey(peerId)) {
         maybeConnect(peer);
       }
     }
@@ -264,7 +274,7 @@ class PeerConnectionManager {
 
   @VisibleForTesting
   void connectToAvailablePeers() {
-    final int availablePeerSlots = Math.max(0, maxPeers - countAllConnections());
+    final int availablePeerSlots = Math.max(0, maxPeers - connections.size());
     if (availablePeerSlots <= 0) {
       return;
     }
@@ -273,7 +283,7 @@ class PeerConnectionManager {
         discoveryPeers
             .get()
             .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED)
-            .filter(peer -> !isConnected(peer.getId()) && !isConnecting(peer.getId()))
+            .filter(peer -> !connections.containsKey(peer.getId()))
             .filter(this::isPeerAllowed)
             .collect(Collectors.toList());
     Collections.shuffle(peers);
@@ -305,15 +315,12 @@ class PeerConnectionManager {
 
   public boolean removeMaintainedPeer(final Peer peer) {
     final boolean removed = maintainedPeers.remove(peer);
-
-    final CompletableFuture<PeerConnection> connectionFuture = pendingConnections.get(peer.getId());
-    if (connectionFuture != null) {
-      connectionFuture.thenAccept(connection -> connection.disconnect(DisconnectReason.REQUESTED));
-    }
-
-    final Optional<PeerConnection> peerConnection =
-        activeConnections.getConnectionForPeer(peer.getId());
-    peerConnection.ifPresent(pc -> pc.disconnect(DisconnectReason.REQUESTED));
+    connections
+        .get(peer.getId())
+        .manage(
+            (peerConnection) -> {
+              peerConnection.disconnect(DisconnectReason.REQUESTED);
+            });
 
     return removed;
   }
@@ -330,7 +337,7 @@ class PeerConnectionManager {
   }
 
   private boolean isPeerAllowed(final PeerConnection peerConnection) {
-    return isPeerAllowed(peerConnection.getPeer().getNodeId(), peerConnection.getRemoteEnodeURL());
+    return isPeerAllowed(peerConnection.getPeer().getId(), peerConnection.getRemoteEnodeURL());
   }
 
   private boolean isPeerAllowed(final Peer peer) {
@@ -346,18 +353,17 @@ class PeerConnectionManager {
     return nodePermissioningController.map(c -> c.isPermitted(ourEnodeUrl, peerEnode)).orElse(true);
   }
 
+  public void registerConnection() {
+    connectedPeersCounter.inc();
+  }
+
   public void handleDisconnect(
       final PeerConnection connection,
       final DisconnectReason reason,
       final boolean initiatedByPeer) {
-    activeConnections.handleDisconnect(connection, reason, initiatedByPeer);
-  }
-
-  private void logConnections() {
-    LOG.debug(
-        "Connections: {} pending, {} active connections.",
-        pendingConnections.size(),
-        activeConnections.size());
+    BytesValue peerId = connection.getPeer().getId();
+    connections.computeIfPresent(peerId, (id, peer) -> peer.equals(connection) ? null : peer);
+    disconnectCounter.labels(initiatedByPeer ? "remote" : "local", reason.name()).inc();
   }
 
   public void shutdown() {
@@ -365,9 +371,7 @@ class PeerConnectionManager {
   }
 
   private void shutdownPeerConnections() {
-    activeConnections
-        .getPeerConnections()
-        .forEach(p -> p.disconnect(DisconnectReason.CLIENT_QUITTING));
+    getConnections().forEach((conn) -> conn.disconnect(DisconnectReason.CLIENT_QUITTING));
   }
 
   private void assertEnabled() {
@@ -387,5 +391,88 @@ class PeerConnectionManager {
   @FunctionalInterface
   public interface DiscoveryPeerSupplier {
     Stream<DiscoveryPeer> get();
+  }
+
+  private interface ManagedPeerConnection {
+    void manage(Consumer<PeerConnection> connectionHandler);
+
+    boolean wasInitiatedRemotely();
+
+    boolean isPending();
+
+    boolean isDisconnected();
+
+    Optional<PeerConnection> getConnection();
+  }
+
+  private static class IncomingConnection implements ManagedPeerConnection {
+    private final PeerConnection connection;
+
+    public IncomingConnection(final PeerConnection connection) {
+      this.connection = connection;
+    }
+
+    @Override
+    public void manage(final Consumer<PeerConnection> connectionHandler) {
+      connectionHandler.accept(connection);
+    }
+
+    @Override
+    public boolean wasInitiatedRemotely() {
+      return true;
+    }
+
+    @Override
+    public boolean isPending() {
+      return false;
+    }
+
+    @Override
+    public boolean isDisconnected() {
+      return connection.isDisconnected();
+    }
+
+    @Override
+    public Optional<PeerConnection> getConnection() {
+      return Optional.of(connection);
+    }
+  }
+
+  private static class OutgoingConnection implements ManagedPeerConnection {
+    private final CompletableFuture<PeerConnection> pendingConnection;
+    private final AtomicBoolean isPending = new AtomicBoolean(true);
+
+    private OutgoingConnection(final CompletableFuture<PeerConnection> pendingConnection) {
+      this.pendingConnection = pendingConnection;
+      this.pendingConnection.whenComplete(
+          (res, err) -> {
+            isPending.set(false);
+          });
+    }
+
+    @Override
+    public void manage(final Consumer<PeerConnection> connectionHandler) {
+      pendingConnection.thenAccept(connectionHandler);
+    }
+
+    @Override
+    public boolean wasInitiatedRemotely() {
+      return false;
+    }
+
+    @Override
+    public boolean isPending() {
+      return isPending.get();
+    }
+
+    @Override
+    public boolean isDisconnected() {
+      return getConnection().map(PeerConnection::isDisconnected).orElse(false);
+    }
+
+    @Override
+    public Optional<PeerConnection> getConnection() {
+      return Optional.ofNullable(pendingConnection.getNow(null));
+    }
   }
 }

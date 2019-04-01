@@ -50,28 +50,48 @@ public class EnodeURL {
       final String ip,
       final Integer listeningPort,
       final OptionalInt discoveryPort) {
-    this(nodeId, InetAddresses.forUriString(ip), listeningPort, discoveryPort);
+    this(
+        BytesValue.fromHexString(nodeId),
+        InetAddresses.forUriString(ip),
+        listeningPort,
+        discoveryPort);
   }
 
   public EnodeURL(final String nodeId, final String ip, final int listeningPort) {
-    this(nodeId, ip, listeningPort, OptionalInt.empty());
+    this(
+        BytesValue.fromHexString(nodeId),
+        InetAddresses.forUriString(ip),
+        listeningPort,
+        OptionalInt.empty());
   }
 
   public EnodeURL(final String nodeId, final InetAddress address, final int listeningPort) {
-    this(nodeId, address, listeningPort, OptionalInt.empty());
+    this(BytesValue.fromHexString(nodeId), address, listeningPort, OptionalInt.empty());
   }
 
   public EnodeURL(
-      final String nodeId, final String address, final int listeningPort, final int discoveryPort) {
-    this(nodeId, address, listeningPort, OptionalInt.of(discoveryPort));
+      final String nodeId, final String ip, final int listeningPort, final int discoveryPort) {
+    this(
+        BytesValue.fromHexString(nodeId),
+        InetAddresses.forUriString(ip),
+        listeningPort,
+        OptionalInt.of(discoveryPort));
   }
 
   public EnodeURL(
-      final String nodeId,
+      final BytesValue nodeId,
+      final String ip,
+      final Integer listeningPort,
+      final int discoveryPort) {
+    this(nodeId, InetAddresses.forUriString(ip), listeningPort, OptionalInt.of(discoveryPort));
+  }
+
+  public EnodeURL(
+      final BytesValue nodeId,
       final InetAddress address,
       final Integer listeningPort,
       final OptionalInt discoveryPort) {
-    this.nodeId = BytesValue.fromHexString(nodeId);
+    this.nodeId = nodeId;
     this.ip = address;
     this.listeningPort = listeningPort;
     if (discoveryPort.isPresent() && discoveryPort.getAsInt() != listeningPort) {
@@ -94,7 +114,7 @@ public class EnodeURL {
     InetAddress ip = getAndValidateIp(enodeMatcher);
     int listeningPort = getAndValidatePort(enodeMatcher, "listening");
     OptionalInt discoveryPort = getAndValidateDiscoveryPort(enodeMatcher);
-    return new EnodeURL(nodeId, ip, listeningPort, discoveryPort);
+    return new EnodeURL(BytesValue.fromHexString(nodeId), ip, listeningPort, discoveryPort);
   }
 
   public URI toURI() {
