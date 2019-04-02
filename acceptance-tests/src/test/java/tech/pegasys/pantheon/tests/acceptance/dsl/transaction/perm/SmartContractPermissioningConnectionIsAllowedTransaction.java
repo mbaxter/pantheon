@@ -61,7 +61,7 @@ public class SmartContractPermissioningConnectionIsAllowedTransaction
         SmartContractPermissioningController.createPayload(
             BytesValue.fromHexString(IS_CONNECTION_ALLOWED_IPV4_SIGNATURE),
             EnodeURL.fromString(sourceEnodeURL),
-          EnodeURL.fromString(targetEnodeURL));
+            EnodeURL.fromString(targetEnodeURL));
 
     return org.web3j.protocol.core.methods.request.Transaction.createFunctionCallTransaction(
         null, null, null, null, contractAddress.toString(), payload.toString());

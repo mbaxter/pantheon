@@ -20,6 +20,10 @@ import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
+import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerRequirement;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
@@ -36,6 +40,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.StreamSupport;
 
@@ -115,13 +120,19 @@ public class NettyP2PNetwork extends AbstractP2PNetwork
       final Optional<NodePermissioningController> nodePermissioningController,
       final Blockchain blockchain) {
     super(
-        vertx,
+        getPeerDiscoveryAgentSupplier(
+            vertx,
+            keyPair,
+            config,
+            peerBlacklist,
+            metricsSystem,
+            nodeLocalConfigPermissioningController,
+            nodePermissioningController),
         keyPair,
         config,
         supportedCapabilities,
         peerBlacklist,
         metricsSystem,
-        nodeLocalConfigPermissioningController,
         nodePermissioningController,
         blockchain);
 
@@ -154,7 +165,7 @@ public class NettyP2PNetwork extends AbstractP2PNetwork
   }
 
   @Override
-  protected CompletableFuture<Void> stopNetwork() {
+  protected CompletableFuture<Void> stopListening() {
     CompletableFuture<Void> stoppedFuture = new CompletableFuture<>();
     workers.shutdownGracefully();
     boss.shutdownGracefully();
@@ -173,15 +184,15 @@ public class NettyP2PNetwork extends AbstractP2PNetwork
   }
 
   @Override
-  protected CompletableFuture<Integer> startListeningForConnections(
-      final NetworkingConfiguration config, final List<Capability> supportedCapabilities) {
+  protected CompletableFuture<Integer> startListening(
+      final RlpxConfiguration config, final List<Capability> supportedCapabilities) {
     CompletableFuture<Integer> listeningPortFuture = new CompletableFuture<>();
     this.server =
         new ServerBootstrap()
             .group(boss, workers)
             .channel(NioServerSocketChannel.class)
             .childHandler(inboundChannelInitializer())
-            .bind(config.getRlpx().getBindHost(), config.getRlpx().getBindPort());
+            .bind(config.getBindHost(), config.getBindPort());
     server.addListener(
         future -> {
           final InetSocketAddress socketAddress =
@@ -189,7 +200,7 @@ public class NettyP2PNetwork extends AbstractP2PNetwork
           final String message =
               String.format(
                   "Unable start up P2P network on %s:%s.  Check for port conflicts.",
-                  config.getRlpx().getBindHost(), config.getRlpx().getBindPort());
+                  config.getBindHost(), config.getBindPort());
 
           if (!future.isSuccess()) {
             LOG.error(message, future.cause());
@@ -289,5 +300,25 @@ public class NettyP2PNetwork extends AbstractP2PNetwork
             .filter(eventExecutor -> eventExecutor instanceof SingleThreadEventExecutor)
             .mapToInt(eventExecutor -> ((SingleThreadEventExecutor) eventExecutor).pendingTasks())
             .sum();
+  }
+
+  private static Function<PeerRequirement, PeerDiscoveryAgent> getPeerDiscoveryAgentSupplier(
+      final Vertx vertx,
+      final SECP256K1.KeyPair keyPair,
+      final NetworkingConfiguration config,
+      final PeerBlacklist peerBlacklist,
+      final MetricsSystem metricsSystem,
+      final Optional<NodeLocalConfigPermissioningController> nodeLocalConfigPermissioningController,
+      final Optional<NodePermissioningController> nodePermissioningController) {
+    return (PeerRequirement peerRequirement) ->
+        new VertxPeerDiscoveryAgent(
+            vertx,
+            keyPair,
+            config.getDiscovery(),
+            peerRequirement,
+            peerBlacklist,
+            nodeLocalConfigPermissioningController,
+            nodePermissioningController,
+            metricsSystem);
   }
 }

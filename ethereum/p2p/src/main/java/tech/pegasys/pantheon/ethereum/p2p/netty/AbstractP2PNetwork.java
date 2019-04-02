@@ -20,11 +20,12 @@ import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
+import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerRequirement;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
@@ -32,7 +33,6 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.DefaultMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
-import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.Subscribers;
@@ -52,11 +52,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.vertx.core.Vertx;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -119,7 +119,7 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
   @VisibleForTesting final PeerConnectionManager peerConnectionManager;
 
   protected Optional<EnodeURL> ourEnodeURL = Optional.empty();
-  protected volatile PeerInfo ourPeerInfo;
+  protected PeerInfo ourPeerInfo;
   protected final SECP256K1.KeyPair keyPair;
 
   private final int maxPeers;
@@ -134,24 +134,21 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
    * public IP address), as well as TCP and UDP port numbers for the RLPx agent and the discovery
    * agent, respectively.
    *
-   * @param vertx The vertx instance.
    * @param keyPair This node's keypair.
    * @param config The network configuration to use.
    * @param supportedCapabilities The wire protocol capabilities to advertise to connected peers.
    * @param peerBlacklist The peers with which this node will not connect
    * @param metricsSystem The metrics system to capture metrics with.
-   * @param nodeLocalConfigPermissioningController local file config for permissioning
    * @param nodePermissioningController Controls node permissioning.
    * @param blockchain The blockchain to subscribe to BlockAddedEvents.
    */
   public AbstractP2PNetwork(
-      final Vertx vertx,
+      final Function<PeerRequirement, PeerDiscoveryAgent> peerDiscoveryAgentSupplier,
       final SECP256K1.KeyPair keyPair,
       final NetworkingConfiguration config,
       final List<Capability> supportedCapabilities,
       final PeerBlacklist peerBlacklist,
       final MetricsSystem metricsSystem,
-      final Optional<NodeLocalConfigPermissioningController> nodeLocalConfigPermissioningController,
       final Optional<NodePermissioningController> nodePermissioningController,
       final Blockchain blockchain) {
     maxPeers = config.getRlpx().getMaxPeers();
@@ -165,17 +162,9 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
     nodePermissioningController.ifPresent(
         c -> peerConnectionManager.setNodePermissioningController(c, blockchain));
 
-    // TODO: inject discovery agent in cleaner way
     peerDiscoveryAgent =
-        new VertxPeerDiscoveryAgent(
-            vertx,
-            keyPair,
-            config.getDiscovery(),
-            () -> peerConnectionManager.countActiveConnections() >= maxPeers,
-            peerBlacklist,
-            nodeLocalConfigPermissioningController,
-            nodePermissioningController,
-            metricsSystem);
+        peerDiscoveryAgentSupplier.apply(
+            () -> peerConnectionManager.countActiveConnections() >= maxPeers);
 
     subscribeDisconnect(peerBlacklist);
 
@@ -183,7 +172,7 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
     this.subProtocols = config.getSupportedProtocols();
 
     CompletableFuture<Integer> listeningPortFuture =
-        startListeningForConnections(config, supportedCapabilities);
+        startListening(config.getRlpx(), supportedCapabilities);
     try {
       // Wait for network to initialize so we can set up our peer info accurately
       int listeningPort = listeningPortFuture.get(1, TimeUnit.MINUTES);
@@ -234,15 +223,15 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
     peerDroppedObserverId.ifPresent(peerDiscoveryAgent::removePeerDroppedObserver);
     peerDroppedObserverId = OptionalLong.empty();
     peerDiscoveryAgent.stop().join();
-    stopNetwork().thenAccept((res) -> stoppedCountDownLatch.countDown());
+    stopListening().thenAccept((res) -> stoppedCountDownLatch.countDown());
   }
 
-  protected abstract CompletableFuture<Void> stopNetwork();
+  protected abstract CompletableFuture<Void> stopListening();
 
-  protected abstract CompletableFuture<Integer> startListeningForConnections(
-      final NetworkingConfiguration config, final List<Capability> supportedCapabilities);
+  protected abstract CompletableFuture<Integer> startListening(
+      final RlpxConfiguration config, final List<Capability> supportedCapabilities);
 
-  public void handleIncomingConnection(final PeerConnection incomingConnection) {
+  protected void handleIncomingConnection(final PeerConnection incomingConnection) {
     if (peerConnectionManager.handleIncomingConnection(incomingConnection)) {
       handlePeerConnected(incomingConnection);
     }
@@ -298,7 +287,7 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
   @VisibleForTesting
   Consumer<PeerBondedEvent> handlePeerBondedEvent() {
     return event -> {
-      peerConnectionManager.maybeConnect(event.getPeer());
+      connect(event.getPeer());
     };
   }
 
@@ -343,7 +332,7 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
 
   @Override
   public boolean isListening() {
-    return peerDiscoveryAgent.isActive();
+    return true;
   }
 
   @Override
@@ -390,7 +379,7 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
   private EnodeURL buildSelfEnodeURL() {
     return peerDiscoveryAgent
         .getAdvertisedPeer()
-        .map(DiscoveryPeer::getEnodeURL)
+        .map(Peer::getEnodeURL)
         .orElseThrow(
             () ->
                 new IllegalStateException(

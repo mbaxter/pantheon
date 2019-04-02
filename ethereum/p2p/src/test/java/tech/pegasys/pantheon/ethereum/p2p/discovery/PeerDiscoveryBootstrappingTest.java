@@ -62,7 +62,7 @@ public class PeerDiscoveryBootstrappingTest {
   public void bootstrappingPingsSentMultipleBootstrapPeers() {
     // Use these peers as bootstrap peers.
     final List<MockPeerDiscoveryAgent> bootstrapAgents = helper.startDiscoveryAgents(3);
-    final List<DiscoveryPeer> bootstrapPeers =
+    final List<Peer> bootstrapPeers =
         bootstrapAgents.stream()
             .map(PeerDiscoveryAgent::getAdvertisedPeer)
             .map(Optional::get)

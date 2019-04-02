@@ -15,47 +15,21 @@ package tech.pegasys.pantheon.ethereum.p2p.netty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason.TCP_SUBSYSTEM_ERROR;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
-import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.WireMessageCodes;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
 
 import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
-import com.google.common.base.MoreObjects;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
-final class NettyPeerConnection implements PeerConnection {
-
-  private static final Logger LOG = LogManager.getLogger();
+final class NettyPeerConnection extends AbstractPeerConnection implements PeerConnection {
 
   private final ChannelHandlerContext ctx;
-  private final PeerInfo peerInfo;
-  private final Peer peer;
-  private final Set<Capability> agreedCapabilities;
-  private final Map<String, Capability> protocolToCapability = new HashMap<>();
-  private final AtomicBoolean disconnectDispatched = new AtomicBoolean(false);
-  private final AtomicBoolean disconnected = new AtomicBoolean(false);
-  private final PeerConnectionEventDispatcher peerEventDispatcher;
-  private final CapabilityMultiplexer multiplexer;
-  private final LabelledMetric<Counter> outboundMessagesCounter;
-  private final long connectedAt;
 
   public NettyPeerConnection(
       final ChannelHandlerContext ctx,
@@ -64,131 +38,37 @@ final class NettyPeerConnection implements PeerConnection {
       final CapabilityMultiplexer multiplexer,
       final PeerConnectionEventDispatcher peerEventDispatcher,
       final LabelledMetric<Counter> outboundMessagesCounter) {
+    super(
+        peer,
+        peerInfo,
+        localAddress(ctx),
+        remoteAddress(ctx),
+        multiplexer,
+        peerEventDispatcher,
+        outboundMessagesCounter);
     this.ctx = ctx;
-    this.peerInfo = peerInfo;
-    this.peer = peer;
-    this.multiplexer = multiplexer;
-    this.agreedCapabilities = multiplexer.getAgreedCapabilities();
-    for (final Capability cap : agreedCapabilities) {
-      protocolToCapability.put(cap.getName(), cap);
-    }
-    this.peerEventDispatcher = peerEventDispatcher;
-    this.outboundMessagesCounter = outboundMessagesCounter;
-    this.connectedAt = System.currentTimeMillis();
     ctx.channel().closeFuture().addListener(f -> terminateConnection(TCP_SUBSYSTEM_ERROR, false));
   }
 
-  @Override
-  public long getConnectedAt() {
-    return connectedAt;
+  private static InetSocketAddress remoteAddress(final ChannelHandlerContext ctx) {
+    return (InetSocketAddress) ctx.channel().localAddress();
   }
 
-  @Override
-  public void send(final Capability capability, final MessageData message) throws PeerNotConnected {
-    if (isDisconnected()) {
-      throw new PeerNotConnected("Attempt to send message to a closed peer connection");
-    }
-    if (capability != null) {
-      // Validate message is valid for this capability
-      final SubProtocol subProtocol = multiplexer.subProtocol(capability);
-      if (subProtocol == null
-          || !subProtocol.isValidMessageCode(capability.getVersion(), message.getCode())) {
-        throw new UnsupportedOperationException(
-            "Attempt to send unsupported message ("
-                + message.getCode()
-                + ") via cap "
-                + capability);
-      }
-      outboundMessagesCounter
-          .labels(
-              capability.toString(),
-              subProtocol.messageName(capability.getVersion(), message.getCode()),
-              Integer.toString(message.getCode()))
-          .inc();
-    } else {
-      outboundMessagesCounter
-          .labels(
-              "Wire",
-              WireMessageCodes.messageName(message.getCode()),
-              Integer.toString(message.getCode()))
-          .inc();
-    }
-
-    LOG.trace("Writing {} to {} via protocol {}", message, peerInfo, capability);
-    ctx.channel().writeAndFlush(new OutboundMessage(capability, message));
-  }
-
-  @Override
-  public PeerInfo getPeerInfo() {
-    return peerInfo;
-  }
-
-  @Override
-  public Peer getPeer() {
-    return peer;
-  }
-
-  @Override
-  public Capability capability(final String protocol) {
-    return protocolToCapability.get(protocol);
-  }
-
-  @Override
-  public Set<Capability> getAgreedCapabilities() {
-    return agreedCapabilities;
-  }
-
-  @Override
-  public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {
-    if (disconnectDispatched.compareAndSet(false, true)) {
-      LOG.debug("Disconnected ({}) from {}", reason, peerInfo);
-      peerEventDispatcher.dispatchPeerDisconnected(this, reason, peerInitiated);
-      disconnected.set(true);
-    }
-    // Always ensure the context gets closed immediately even if we previously sent a disconnect
-    // message and are waiting to close.
-    ctx.close();
-  }
-
-  @Override
-  public void disconnect(final DisconnectReason reason) {
-    if (disconnectDispatched.compareAndSet(false, true)) {
-      LOG.debug("Disconnecting ({}) from {}", reason, peerInfo);
-      peerEventDispatcher.dispatchPeerDisconnected(this, reason, false);
-      try {
-        send(null, DisconnectMessage.create(reason));
-      } catch (final PeerNotConnected e) {
-        // The connection has already been closed - nothing left to do
-        return;
-      }
-      disconnected.set(true);
-      ctx.channel().eventLoop().schedule((Callable<ChannelFuture>) ctx::close, 2L, SECONDS);
-    }
-  }
-
-  @Override
-  public boolean isDisconnected() {
-    return disconnected.get();
-  }
-
-  @Override
-  public InetSocketAddress getLocalAddress() {
+  private static InetSocketAddress localAddress(final ChannelHandlerContext ctx) {
     return (InetSocketAddress) ctx.channel().localAddress();
   }
 
   @Override
-  public InetSocketAddress getRemoteAddress() {
-    return (InetSocketAddress) ctx.channel().remoteAddress();
+  protected void sendOutboundMessage(final OutboundMessage message) {
+    ctx.channel().writeAndFlush(message);
   }
 
   @Override
-  public String toString() {
-    return MoreObjects.toStringHelper(this)
-        .add("clientId", peerInfo.getClientId())
-        .add("nodeId", peerInfo.getNodeId())
-        .add(
-            "caps",
-            agreedCapabilities.stream().map(Capability::toString).collect(Collectors.joining(", ")))
-        .toString();
+  protected void closeConnection(final boolean withDelay) {
+    if (withDelay) {
+      ctx.channel().eventLoop().schedule((Callable<ChannelFuture>) ctx::close, 2L, SECONDS);
+    } else {
+      ctx.close();
+    }
   }
 }

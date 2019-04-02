@@ -204,7 +204,7 @@ class PeerConnectionManager {
       return connectionFuture;
     }
 
-    if (connections.size() >= maxPeers) {
+    if (connections.size() > maxPeers) {
       connectionFuture.completeExceptionally(new TooManyPeersConnectionException());
     } else if (!isPeerAllowed(peer)) {
       connectionFuture.completeExceptionally(new PeerNotPermittedException());
@@ -472,7 +472,11 @@ class PeerConnectionManager {
 
     @Override
     public Optional<PeerConnection> getConnection() {
-      return Optional.ofNullable(pendingConnection.getNow(null));
+      try {
+        return Optional.ofNullable(pendingConnection.getNow(null));
+      } catch (Exception e) {
+        return Optional.empty();
+      }
     }
   }
 }

@@ -25,6 +25,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.MockPeerDiscoveryAg
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.NeighborsPacketData;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.Packet;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PacketType;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
@@ -65,7 +66,7 @@ public class PeerDiscoveryAgentTest {
     // Start 20 agents with no bootstrap peers.
     final List<MockPeerDiscoveryAgent> otherAgents =
         helper.startDiscoveryAgents(20, Collections.emptyList());
-    final List<DiscoveryPeer> otherPeers =
+    final List<Peer> otherPeers =
         otherAgents.stream()
             .map(MockPeerDiscoveryAgent::getAdvertisedPeer)
             .map(Optional::get)
@@ -111,7 +112,9 @@ public class PeerDiscoveryAgentTest {
     otherPeers.removeAll(neighbors.getNodes());
     assertThat(otherPeers.size()).isBetween(4, 5);
     if (otherPeers.size() == 5) {
-      assertThat(neighbors.getNodes()).contains(testAgent.getAdvertisedPeer().get());
+      List<BytesValue> neighborIds =
+          neighbors.getNodes().stream().map(Peer::getId).collect(toList());
+      assertThat(neighborIds).contains(testAgent.getAdvertisedPeer().get().getId());
     }
   }
 
@@ -119,7 +122,7 @@ public class PeerDiscoveryAgentTest {
   public void dropPeer() {
     final MockPeerDiscoveryAgent peerDiscoveryAgent1 = helper.startDiscoveryAgent();
     peerDiscoveryAgent1.start(BROADCAST_TCP_PORT).join();
-    final DiscoveryPeer peer = peerDiscoveryAgent1.getAdvertisedPeer().get();
+    final Peer peer = peerDiscoveryAgent1.getAdvertisedPeer().get();
 
     final MockPeerDiscoveryAgent peerDiscoveryAgent2 = helper.startDiscoveryAgent(peer);
     peerDiscoveryAgent2.start(BROADCAST_TCP_PORT).join();

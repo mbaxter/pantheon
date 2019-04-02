@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.MockPeerDiscoveryAgent;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.ArrayList;
@@ -82,7 +83,7 @@ public class PeerDiscoveryObserversTest {
     // Create 3 discovery agents with no bootstrap peers.
     final List<MockPeerDiscoveryAgent> others1 =
         helper.startDiscoveryAgents(3, Collections.emptyList());
-    final List<DiscoveryPeer> peers1 =
+    final List<Peer> peers1 =
         others1.stream()
             .map(MockPeerDiscoveryAgent::getAdvertisedPeer)
             .map(Optional::get)
@@ -90,14 +91,14 @@ public class PeerDiscoveryObserversTest {
 
     // Create two discovery agents pointing to the above as bootstrap peers.
     final List<MockPeerDiscoveryAgent> others2 = helper.startDiscoveryAgents(2, peers1);
-    final List<DiscoveryPeer> peers2 =
+    final List<Peer> peers2 =
         others2.stream()
             .map(MockPeerDiscoveryAgent::getAdvertisedPeer)
             .map(Optional::get)
             .collect(Collectors.toList());
 
     // A list of all peers.
-    final List<DiscoveryPeer> allPeers = new ArrayList<>(peers1);
+    final List<Peer> allPeers = new ArrayList<>(peers1);
     allPeers.addAll(peers2);
 
     // Create a discovery agent (which we'll assert on), using the above two peers as bootstrap
@@ -123,7 +124,7 @@ public class PeerDiscoveryObserversTest {
     assertThat(discoveredPeers)
         .extracting(DiscoveryPeer::getId)
         .containsExactlyInAnyOrderElementsOf(
-            allPeers.stream().map(DiscoveryPeer::getId).collect(Collectors.toList()));
+            allPeers.stream().map(Peer::getId).collect(Collectors.toList()));
     assertThat(events).extracting(PeerDiscoveryEvent::getTimestamp).isSorted();
   }
 
@@ -132,7 +133,7 @@ public class PeerDiscoveryObserversTest {
     // Create 3 discovery agents with no bootstrap peers.
     final List<MockPeerDiscoveryAgent> others =
         helper.startDiscoveryAgents(3, Collections.emptyList());
-    final DiscoveryPeer peer = others.get(0).getAdvertisedPeer().get();
+    final Peer peer = others.get(0).getAdvertisedPeer().get();
 
     // Create a discovery agent (which we'll assert on), using the above two peers as bootstrap
     // peers.

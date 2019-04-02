@@ -81,15 +81,15 @@ public class EnodeURL {
   public EnodeURL(
       final BytesValue nodeId,
       final String ip,
-      final Integer listeningPort,
-      final int discoveryPort) {
-    this(nodeId, InetAddresses.forUriString(ip), listeningPort, OptionalInt.of(discoveryPort));
+      final int listeningPort,
+      final OptionalInt discoveryPort) {
+    this(nodeId, InetAddresses.forUriString(ip), listeningPort, discoveryPort);
   }
 
   public EnodeURL(
       final BytesValue nodeId,
       final InetAddress address,
-      final Integer listeningPort,
+      final int listeningPort,
       final OptionalInt discoveryPort) {
     this.nodeId = nodeId;
     this.ip = address;
