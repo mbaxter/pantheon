@@ -67,7 +67,7 @@ public class NettyPeerConnectionTest {
             peerInfo,
             multiplexer,
             peerEventDispatcher,
-            NoOpMetricsSystem.NO_OP_LABELLED_COUNTER);
+            NoOpMetricsSystem.NO_OP_LABELLED_3_COUNTER);
   }
 
   @Test

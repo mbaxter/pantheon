@@ -47,7 +47,7 @@ public class DeFramerTest {
           Optional.empty(),
           peerEventDispatcher,
           connectFuture,
-          NoOpMetricsSystem.NO_OP_LABELLED_COUNTER);
+          NoOpMetricsSystem.NO_OP_LABELLED_3_COUNTER);
 
   @Test
   public void shouldDisconnectForBreachOfProtocolWhenFramingExceptionThrown() throws Exception {
