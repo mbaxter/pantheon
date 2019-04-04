@@ -25,13 +25,13 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerRequirement;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.DefaultMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
-import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
@@ -120,10 +120,10 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
 
   protected Optional<EnodeURL> ourEnodeURL = Optional.empty();
   protected PeerInfo ourPeerInfo;
+  protected final List<Capability> ourCapabilities;
   protected final SECP256K1.KeyPair keyPair;
 
   private final int maxPeers;
-  protected final List<SubProtocol> subProtocols;
 
   private final CountDownLatch stoppedCountDownLatch = new CountDownLatch(1);
 
@@ -152,10 +152,11 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
       final Optional<NodePermissioningController> nodePermissioningController,
       final Blockchain blockchain) {
     maxPeers = config.getRlpx().getMaxPeers();
+    ourCapabilities = supportedCapabilities;
     this.peerConnectionManager =
         new PeerConnectionManager(
             this::initiateConnection,
-            this::getDiscoveryPeers,
+            this::getDiscoveredPeers,
             maxPeers,
             peerBlacklist,
             metricsSystem);
@@ -169,7 +170,6 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
     subscribeDisconnect(peerBlacklist);
 
     this.keyPair = keyPair;
-    this.subProtocols = config.getSupportedProtocols();
 
     CompletableFuture<Integer> listeningPortFuture =
         startListening(config.getRlpx(), supportedCapabilities);
@@ -316,8 +316,10 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
   }
 
   @VisibleForTesting
-  public Stream<DiscoveryPeer> getDiscoveryPeers() {
-    return peerDiscoveryAgent.getPeers();
+  public Stream<DiscoveryPeer> getDiscoveredPeers() {
+    return peerDiscoveryAgent
+        .getPeers()
+        .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED);
   }
 
   @Override

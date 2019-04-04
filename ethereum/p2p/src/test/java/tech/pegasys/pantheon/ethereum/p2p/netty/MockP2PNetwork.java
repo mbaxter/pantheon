@@ -30,23 +30,16 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
-import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
-import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
-import tech.pegasys.pantheon.metrics.Counter;
-import tech.pegasys.pantheon.metrics.LabelledMetric;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
-import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class MockP2PNetwork extends AbstractP2PNetwork {
@@ -77,6 +70,10 @@ public class MockP2PNetwork extends AbstractP2PNetwork {
 
   public static MockP2PNetwork create() {
     return builder().build();
+  }
+
+  public static MockPeerConnection createMockPeerConnection(final Peer peer) {
+    return MockPeerConnection.create(peer);
   }
 
   private static Function<PeerRequirement, PeerDiscoveryAgent> getPeerDiscoveryAgentSupplier(
@@ -133,7 +130,7 @@ public class MockP2PNetwork extends AbstractP2PNetwork {
     private DiscoveryConfiguration discoveryConfiguration =
         DiscoveryConfiguration.create().setActive(false);
     private RlpxConfiguration rlpxConfiguration = RlpxConfiguration.create();
-    private List<SubProtocol> subprotocols = Arrays.asList(subProtocol());
+    private List<Capability> capabilities = Arrays.asList(Capability.create("eth", 63));
 
     private MockP2PNetworkBuilder() {}
 
@@ -149,145 +146,27 @@ public class MockP2PNetwork extends AbstractP2PNetwork {
 
     public MockP2PNetworkBuilder rlpxConfig(
         final Function<RlpxConfiguration, RlpxConfiguration> configModifier) {
-      this.rlpxConfiguration = configModifier.apply(this.rlpxConfiguration);
-      return this;
+      return rlpxConfig(configModifier.apply(this.rlpxConfiguration));
     }
 
     MockP2PNetwork build() {
       checkNotNull(keyPair);
       checkNotNull(discoveryConfiguration);
       checkNotNull(rlpxConfiguration);
-      checkNotNull(subprotocols);
 
       final NetworkingConfiguration networkingConfiguration =
           NetworkingConfiguration.create()
               .setDiscovery(discoveryConfiguration)
-              .setSupportedProtocols(subprotocols)
               .setRlpx(rlpxConfiguration);
 
       return new MockP2PNetwork(
           keyPair,
           networkingConfiguration,
-          getCapabilities(),
+          capabilities,
           new PeerBlacklist(),
           new NoOpMetricsSystem(),
           Optional.ofNullable(nodePermissioningController),
           blockchain);
-    }
-
-    private List<Capability> getCapabilities() {
-      return subprotocols.stream()
-          .map(s -> Capability.create(s.getName(), 1))
-          .collect(Collectors.toList());
-    }
-
-    private static SubProtocol subProtocol() {
-      return new SubProtocol() {
-        @Override
-        public String getName() {
-          return "eth";
-        }
-
-        @Override
-        public int messageSpace(final int protocolVersion) {
-          return 8;
-        }
-
-        @Override
-        public boolean isValidMessageCode(final int protocolVersion, final int code) {
-          return true;
-        }
-
-        @Override
-        public String messageName(final int protocolVersion, final int code) {
-          return INVALID_MESSAGE_NAME;
-        }
-      };
-    }
-  }
-
-  private static class MockPeerConnection extends AbstractPeerConnection {
-
-    private MockPeerConnection(
-        final Peer peer,
-        final PeerInfo peerInfo,
-        final InetSocketAddress localAddress,
-        final InetSocketAddress remoteAddress,
-        final CapabilityMultiplexer multiplexer,
-        final PeerConnectionEventDispatcher peerEventDispatcher,
-        final LabelledMetric<Counter> outboundMessagesCounter) {
-      super(
-          peer,
-          peerInfo,
-          localAddress,
-          remoteAddress,
-          multiplexer,
-          peerEventDispatcher,
-          outboundMessagesCounter);
-    }
-
-    static MockPeerConnection create(final Peer peer, final MockP2PNetwork localNetwork) {
-      PeerInfo localInfo = localNetwork.ourPeerInfo;
-      PeerInfo peerInfo =
-          new PeerInfo(
-              localInfo.getVersion(),
-              localInfo.getClientId(),
-              localInfo.getCapabilities(),
-              localInfo.getPort(),
-              peer.getId());
-      InetSocketAddress localAddress = new InetSocketAddress("127.0.0.1", localInfo.getPort());
-      InetSocketAddress remoteAddress = new InetSocketAddress("127.0.0.2", peerInfo.getPort());
-      CapabilityMultiplexer multiplexer =
-          new CapabilityMultiplexer(
-              localNetwork.subProtocols, localInfo.getCapabilities(), peerInfo.getCapabilities());
-      PeerConnectionEventDispatcher dispatcher = localNetwork;
-      LabelledMetric<Counter> counter = NoOpMetricsSystem.NO_OP_LABELLED_3_COUNTER;
-      return new MockPeerConnection(
-          peer, peerInfo, localAddress, remoteAddress, multiplexer, dispatcher, counter);
-    }
-
-    @Override
-    protected void sendOutboundMessage(final OutboundMessage message) {
-      // Not implemented
-    }
-
-    @Override
-    protected void closeConnection(final boolean withDelay) {
-      // Nothing to do
-    }
-  }
-
-  public static class Disconnection {
-    private final PeerConnection connection;
-    private final DisconnectReason reason;
-    private final boolean initiatedByPeer;
-
-    private Disconnection(
-        final PeerConnection connection,
-        final DisconnectReason reason,
-        final boolean initiatedByPeer) {
-      this.connection = connection;
-      this.reason = reason;
-      this.initiatedByPeer = initiatedByPeer;
-    }
-
-    public static Disconnection create(
-        final PeerConnection connection,
-        final DisconnectReason reason,
-        final boolean initiatedByPeer) {
-      return new Disconnection(connection, reason, initiatedByPeer);
-    }
-
-    public PeerConnection getConnection() {
-      return connection;
-    }
-
-    public DisconnectReason getReason() {
-      return reason;
-    }
-
-    public boolean isInitiatedByPeer() {
-      return initiatedByPeer;
     }
   }
 }

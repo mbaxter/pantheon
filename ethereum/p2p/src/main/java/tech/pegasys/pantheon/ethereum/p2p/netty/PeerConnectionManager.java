@@ -17,8 +17,6 @@ import static com.google.common.base.Preconditions.checkState;
 
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.ConnectingToLocalNodeException;
 import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.ConnectionException;
 import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.DuplicatePeerConnectionException;
@@ -60,9 +58,9 @@ class PeerConnectionManager {
   private final Map<BytesValue, ManagedPeerConnection> connections = new ConcurrentHashMap<>();
 
   private final PeerConnector peerConnector;
-  private final DiscoveryPeerSupplier discoveryPeers;
+  private final AvailablePeersSupplier availablePeers;
   private final int maxPeers;
-  private final Set<Peer> maintainedPeers = new ConcurrentHashSet<>();
+  @VisibleForTesting final Set<Peer> maintainedPeers = new ConcurrentHashSet<>();
   private final PeerBlacklist peerBlacklist;
 
   private Optional<NodePermissioningController> nodePermissioningController = Optional.empty();
@@ -78,7 +76,7 @@ class PeerConnectionManager {
 
   public PeerConnectionManager(
       final PeerConnector peerConnector,
-      final DiscoveryPeerSupplier discoveryPeers,
+      final AvailablePeersSupplier availablePeers,
       final int maxPeers,
       final PeerBlacklist peerBlacklist,
       final MetricsSystem metrics) {
@@ -98,7 +96,7 @@ class PeerConnectionManager {
         "Number of peers currently connected",
         () -> (double) countActiveConnections());
     this.peerConnector = peerConnector;
-    this.discoveryPeers = discoveryPeers;
+    this.availablePeers = availablePeers;
     this.maxPeers = maxPeers;
     this.peerBlacklist = peerBlacklist;
     this.shutdownCallbacks.add(this::shutdownPeerConnections);
@@ -279,10 +277,9 @@ class PeerConnectionManager {
       return;
     }
 
-    final List<DiscoveryPeer> peers =
-        discoveryPeers
+    final List<Peer> peers =
+        availablePeers
             .get()
-            .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED)
             .filter(peer -> !connections.containsKey(peer.getId()))
             .filter(this::isPeerAllowed)
             .collect(Collectors.toList());
@@ -389,8 +386,8 @@ class PeerConnectionManager {
   }
 
   @FunctionalInterface
-  public interface DiscoveryPeerSupplier {
-    Stream<DiscoveryPeer> get();
+  public interface AvailablePeersSupplier {
+    Stream<? extends Peer> get();
   }
 
   private interface ManagedPeerConnection {

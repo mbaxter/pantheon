@@ -13,33 +13,45 @@
 package tech.pegasys.pantheon.ethereum.p2p.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
+import static org.assertj.core.api.Java6Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
+import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.netty.PeerConnectionManager.PeerConnector;
+import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.TooManyPeersConnectionException;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper;
+import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalInt;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.junit.Test;
 
 public class PeerConnectionManagerTest {
 
-  final List<DiscoveryPeer> discoveryPeers = new ArrayList<>();
-  final PeerConnector peerConnector = mock(PeerConnector.class);
+  final EnodeURL ourEnode = new EnodeURL(Peer.randomId(), "127.0.0.1", 30303, OptionalInt.empty());
+  final List<Peer> availablePeers = new ArrayList<>();
+  final TestPeerConnector peerConnector = spy(new TestPeerConnector());
   final PeerBlacklist peerBlacklist = new PeerBlacklist();
   final MetricsSystem metrics = new NoOpMetricsSystem();
 
   private PeerConnectionManager getPeerConnectionManager(final int maxPeers) {
-    return new PeerConnectionManager(
-        peerConnector, () -> discoveryPeers.stream(), maxPeers, peerBlacklist, metrics);
+    PeerConnectionManager manager =
+        new PeerConnectionManager(
+            peerConnector, () -> availablePeers.stream(), maxPeers, peerBlacklist, metrics);
+    manager.setEnodeUrl(ourEnode);
+    manager.setEnabled();
+    return manager;
   }
 
   private PeerConnectionManager getPeerConnectionManager() {
@@ -47,9 +59,59 @@ public class PeerConnectionManagerTest {
   }
 
   @Test
-  public void addingMaintainedNetworkPeerStartsConnection() {
+  public void connect_succeeds() {
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager(5);
+    final Peer peer = P2PNetworkTestHelper.mockPeer();
+    peerConnectionManager.maybeConnect(peer);
+
+    assertThat(peerConnectionManager.getConnections().map(PeerConnection::getPeer)).contains(peer);
+  }
+
+  @Test
+  public void handleIncomingConnection_succeeds() {
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager(5);
+    PeerConnection connection = P2PNetworkTestHelper.mockPeerConnection();
+    peerConnectionManager.handleIncomingConnection(connection);
+
+    assertThat(peerConnectionManager.getConnections()).contains(connection);
+  }
+
+  @Test
+  public void connect_enforceMaxPeers() {
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager(1);
+    final Peer peer1 = P2PNetworkTestHelper.mockPeer();
+    peerConnectionManager.maybeConnect(peer1);
+
+    assertThat(peerConnectionManager.getConnections().map(PeerConnection::getPeer)).contains(peer1);
+
+    final Peer peer2 = P2PNetworkTestHelper.mockPeer();
+    CompletableFuture<PeerConnection> result = peerConnectionManager.maybeConnect(peer2);
+    assertThatThrownBy(() -> result.get())
+        .hasCauseInstanceOf(TooManyPeersConnectionException.class);
+
+    assertThat(peerConnectionManager.getConnections().count()).isEqualTo(1);
+  }
+
+  @Test
+  public void handleIncomingConnection_enforceMaxPeers() {
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager(1);
+    final Peer peer1 = P2PNetworkTestHelper.mockPeer();
+    peerConnectionManager.maybeConnect(peer1);
+
+    assertThat(peerConnectionManager.getConnections().map(PeerConnection::getPeer)).contains(peer1);
+
+    final PeerConnection connection = P2PNetworkTestHelper.mockPeerConnection();
+    peerConnectionManager.handleIncomingConnection(connection);
+
+    // One of the 2 peers should be disconnected
+    assertThat(peerConnectionManager.getConnections().filter(conn -> conn.isDisconnected()).count())
+        .isEqualTo(1);
+  }
+
+  @Test
+  public void addMaintainedPeer_connectsToPeer() {
     final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
-    final Peer peer = PeerTestHelper.mockPeer();
+    final Peer peer = P2PNetworkTestHelper.mockPeer();
     assertThat(peerConnectionManager.addMaintainedPeer(peer)).isTrue();
 
     assertThat(peerConnectionManager.getMaintainedPeers()).contains(peer);
@@ -57,228 +119,181 @@ public class PeerConnectionManagerTest {
   }
 
   @Test
-  public void addingRepeatMaintainedPeersReturnsFalse() {
+  public void addMaintainedPeer_repeatedInvocationsReturnFalse() {
     final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
-    final Peer peer = PeerTestHelper.mockPeer();
+    final Peer peer = P2PNetworkTestHelper.mockPeer();
     assertThat(peerConnectionManager.addMaintainedPeer(peer)).isTrue();
     assertThat(peerConnectionManager.addMaintainedPeer(peer)).isFalse();
   }
 
-  // TODO: Finish migrating tests
-  //  @Test
-  //  public void checkMaintainedConnectionPeersTriesToConnect() {
-  //    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
-  //    final Peer peer = PeerTestHelper.mockPeer();
-  //    peerConnectionManager.addMaintainedPeer(peer);
-  //
-  //    network.checkMaintainedConnectionPeers();
-  //    verify(network, times(1)).connect(peer);
-  //  }
-  //
-  //  @Test
-  //  public void checkMaintainedConnectionPeersDoesntReconnectPendingPeers() {
-  //    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
-  //    final Peer peer = PeerTestHelper.mockPeer();
-  //
-  //    network.pendingConnections.put(peer, new CompletableFuture<>());
-  //
-  //    network.checkMaintainedConnectionPeers();
-  //    verify(network, times(0)).connect(peer);
-  //  }
-  //
-  //  @Test
-  //  public void checkMaintainedConnectionPeersDoesntReconnectConnectedPeers() {
-  //    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
-  //    final Peer peer = PeerTestHelper.mockPeer();
-  //    verify(network, never()).connect(peer);
-  //    assertThat(network.addMaintainConnectionPeer(peer)).isTrue();
-  //    verify(network, times(1)).connect(peer);
-  //
-  //    {
-  //      final CompletableFuture<PeerConnection> connection;
-  //      connection = network.pendingConnections.remove(peer);
-  //      assertThat(connection).isNotNull();
-  //      assertThat(connection.cancel(true)).isTrue();
-  //    }
-  //
-  //    {
-  //      final PeerConnection peerConnection = mockPeerConnection(peer.getId());
-  //      network.connections.registerConnection(peerConnection);
-  //      network.checkMaintainedConnectionPeers();
-  //      verify(network, times(1)).connect(peer);
-  //    }
-  //  }
-  //
-  //  @Test
-  //  public void removePeerReturnsTrueIfNodeWasInMaintaineConnectionsAndDisconnectsIfInPending() {
-  //    final NettyP2PNetwork nettyP2PNetwork = nettyP2PNetwork();
-  //    nettyP2PNetwork.start();
-  //
-  //    final Peer localPeer = mockPeer("127.0.0.1", 30301);
-  //    final Peer remotePeer = mockPeer("127.0.0.2", 30302);
-  //    final PeerConnection peerConnection = mockPeerConnection(localPeer, remotePeer);
-  //
-  //    nettyP2PNetwork.addMaintainConnectionPeer(remotePeer);
-  //    assertThat(nettyP2PNetwork.peerMaintainConnectionList.contains(remotePeer)).isTrue();
-  //    assertThat(nettyP2PNetwork.pendingConnections.containsKey(remotePeer)).isTrue();
-  //    assertThat(nettyP2PNetwork.removeMaintainedConnectionPeer(remotePeer)).isTrue();
-  //    assertThat(nettyP2PNetwork.peerMaintainConnectionList.contains(remotePeer)).isFalse();
-  //
-  //    // Note: The pendingConnection future is not removed.
-  //    assertThat(nettyP2PNetwork.pendingConnections.containsKey(remotePeer)).isTrue();
-  //
-  //    // Complete the connection, and ensure "disconnect is automatically called.
-  //    nettyP2PNetwork.pendingConnections.get(remotePeer).complete(peerConnection);
-  //    verify(peerConnection).disconnect(DisconnectReason.REQUESTED);
-  //  }
-  //
-  //  @Test
-  //  public void removePeerReturnsFalseIfNotInMaintainedListButDisconnectsPeer() {
-  //    final NettyP2PNetwork nettyP2PNetwork = nettyP2PNetwork();
-  //    nettyP2PNetwork.start();
-  //
-  //    final Peer localPeer = mockPeer("127.0.0.1", 30301);
-  //    final Peer remotePeer = mockPeer("127.0.0.2", 30302);
-  //    final PeerConnection peerConnection = mockPeerConnection(localPeer, remotePeer);
-  //
-  //    CompletableFuture<PeerConnection> future = nettyP2PNetwork.connect(remotePeer);
-  //
-  //    assertThat(nettyP2PNetwork.peerMaintainConnectionList.contains(remotePeer)).isFalse();
-  //    assertThat(nettyP2PNetwork.pendingConnections.containsKey(remotePeer)).isTrue();
-  //    future.complete(peerConnection);
-  //    assertThat(nettyP2PNetwork.pendingConnections.containsKey(remotePeer)).isFalse();
-  //
-  //    assertThat(nettyP2PNetwork.removeMaintainedConnectionPeer(remotePeer)).isFalse();
-  //    assertThat(nettyP2PNetwork.peerMaintainConnectionList.contains(remotePeer)).isFalse();
-  //
-  //    verify(peerConnection).disconnect(DisconnectReason.REQUESTED);
-  //  }
-  //
-  //  @Test
-  //  public void attemptPeerConnections_connectsToValidPeer() {
-  //    final int maxPeers = 5;
-  //    final NettyP2PNetwork network =
-  //      mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-  //
-  //    doReturn(2).when(network).connectionCount();
-  //    DiscoveryPeer peer = createDiscoveryPeer(0);
-  //    peer.setStatus(PeerDiscoveryStatus.BONDED);
-  //
-  //    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
-  //    ArgumentCaptor<DiscoveryPeer> peerCapture = ArgumentCaptor.forClass(DiscoveryPeer.class);
-  //    doReturn(CompletableFuture.completedFuture(mock(PeerConnection.class)))
-  //      .when(network)
-  //      .connect(peerCapture.capture());
-  //
-  //    network.connectToAvailablePeers();
-  //    verify(network, times(1)).connect(any());
-  //    assertThat(peerCapture.getValue()).isEqualTo(peer);
-  //  }
-  //
-  //  @Test
-  //  public void attemptPeerConnections_ignoresUnbondedPeer() {
-  //    final int maxPeers = 5;
-  //    final NettyP2PNetwork network =
-  //      mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-  //
-  //    doReturn(2).when(network).connectionCount();
-  //    DiscoveryPeer peer = createDiscoveryPeer(0);
-  //    peer.setStatus(PeerDiscoveryStatus.KNOWN);
-  //
-  //    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
-  //
-  //    network.connectToAvailablePeers();
-  //    verify(network, times(0)).connect(any());
-  //  }
-  //
-  //  @Test
-  //  public void attemptPeerConnections_ignoresConnectingPeer() {
-  //    final int maxPeers = 5;
-  //    final NettyP2PNetwork network =
-  //      mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-  //
-  //    doReturn(2).when(network).connectionCount();
-  //    DiscoveryPeer peer = createDiscoveryPeer(0);
-  //    peer.setStatus(PeerDiscoveryStatus.BONDED);
-  //
-  //    doReturn(true).when(network).isConnecting(peer);
-  //    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
-  //
-  //    network.connectToAvailablePeers();
-  //    verify(network, times(0)).connect(any());
-  //  }
-  //
-  //  @Test
-  //  public void attemptPeerConnections_ignoresConnectedPeer() {
-  //    final int maxPeers = 5;
-  //    final NettyP2PNetwork network =
-  //      mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-  //
-  //    doReturn(2).when(network).connectionCount();
-  //    DiscoveryPeer peer = createDiscoveryPeer(0);
-  //    peer.setStatus(PeerDiscoveryStatus.BONDED);
-  //
-  //    doReturn(true).when(network).isConnected(peer);
-  //    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
-  //
-  //    network.connectToAvailablePeers();
-  //    verify(network, times(0)).connect(any());
-  //  }
-  //
-  //  @Test
-  //  public void attemptPeerConnections_withSlotsAvailable() {
-  //    final int maxPeers = 5;
-  //    final NettyP2PNetwork network =
-  //      mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-  //
-  //    doReturn(2).when(network).connectionCount();
-  //    List<DiscoveryPeer> peers =
-  //      Stream.iterate(1, n -> n + 1)
-  //        .limit(10)
-  //        .map(
-  //          (seed) -> {
-  //            DiscoveryPeer peer = createDiscoveryPeer(seed);
-  //            peer.setStatus(PeerDiscoveryStatus.BONDED);
-  //            return peer;
-  //          })
-  //        .collect(Collectors.toList());
-  //
-  //    doReturn(peers.stream()).when(network).getDiscoveryPeers();
-  //    ArgumentCaptor<DiscoveryPeer> peerCapture = ArgumentCaptor.forClass(DiscoveryPeer.class);
-  //    doReturn(CompletableFuture.completedFuture(mock(PeerConnection.class)))
-  //      .when(network)
-  //      .connect(peerCapture.capture());
-  //
-  //    network.connectToAvailablePeers();
-  //    verify(network, times(3)).connect(any());
-  //    assertThat(peers.containsAll(peerCapture.getAllValues())).isTrue();
-  //  }
-  //
-  //  @Test
-  //  public void attemptPeerConnections_withNoSlotsAvailable() {
-  //    final int maxPeers = 5;
-  //    final NettyP2PNetwork network =
-  //      mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
-  //
-  //    doReturn(maxPeers).when(network).connectionCount();
-  //    List<DiscoveryPeer> peers =
-  //      Stream.iterate(1, n -> n + 1)
-  //        .limit(10)
-  //        .map(
-  //          (seed) -> {
-  //            DiscoveryPeer peer = createDiscoveryPeer(seed);
-  //            peer.setStatus(PeerDiscoveryStatus.BONDED);
-  //            return peer;
-  //          })
-  //        .collect(Collectors.toList());
-  //
-  //    lenient().doReturn(peers.stream()).when(network).getDiscoveryPeers();
-  //
-  //    network.connectToAvailablePeers();
-  //    verify(network, times(0)).connect(any());
-  //  }
-  //  private DiscoveryPeer createDiscoveryPeer(final int seed) {
-  //    return new DiscoveryPeer(generatePeerId(seed), "127.0.0.1", 999, OptionalInt.empty());
-  //  }
+  @Test
+  public void checkMaintainedConnection_connectsNewPeer() {
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
+    final Peer peer = P2PNetworkTestHelper.mockPeer();
 
+    peerConnectionManager.maintainedPeers.add(peer);
+    verify(peerConnector, times(0)).connect(peer);
+    assertThat(peerConnectionManager.getConnections().map(PeerConnection::getPeer))
+        .doesNotContain(peer);
+
+    peerConnectionManager.checkMaintainedPeers();
+    verify(peerConnector, times(1)).connect(peer);
+  }
+
+  @Test
+  public void checkMaintainedConnection_doesntReconnectConnectedPeers() {
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
+    final Peer peer = P2PNetworkTestHelper.mockPeer();
+
+    // Connect to peer
+    assertThat(peerConnectionManager.addMaintainedPeer(peer)).isTrue();
+    verify(peerConnector, times(1)).connect(peer);
+    assertThat(peerConnectionManager.getConnections().map(PeerConnection::getPeer)).contains(peer);
+
+    // Check shouldn't connect to already connecting peer
+    peerConnectionManager.checkMaintainedPeers();
+    verify(peerConnector, times(1)).connect(peer);
+  }
+
+  @Test
+  public void checkMaintainedConnection_doesntReconnectPendingPeers() {
+    peerConnector.setAutoComplete(false);
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
+    final Peer peer = P2PNetworkTestHelper.mockPeer();
+
+    // Connect to peer
+    assertThat(peerConnectionManager.addMaintainedPeer(peer)).isTrue();
+    verify(peerConnector, times(1)).connect(peer);
+    assertThat(peerConnectionManager.getConnections().map(PeerConnection::getPeer))
+        .doesNotContain(peer);
+
+    // Check shouldn't connect to peer with pending connection
+    peerConnectionManager.checkMaintainedPeers();
+    verify(peerConnector, times(1)).connect(peer);
+  }
+
+  @Test
+  public void removeMaintainedPeer_returnsFalseIfNotInMaintainedListButDisconnectsPeer() {
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
+    final PeerConnection peerConnection = P2PNetworkTestHelper.mockPeerConnection();
+
+    // Connect to the peer
+    peerConnectionManager.handleIncomingConnection(peerConnection);
+    assertThat(peerConnectionManager.getConnections()).contains(peerConnection);
+    assertThat(peerConnection.isDisconnected()).isFalse();
+
+    assertThat(peerConnectionManager.removeMaintainedPeer(peerConnection.getPeer())).isFalse();
+    assertThat(peerConnection.isDisconnected()).isTrue();
+    verify(peerConnection).disconnect(DisconnectReason.REQUESTED);
+  }
+
+  @Test
+  public void attemptPeerConnections_connectsTopeer() {
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
+    Peer peer = P2PNetworkTestHelper.mockPeer();
+    availablePeers.add(peer);
+
+    peerConnectionManager.connectToAvailablePeers();
+
+    verify(peerConnector, times(1)).connect(peer);
+  }
+
+  @Test
+  public void attemptPeerConnections_ignoresConnectedPeer() {
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
+    Peer peer = P2PNetworkTestHelper.mockPeer();
+    availablePeers.add(peer);
+
+    peerConnectionManager.maybeConnect(peer);
+    verify(peerConnector, times(1)).connect(peer);
+
+    // We should not try to connect to already connected peer
+    peerConnectionManager.connectToAvailablePeers();
+    verify(peerConnector, times(1)).connect(peer);
+  }
+
+  @Test
+  public void attemptPeerConnections_ignoresConnectingPeer() {
+    peerConnector.setAutoComplete(false);
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager();
+    Peer peer = P2PNetworkTestHelper.mockPeer();
+    availablePeers.add(peer);
+
+    peerConnectionManager.maybeConnect(peer);
+    verify(peerConnector, times(1)).connect(peer);
+
+    // We should not try to connect to already connected peer
+    peerConnectionManager.connectToAvailablePeers();
+    verify(peerConnector, times(1)).connect(peer);
+  }
+
+  @Test
+  public void attemptPeerConnections_withSlotsAvailable() {
+    final int maxPeers = 6;
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager(maxPeers);
+    Stream.generate(P2PNetworkTestHelper::mockPeer).limit(10).forEach(availablePeers::add);
+
+    // Sanity check
+    assertThat(peerConnectionManager.getConnections().count()).isEqualTo(0);
+
+    // We should connect to maxPeers
+    peerConnectionManager.connectToAvailablePeers();
+    assertThat(peerConnectionManager.getConnections().count()).isEqualTo(maxPeers);
+  }
+
+  @Test
+  public void attemptPeerConnections_withNoSlotsAvailable() {
+    final int maxPeers = 1;
+    final PeerConnectionManager peerConnectionManager = getPeerConnectionManager(maxPeers);
+    peerConnectionManager.maybeConnect(P2PNetworkTestHelper.mockPeer());
+    Stream.generate(P2PNetworkTestHelper::mockPeer).limit(10).forEach(availablePeers::add);
+
+    // Sanity check
+    assertThat(peerConnectionManager.getConnections().count()).isEqualTo(1);
+
+    // We should connect to maxPeers
+    peerConnectionManager.connectToAvailablePeers();
+    assertThat(peerConnectionManager.getConnections().count()).isEqualTo(1);
+    availablePeers.forEach(
+        (p) -> {
+          verify(peerConnector, never()).connect(p);
+        });
+  }
+
+  private static class TestPeerConnector implements PeerConnector {
+    private boolean shouldAutoCompleteConnection = true;
+
+    @Override
+    public CompletableFuture<PeerConnection> connect(Peer peer) {
+      PeerConnection connection = P2PNetworkTestHelper.mockPeerConnection(peer);
+      final OutgoingConnection conn = new OutgoingConnection(connection);
+
+      if (shouldAutoCompleteConnection) {
+        conn.complete();
+      }
+
+      return conn.getFuture();
+    }
+
+    public void setAutoComplete(boolean shouldAutoCompleteConnection) {
+      this.shouldAutoCompleteConnection = shouldAutoCompleteConnection;
+    }
+  }
+
+  private static class OutgoingConnection {
+    private final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
+    private final PeerConnection peerConnection;
+
+    OutgoingConnection(PeerConnection peerConnection) {
+      this.peerConnection = peerConnection;
+    }
+
+    public void complete() {
+      connectionFuture.complete(peerConnection);
+    }
+
+    public CompletableFuture<PeerConnection> getFuture() {
+      return connectionFuture;
+    }
+  }
 }

@@ -28,6 +28,7 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
+import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
 import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.Counter;
@@ -69,6 +70,7 @@ public class NettyP2PNetwork extends AbstractP2PNetwork
   private final EventLoopGroup boss = new NioEventLoopGroup(1);
   private final EventLoopGroup workers = new NioEventLoopGroup(1);
 
+  private final List<SubProtocol> subProtocols;
   private final LabelledMetric<Counter> outboundMessagesCounter;
 
   public NettyP2PNetwork(
@@ -136,6 +138,7 @@ public class NettyP2PNetwork extends AbstractP2PNetwork
         nodePermissioningController,
         blockchain);
 
+    this.subProtocols = config.getSupportedProtocols();
     outboundMessagesCounter =
         metricsSystem.createLabelledCounter(
             MetricCategory.NETWORK,

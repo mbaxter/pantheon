@@ -70,7 +70,7 @@ public class NetworkingServiceLifecycleTest {
       assertThat(udpPort).isNotZero();
       assertThat(tcpPort).isPresent();
       assertThat(tcpPort.getAsInt()).isNotZero();
-      assertThat(service.getDiscoveryPeers()).hasSize(0);
+      assertThat(service.getDiscoveredPeers()).hasSize(0);
     }
   }
 
@@ -256,7 +256,7 @@ public class NetworkingServiceLifecycleTest {
             new NoOpMetricsSystem(),
             Optional.empty(),
             Optional.empty())) {
-      assertTrue(agent.getDiscoveryPeers().collect(toList()).isEmpty());
+      assertTrue(agent.getDiscoveredPeers().collect(toList()).isEmpty());
       assertEquals(0, agent.getPeers().size());
     }
   }

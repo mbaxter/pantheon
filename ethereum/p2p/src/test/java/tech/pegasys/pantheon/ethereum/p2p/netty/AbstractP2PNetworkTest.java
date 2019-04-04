@@ -28,13 +28,12 @@ import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
-import tech.pegasys.pantheon.ethereum.p2p.netty.MockP2PNetwork.Disconnection;
+import tech.pegasys.pantheon.ethereum.p2p.netty.P2PNetworkTestHelper.Disconnection;
 import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.DuplicatePeerConnectionException;
 import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.TooManyPeersConnectionException;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
@@ -42,7 +41,6 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
@@ -113,10 +111,7 @@ public final class AbstractP2PNetworkTest {
         MockP2PNetwork.builder().rlpxConfig((config) -> config.setMaxPeers(maxPeers)).build()) {
       network.start();
 
-      List<Disconnection> disconnections = new ArrayList<>();
-      network.subscribeDisconnect(
-          (connection, reason, initiatedByPeer) ->
-              disconnections.add(Disconnection.create(connection, reason, initiatedByPeer)));
+      List<Disconnection> disconnections = P2PNetworkTestHelper.collectDisconnects(network);
       final CompletableFuture<PeerConnection> connectFuture1 = network.connect(peer1);
       assertThat(connectFuture1.get(30L, TimeUnit.SECONDS).getPeer()).isEqualTo(peer1);
       assertThat(disconnections.size()).isEqualTo(0);
@@ -571,11 +566,11 @@ public final class AbstractP2PNetworkTest {
   //  }
 
   private Peer mockPeer() {
-    return PeerTestHelper.mockPeer();
+    return P2PNetworkTestHelper.mockPeer();
   }
 
   private Peer mockPeer(final String host, final int port) {
-    return PeerTestHelper.mockPeer(host, port);
+    return P2PNetworkTestHelper.mockPeer(host, port);
   }
 
   public static class EnodeURLMatcher implements ArgumentMatcher<EnodeURL> {
