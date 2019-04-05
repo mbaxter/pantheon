@@ -119,7 +119,12 @@ class PeerConnectionManager {
     checkNotNull(blockchain);
     final long blockAddedObserverId =
         blockchain.observeBlockAdded((e, b) -> disconnectDisallowed());
+    final long updatesObserverId =
+        nodePermissioningController.subscribeToUpdates(this::disconnectDisallowed);
+
     shutdownCallbacks.add(() -> blockchain.removeObserver(blockAddedObserverId));
+    shutdownCallbacks.add(
+        () -> nodePermissioningController.unsubscribeFromUpdates(updatesObserverId));
   }
 
   public void setEnodeUrl(final EnodeURL ourEnodeUrl) {

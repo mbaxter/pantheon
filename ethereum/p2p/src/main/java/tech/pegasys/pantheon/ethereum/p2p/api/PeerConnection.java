@@ -113,4 +113,10 @@ public interface PeerConnection {
       super(message);
     }
   }
+
+  default boolean isRemoteEnode(final EnodeURL remoteEnodeUrl) {
+    return ((remoteEnodeUrl.getNodeId().equals(this.getPeerInfo().getAddress()))
+        && (remoteEnodeUrl.getListeningPort() == this.getPeerInfo().getPort())
+        && (remoteEnodeUrl.getInetAddress().equals(this.getRemoteAddress().getAddress())));
+  }
 }
