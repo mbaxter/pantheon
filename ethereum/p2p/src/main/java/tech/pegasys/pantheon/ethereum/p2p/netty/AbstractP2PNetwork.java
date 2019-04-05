@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.ethereum.p2p.netty;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
+import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.Message;
@@ -26,7 +27,6 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerRequirement;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
@@ -52,7 +52,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -134,6 +133,7 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
    * public IP address), as well as TCP and UDP port numbers for the RLPx agent and the discovery
    * agent, respectively.
    *
+   * @param peerDiscoveryAgent
    * @param keyPair This node's keypair.
    * @param config The network configuration to use.
    * @param supportedCapabilities The wire protocol capabilities to advertise to connected peers.
@@ -143,8 +143,8 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
    * @param blockchain The blockchain to subscribe to BlockAddedEvents.
    */
   public AbstractP2PNetwork(
-      final Function<PeerRequirement, PeerDiscoveryAgent> peerDiscoveryAgentSupplier,
-      final SECP256K1.KeyPair keyPair,
+      final PeerDiscoveryAgent peerDiscoveryAgent,
+      final KeyPair keyPair,
       final NetworkingConfiguration config,
       final List<Capability> supportedCapabilities,
       final PeerBlacklist peerBlacklist,
@@ -163,9 +163,9 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
     nodePermissioningController.ifPresent(
         c -> peerConnectionManager.setNodePermissioningController(c, blockchain));
 
-    peerDiscoveryAgent =
-        peerDiscoveryAgentSupplier.apply(
-            () -> peerConnectionManager.countActiveConnections() >= maxPeers);
+    peerDiscoveryAgent.addPeerRequirement(
+        () -> peerConnectionManager.countActiveConnections() >= maxPeers);
+    this.peerDiscoveryAgent = peerDiscoveryAgent;
 
     subscribeDisconnect(peerBlacklist);
 
@@ -315,7 +315,7 @@ public abstract class AbstractP2PNetwork implements P2PNetwork, PeerConnectionEv
     stop();
   }
 
-  @VisibleForTesting
+  @Override
   public Stream<DiscoveryPeer> getDiscoveredPeers() {
     return peerDiscoveryAgent
         .getPeers()

@@ -49,11 +49,11 @@ public class P2PNetworkTestHelper {
     return mockPeerConnection(mockPeer());
   }
 
-  public static PeerConnection mockPeerConnection(Peer peer) {
+  public static PeerConnection mockPeerConnection(final Peer peer) {
     return spy(MockP2PNetwork.createMockPeerConnection(peer));
   }
 
-  public static List<Disconnection> collectDisconnects(P2PNetwork network) {
+  public static List<Disconnection> collectDisconnects(final P2PNetwork network) {
     List<Disconnection> disconnections = new ArrayList<>();
     network.subscribeDisconnect(
         (connection, reason, initiatedByPeer) ->

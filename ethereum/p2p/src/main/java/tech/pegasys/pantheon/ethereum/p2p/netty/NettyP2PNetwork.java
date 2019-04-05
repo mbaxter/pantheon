@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.netty;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
@@ -23,7 +24,6 @@ import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerRequirement;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
@@ -37,11 +37,11 @@ import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.StreamSupport;
 
@@ -73,25 +73,8 @@ public class NettyP2PNetwork extends AbstractP2PNetwork
   private final List<SubProtocol> subProtocols;
   private final LabelledMetric<Counter> outboundMessagesCounter;
 
-  public NettyP2PNetwork(
-      final Vertx vertx,
-      final KeyPair keyPair,
-      final NetworkingConfiguration config,
-      final List<Capability> supportedCapabilities,
-      final PeerBlacklist peerBlacklist,
-      final MetricsSystem metricsSystem,
-      final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController,
-      final Optional<NodePermissioningController> nodePermissioningController) {
-    this(
-        vertx,
-        keyPair,
-        config,
-        supportedCapabilities,
-        peerBlacklist,
-        metricsSystem,
-        nodeWhitelistController,
-        nodePermissioningController,
-        null);
+  public static Builder builder() {
+    return new Builder();
   }
 
   /**
@@ -101,35 +84,26 @@ public class NettyP2PNetwork extends AbstractP2PNetwork
    * public IP address), as well as TCP and UDP port numbers for the RLPx agent and the discovery
    * agent, respectively.
    *
-   * @param vertx The vertx instance.
+   * @param discoveryAgent The agent responsible for discovery network peers.
    * @param keyPair This node's keypair.
    * @param config The network configuration to use.
    * @param supportedCapabilities The wire protocol capabilities to advertise to connected peers.
    * @param peerBlacklist The peers with which this node will not connect
    * @param metricsSystem The metrics system to capture metrics with.
-   * @param nodeLocalConfigPermissioningController local file config for permissioning
    * @param nodePermissioningController Controls node permissioning.
    * @param blockchain The blockchain to subscribe to BlockAddedEvents.
    */
-  public NettyP2PNetwork(
-      final Vertx vertx,
+  private NettyP2PNetwork(
+      final PeerDiscoveryAgent discoveryAgent,
       final SECP256K1.KeyPair keyPair,
       final NetworkingConfiguration config,
       final List<Capability> supportedCapabilities,
       final PeerBlacklist peerBlacklist,
       final MetricsSystem metricsSystem,
-      final Optional<NodeLocalConfigPermissioningController> nodeLocalConfigPermissioningController,
       final Optional<NodePermissioningController> nodePermissioningController,
       final Blockchain blockchain) {
     super(
-        getPeerDiscoveryAgentSupplier(
-            vertx,
-            keyPair,
-            config,
-            peerBlacklist,
-            metricsSystem,
-            nodeLocalConfigPermissioningController,
-            nodePermissioningController),
+        discoveryAgent,
         keyPair,
         config,
         supportedCapabilities,
@@ -159,12 +133,6 @@ public class NettyP2PNetwork extends AbstractP2PNetwork
         "netty_boss_pending_tasks",
         "The number of pending tasks in the Netty boss event loop",
         pendingTaskCounter(boss));
-
-    metricsSystem.createIntegerGauge(
-        MetricCategory.NETWORK,
-        "vertx_eventloop_pending_tasks",
-        "The number of pending tasks in the Vertx event loop",
-        pendingTaskCounter(vertx.nettyEventLoopGroup()));
   }
 
   @Override
@@ -305,23 +273,123 @@ public class NettyP2PNetwork extends AbstractP2PNetwork
             .sum();
   }
 
-  private static Function<PeerRequirement, PeerDiscoveryAgent> getPeerDiscoveryAgentSupplier(
-      final Vertx vertx,
-      final SECP256K1.KeyPair keyPair,
-      final NetworkingConfiguration config,
-      final PeerBlacklist peerBlacklist,
-      final MetricsSystem metricsSystem,
-      final Optional<NodeLocalConfigPermissioningController> nodeLocalConfigPermissioningController,
-      final Optional<NodePermissioningController> nodePermissioningController) {
-    return (PeerRequirement peerRequirement) ->
-        new VertxPeerDiscoveryAgent(
-            vertx,
-            keyPair,
-            config.getDiscovery(),
-            peerRequirement,
-            peerBlacklist,
-            nodeLocalConfigPermissioningController,
-            nodePermissioningController,
-            metricsSystem);
+  public static class Builder {
+
+    protected PeerDiscoveryAgent peerDiscoveryAgent;
+    protected KeyPair keyPair;
+    protected NetworkingConfiguration config = NetworkingConfiguration.create();
+    protected List<Capability> supportedCapabilities;
+    protected PeerBlacklist peerBlacklist;
+    protected MetricsSystem metricsSystem;
+    protected Optional<NodePermissioningController> nodePermissioningController = Optional.empty();
+    protected Blockchain blockchain = null;
+    private Vertx vertx;
+    private Optional<NodeLocalConfigPermissioningController>
+        nodeLocalConfigPermissioningController = Optional.empty();
+
+    protected P2PNetwork doBuild() {
+      return new NettyP2PNetwork(
+          peerDiscoveryAgent,
+          keyPair,
+          config,
+          supportedCapabilities,
+          peerBlacklist,
+          metricsSystem,
+          nodePermissioningController,
+          blockchain);
+    }
+
+    protected void validate() {
+      checkNotNull(keyPair);
+      checkNotNull(config);
+      checkState(supportedCapabilities != null && supportedCapabilities.size() > 0);
+      checkNotNull(peerBlacklist);
+      checkNotNull(metricsSystem);
+      checkState(!nodePermissioningController.isPresent() || blockchain != null);
+      peerDiscoveryAgent = peerDiscoveryAgent == null ? createDiscoveryAgent() : peerDiscoveryAgent;
+    }
+
+    protected PeerDiscoveryAgent createDiscoveryAgent() {
+      return new VertxPeerDiscoveryAgent(
+          vertx,
+          keyPair,
+          config.getDiscovery(),
+          peerBlacklist,
+          nodeLocalConfigPermissioningController,
+          nodePermissioningController,
+          metricsSystem);
+    }
+
+    public Builder vertx(final Vertx vertx) {
+      this.vertx = vertx;
+      return this;
+    }
+
+    public Builder nodeLocalConfigPermissioningController(
+        final Optional<NodeLocalConfigPermissioningController>
+            nodeLocalConfigPermissioningController) {
+      this.nodeLocalConfigPermissioningController = nodeLocalConfigPermissioningController;
+      return this;
+    }
+
+    public Builder nodeLocalConfigPermissioningController(
+        final NodeLocalConfigPermissioningController nodeLocalConfigPermissioningController) {
+      this.nodeLocalConfigPermissioningController =
+          Optional.ofNullable(nodeLocalConfigPermissioningController);
+      return this;
+    }
+
+    public P2PNetwork build() {
+      validate();
+      this.peerDiscoveryAgent = createDiscoveryAgent();
+      return doBuild();
+    }
+
+    public Builder keyPair(final KeyPair keyPair) {
+      this.keyPair = keyPair;
+      return this;
+    }
+
+    public Builder config(final NetworkingConfiguration config) {
+      this.config = config;
+      return this;
+    }
+
+    public Builder supportedCapabilities(final List<Capability> supportedCapabilities) {
+      this.supportedCapabilities = supportedCapabilities;
+      return this;
+    }
+
+    public Builder supportedCapabilities(final Capability... supportedCapabilities) {
+      this.supportedCapabilities = Arrays.asList(supportedCapabilities);
+      return this;
+    }
+
+    public Builder peerBlacklist(final PeerBlacklist peerBlacklist) {
+      this.peerBlacklist = peerBlacklist;
+      return this;
+    }
+
+    public Builder metricsSystem(final MetricsSystem metricsSystem) {
+      this.metricsSystem = metricsSystem;
+      return this;
+    }
+
+    public Builder nodePermissioningController(
+        final NodePermissioningController nodePermissioningController) {
+      this.nodePermissioningController = Optional.ofNullable(nodePermissioningController);
+      return this;
+    }
+
+    public Builder nodePermissioningController(
+        final Optional<NodePermissioningController> nodePermissioningController) {
+      this.nodePermissioningController = nodePermissioningController;
+      return this;
+    }
+
+    public Builder blockchain(final Blockchain blockchain) {
+      this.blockchain = blockchain;
+      return this;
+    }
   }
 }

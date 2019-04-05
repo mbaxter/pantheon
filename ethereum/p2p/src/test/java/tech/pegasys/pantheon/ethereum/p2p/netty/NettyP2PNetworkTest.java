@@ -12,11 +12,11 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.netty;
 
-import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
+import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
@@ -33,7 +33,7 @@ import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.net.InetAddress;
-import java.util.Optional;
+import java.util.Arrays;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +48,11 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class NettyP2PNetworkTest {
 
   private final Vertx vertx = Vertx.vertx();
+  private final NetworkingConfiguration config =
+      NetworkingConfiguration.create()
+          .setDiscovery(DiscoveryConfiguration.create().setActive(false))
+          .setSupportedProtocols(subProtocol())
+          .setRlpx(RlpxConfiguration.create().setBindPort(0));
 
   @After
   public void closeVertx() {
@@ -56,35 +61,9 @@ public class NettyP2PNetworkTest {
 
   @Test
   public void handshaking() throws Exception {
-    final DiscoveryConfiguration noDiscovery = DiscoveryConfiguration.create().setActive(false);
     final SECP256K1.KeyPair listenKp = SECP256K1.KeyPair.generate();
-    final Capability cap = Capability.create("eth", 63);
-    try (final P2PNetwork listener =
-            new NettyP2PNetwork(
-                vertx,
-                listenKp,
-                NetworkingConfiguration.create()
-                    .setDiscovery(noDiscovery)
-                    .setSupportedProtocols(subProtocol())
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0)),
-                singletonList(cap),
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty());
-        final P2PNetwork connector =
-            new NettyP2PNetwork(
-                vertx,
-                SECP256K1.KeyPair.generate(),
-                NetworkingConfiguration.create()
-                    .setSupportedProtocols(subProtocol())
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0))
-                    .setDiscovery(noDiscovery),
-                singletonList(cap),
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty())) {
+    try (final P2PNetwork listener = builder().keyPair(listenKp).build();
+        final P2PNetwork connector = builder().build()) {
 
       final int listenPort = listener.getLocalPeerInfo().getPort();
       listener.start();
@@ -108,7 +87,6 @@ public class NettyP2PNetworkTest {
 
   @Test
   public void rejectPeerWithNoSharedCaps() throws Exception {
-    final DiscoveryConfiguration noDiscovery = DiscoveryConfiguration.create().setActive(false);
     final SECP256K1.KeyPair listenKp = SECP256K1.KeyPair.generate();
 
     final SubProtocol subprotocol1 = subProtocol("eth");
@@ -116,31 +94,9 @@ public class NettyP2PNetworkTest {
     final SubProtocol subprotocol2 = subProtocol("oth");
     final Capability cap2 = Capability.create(subprotocol2.getName(), 63);
     try (final P2PNetwork listener =
-            new NettyP2PNetwork(
-                vertx,
-                listenKp,
-                NetworkingConfiguration.create()
-                    .setDiscovery(noDiscovery)
-                    .setSupportedProtocols(subprotocol1)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0)),
-                singletonList(cap1),
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty());
+            builder().keyPair(listenKp).supportedCapabilities(cap1).build();
         final P2PNetwork connector =
-            new NettyP2PNetwork(
-                vertx,
-                SECP256K1.KeyPair.generate(),
-                NetworkingConfiguration.create()
-                    .setSupportedProtocols(subprotocol2)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0))
-                    .setDiscovery(noDiscovery),
-                singletonList(cap2),
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty())) {
+            builder().keyPair(listenKp).supportedCapabilities(cap2).build()) {
       final int listenPort = listener.getLocalPeerInfo().getPort();
       listener.start();
       connector.start();
@@ -159,11 +115,11 @@ public class NettyP2PNetworkTest {
     }
   }
 
-  private SubProtocol subProtocol() {
+  private static SubProtocol subProtocol() {
     return subProtocol("eth");
   }
 
-  private SubProtocol subProtocol(final String name) {
+  private static SubProtocol subProtocol(final String name) {
     return new SubProtocol() {
       @Override
       public String getName() {
@@ -185,5 +141,15 @@ public class NettyP2PNetworkTest {
         return INVALID_MESSAGE_NAME;
       }
     };
+  }
+
+  private NettyP2PNetwork.Builder builder() {
+    return NettyP2PNetwork.builder()
+        .vertx(vertx)
+        .config(config)
+        .keyPair(KeyPair.generate())
+        .peerBlacklist(new PeerBlacklist())
+        .metricsSystem(new NoOpMetricsSystem())
+        .supportedCapabilities(Arrays.asList(Capability.create("eth", 63)));
   }
 }

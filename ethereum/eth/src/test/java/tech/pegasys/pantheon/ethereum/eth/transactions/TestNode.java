@@ -56,7 +56,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 
@@ -117,16 +116,14 @@ public class TestNode implements Closeable {
             .protocolManagers(singletonList(ethProtocolManager))
             .network(
                 capabilities ->
-                    new NettyP2PNetwork(
-                        vertx,
-                        this.kp,
-                        networkingConfiguration,
-                        capabilities,
-                        new PeerBlacklist(),
-                        new NoOpMetricsSystem(),
-                        Optional.empty(),
-                        Optional.empty()))
-            .metricsSystem(new NoOpMetricsSystem())
+                    NettyP2PNetwork.builder()
+                        .vertx(vertx)
+                        .keyPair(this.kp)
+                        .config(networkingConfiguration)
+                        .peerBlacklist(new PeerBlacklist())
+                        .metricsSystem(new NoOpMetricsSystem())
+                        .supportedCapabilities(capabilities)
+                        .build())
             .build();
     network = networkRunner.getNetwork();
     this.port = network.getLocalPeerInfo().getPort();

@@ -25,7 +25,6 @@ import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerRequirement;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
@@ -54,7 +53,7 @@ public class MockP2PNetwork extends AbstractP2PNetwork {
       final Optional<NodePermissioningController> nodePermissioningController,
       final Blockchain blockchain) {
     super(
-        getPeerDiscoveryAgentSupplier(keyPair, config),
+        getPeerDiscoveryAgent(keyPair, config),
         keyPair,
         config,
         supportedCapabilities,
@@ -76,7 +75,7 @@ public class MockP2PNetwork extends AbstractP2PNetwork {
     return MockPeerConnection.create(peer);
   }
 
-  private static Function<PeerRequirement, PeerDiscoveryAgent> getPeerDiscoveryAgentSupplier(
+  private static PeerDiscoveryAgent getPeerDiscoveryAgent(
       final KeyPair keyPair, final NetworkingConfiguration config) {
     BytesValue peerId = keyPair.getPublicKey().getEncodedBytes();
     Peer peer =
@@ -93,7 +92,7 @@ public class MockP2PNetwork extends AbstractP2PNetwork {
     lenient().when(agent.stop()).thenReturn(CompletableFuture.completedFuture(null));
     lenient().when(agent.getPeers()).thenReturn(Stream.empty());
 
-    return (PeerRequirement peerRequirement) -> agent;
+    return agent;
   }
 
   @Override
