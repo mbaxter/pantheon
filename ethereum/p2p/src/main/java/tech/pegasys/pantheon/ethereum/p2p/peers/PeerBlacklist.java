@@ -12,10 +12,11 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.peers;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
+import tech.pegasys.pantheon.util.LimitedSet;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Collections;
@@ -49,15 +50,7 @@ public class PeerBlacklist implements DisconnectCallback {
       ImmutableSet.of(DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION);
 
   private final int blacklistCap;
-  private final Set<BytesValue> blacklistedNodeIds =
-      Collections.synchronizedSet(
-          Collections.newSetFromMap(
-              new LinkedHashMap<BytesValue, Boolean>(20, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(final Map.Entry<BytesValue, Boolean> eldest) {
-                  return size() > blacklistCap;
-                }
-              }));
+  private final Set<BytesValue> blacklistedNodeIds;
 
   /** These nodes are always banned for the life of this list. They are not subject to rollover. */
   private final Set<BytesValue> bannedNodeIds;
@@ -65,6 +58,7 @@ public class PeerBlacklist implements DisconnectCallback {
   public PeerBlacklist(final int blacklistCap, final Set<BytesValue> bannedNodeIds) {
     this.blacklistCap = blacklistCap;
     this.bannedNodeIds = bannedNodeIds;
+    this.blacklistedNodeIds = LimitedSet.create(blacklistCap);
   }
 
   public PeerBlacklist(final int blacklistCap) {

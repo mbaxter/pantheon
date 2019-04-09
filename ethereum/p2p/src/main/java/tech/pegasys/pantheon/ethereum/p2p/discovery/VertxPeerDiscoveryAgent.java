@@ -23,6 +23,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.TimerUtil;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.VertxTimerUtil;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.MetricCategory;
@@ -61,16 +62,12 @@ public class VertxPeerDiscoveryAgent extends PeerDiscoveryAgent {
       final Vertx vertx,
       final KeyPair keyPair,
       final DiscoveryConfiguration config,
-      final PeerBlacklist peerBlacklist,
-      final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController,
-      final Optional<NodePermissioningController> nodePermissioningController,
+      final PeerPermissions peerPermissions,
       final MetricsSystem metricsSystem) {
     super(
         keyPair,
         config,
-        peerBlacklist,
-        nodeWhitelistController,
-        nodePermissioningController,
+        peerPermissions,
         metricsSystem);
     checkArgument(vertx != null, "vertx instance cannot be null");
     this.vertx = vertx;

@@ -32,6 +32,7 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeerId;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
@@ -70,9 +71,7 @@ public abstract class PeerDiscoveryAgent {
 
   protected final List<DiscoveryPeer> bootstrapPeers;
   private final List<PeerRequirement> peerRequirements = new CopyOnWriteArrayList<>();
-  private final PeerBlacklist peerBlacklist;
-  private final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController;
-  private final Optional<NodePermissioningController> nodePermissioningController;
+  private final PeerPermissions peerPermissions;
   private final MetricsSystem metricsSystem;
   /* The peer controller, which takes care of the state machine of peers. */
   protected Optional<PeerDiscoveryController> controller = Optional.empty();
@@ -94,9 +93,7 @@ public abstract class PeerDiscoveryAgent {
   public PeerDiscoveryAgent(
       final SECP256K1.KeyPair keyPair,
       final DiscoveryConfiguration config,
-      final PeerBlacklist peerBlacklist,
-      final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController,
-      final Optional<NodePermissioningController> nodePermissioningController,
+      final PeerPermissions peerPermissions,
       final MetricsSystem metricsSystem) {
     this.metricsSystem = metricsSystem;
     checkArgument(keyPair != null, "keypair cannot be null");
@@ -104,9 +101,7 @@ public abstract class PeerDiscoveryAgent {
 
     validateConfiguration(config);
 
-    this.peerBlacklist = peerBlacklist;
-    this.nodeWhitelistController = nodeWhitelistController;
-    this.nodePermissioningController = nodePermissioningController;
+    this.peerPermissions = peerPermissions;
     this.bootstrapPeers =
         config.getBootstrapPeers().stream().map(DiscoveryPeer::new).collect(Collectors.toList());
 
@@ -173,9 +168,7 @@ public abstract class PeerDiscoveryAgent {
         createWorkerExecutor(),
         PEER_REFRESH_INTERVAL_MS,
         PeerRequirement.combine(peerRequirements),
-        peerBlacklist,
-        nodeWhitelistController,
-        nodePermissioningController,
+        peerPermissions,
         peerBondedObservers,
         peerDroppedObservers,
         metricsSystem);
@@ -234,6 +227,14 @@ public abstract class PeerDiscoveryAgent {
 
   public Optional<Peer> getAdvertisedPeer() {
     return Optional.ofNullable(advertisedPeer);
+  }
+
+  public int getDiscoveryPort() {
+    if (advertisedPeer != null) {
+      return advertisedPeer.getDiscoveryPort();
+    } else {
+      return config.getBindPort();
+    }
   }
 
   public BytesValue getId() {

@@ -51,11 +51,10 @@ import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.SubProtocolConfiguration;
-import tech.pegasys.pantheon.ethereum.p2p.netty.NettyP2PNetwork;
-import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.ConnectingToLocalNodeException;
+import tech.pegasys.pantheon.ethereum.p2p.network.DefaultP2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.exceptions.ConnectingToLocalNodeException;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
 import tech.pegasys.pantheon.ethereum.permissioning.AccountWhitelistController;
@@ -233,9 +232,8 @@ public class RunnerBuilder {
             .setClientId(PantheonInfo.version())
             .setSupportedProtocols(subProtocols);
 
-    final PeerBlacklist peerBlacklist =
-        new PeerBlacklist(
-            bannedNodeIds.stream().map(BytesValue::fromHexString).collect(Collectors.toSet()));
+    final Collection<BytesValue> bannedIds =
+        bannedNodeIds.stream().map(BytesValue::fromHexString).collect(Collectors.toSet());
 
     final List<EnodeURL> bootnodesAsEnodeURLs =
         discoveryConfiguration.getBootstrapPeers().stream()
@@ -266,12 +264,12 @@ public class RunnerBuilder {
     NetworkBuilder inactiveNetwork = (caps) -> new NoopP2PNetwork();
     NetworkBuilder activeNetwork =
         (caps) ->
-            NettyP2PNetwork.builder()
+            DefaultP2PNetwork.builder()
                 .vertx(vertx)
                 .keyPair(keyPair)
                 .nodeLocalConfigPermissioningController(nodeWhitelistController)
+                .banNodeIds(bannedIds)
                 .config(networkConfig)
-                .peerBlacklist(peerBlacklist)
                 .metricsSystem(metricsSystem)
                 .supportedCapabilities(caps)
                 .nodePermissioningController(nodePermissioningController)

@@ -18,10 +18,10 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcErrorResp
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
-import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.ConnectingToLocalNodeException;
-import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.connection.PeerNotPermittedException;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.exceptions.ConnectingToLocalNodeException;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.exceptions.PeerNotPermittedException;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import org.apache.logging.log4j.LogManager;

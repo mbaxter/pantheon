@@ -12,7 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.Message;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;

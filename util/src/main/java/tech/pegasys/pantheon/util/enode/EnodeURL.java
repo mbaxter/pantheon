@@ -79,6 +79,11 @@ public class EnodeURL {
   }
 
   public EnodeURL(
+      final BytesValue nodeId, final String ip, final int listeningPort, final int discoveryPort) {
+    this(nodeId, InetAddresses.forUriString(ip), listeningPort, OptionalInt.of(discoveryPort));
+  }
+
+  public EnodeURL(
       final BytesValue nodeId,
       final String ip,
       final int listeningPort,

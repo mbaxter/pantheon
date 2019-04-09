@@ -18,6 +18,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerDiscoveryController.AsyncExecutor;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
@@ -40,16 +41,12 @@ public class MockPeerDiscoveryAgent extends PeerDiscoveryAgent {
   public MockPeerDiscoveryAgent(
       final KeyPair keyPair,
       final DiscoveryConfiguration config,
-      final PeerBlacklist peerBlacklist,
-      final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController,
-      final Optional<NodePermissioningController> nodePermissioningController,
+      final PeerPermissions peerPermissions,
       final Map<BytesValue, MockPeerDiscoveryAgent> agentNetwork) {
     super(
         keyPair,
         config,
-        peerBlacklist,
-        nodeWhitelistController,
-        nodePermissioningController,
+        peerPermissions,
         new NoOpMetricsSystem());
     this.agentNetwork = agentNetwork;
   }

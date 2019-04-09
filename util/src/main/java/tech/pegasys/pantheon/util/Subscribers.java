@@ -84,6 +84,11 @@ public class Subscribers<T> {
     subscribers.values().forEach(action);
   }
 
+  /** Remove all subscribers */
+  public void clear() {
+    subscribers.clear();
+  }
+
   /**
    * Get the current subscriber count.
    *
