@@ -25,7 +25,7 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 
 public class FastSyncChainDownloader {
 
-  private static final boolean USE_PIPELINE_DOWNLOADER = false;
+  private static final boolean USE_PIPELINE_DOWNLOADER = true;
 
   private FastSyncChainDownloader() {}
 
@@ -44,6 +44,7 @@ public class FastSyncChainDownloader {
 
     if (USE_PIPELINE_DOWNLOADER) {
       return new PipelineChainDownloader<>(
+          syncState,
           syncTargetManager,
           new FastSyncDownloadPipelineFactory<>(
               config,

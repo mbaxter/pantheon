@@ -45,6 +45,7 @@ import tech.pegasys.pantheon.ethereum.storage.keyvalue.RocksDbStorageProvider;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
+import tech.pegasys.pantheon.services.kvstore.RocksDbConfiguration;
 import tech.pegasys.pantheon.testutil.TestClock;
 import tech.pegasys.pantheon.util.uint.UInt256;
 
@@ -109,7 +110,7 @@ public final class RunnerTest {
             new MiningParametersTestBuilder().enabled(false).build(),
             networkId,
             aheadDbNodeKeys,
-            PrivacyParameters.noPrivacy(),
+            PrivacyParameters.DEFAULT,
             dataDirAhead,
             noOpMetricsSystem,
             TestClock.fixed(),
@@ -127,7 +128,7 @@ public final class RunnerTest {
             new MiningParametersTestBuilder().enabled(false).build(),
             networkId,
             aheadDbNodeKeys,
-            PrivacyParameters.noPrivacy(),
+            PrivacyParameters.DEFAULT,
             dataDirAhead,
             noOpMetricsSystem,
             TestClock.fixed(),
@@ -183,7 +184,7 @@ public final class RunnerTest {
               new MiningParametersTestBuilder().enabled(false).build(),
               networkId,
               KeyPair.generate(),
-              PrivacyParameters.noPrivacy(),
+              PrivacyParameters.DEFAULT,
               dataDirBehind,
               noOpMetricsSystem,
               TestClock.fixed(),
@@ -307,7 +308,8 @@ public final class RunnerTest {
   }
 
   private StorageProvider createKeyValueStorageProvider(final Path dbAhead) throws IOException {
-    return RocksDbStorageProvider.create(dbAhead, new NoOpMetricsSystem());
+    return RocksDbStorageProvider.create(
+        new RocksDbConfiguration.Builder().databaseDir(dbAhead).build(), new NoOpMetricsSystem());
   }
 
   private JsonRpcConfiguration jsonRpcConfiguration() {

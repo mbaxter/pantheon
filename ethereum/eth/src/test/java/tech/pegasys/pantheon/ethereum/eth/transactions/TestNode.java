@@ -24,7 +24,6 @@ import tech.pegasys.pantheon.ethereum.chain.GenesisState;
 import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
 import tech.pegasys.pantheon.ethereum.core.BlockHashFunction;
 import tech.pegasys.pantheon.ethereum.core.PendingTransactions;
-import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Transaction;
 import tech.pegasys.pantheon.ethereum.core.TransactionPool;
 import tech.pegasys.pantheon.ethereum.difficulty.fixed.FixedDifficultyProtocolSchedule;
@@ -93,8 +92,7 @@ public class TestNode implements Closeable {
 
     final GenesisConfigFile genesisConfigFile = GenesisConfigFile.development();
     final ProtocolSchedule<Void> protocolSchedule =
-        FixedDifficultyProtocolSchedule.create(
-            GenesisConfigFile.development().getConfigOptions(), PrivacyParameters.noPrivacy());
+        FixedDifficultyProtocolSchedule.create(GenesisConfigFile.development().getConfigOptions());
 
     final GenesisState genesisState = GenesisState.fromConfig(genesisConfigFile, protocolSchedule);
     final BlockHashFunction blockHashFunction =
@@ -107,7 +105,18 @@ public class TestNode implements Closeable {
         new ProtocolContext<>(blockchain, worldStateArchive, null);
     final EthProtocolManager ethProtocolManager =
         new EthProtocolManager(
-            blockchain, worldStateArchive, 1, false, 1, 1, 1, new NoOpMetricsSystem());
+            blockchain,
+            worldStateArchive,
+            1,
+            false,
+            1,
+            1,
+            1,
+            new NoOpMetricsSystem(),
+            200,
+            200,
+            200,
+            200);
 
     final NetworkRunner networkRunner =
         NetworkRunner.builder()

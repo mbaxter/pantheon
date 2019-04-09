@@ -575,7 +575,11 @@ public class PantheonCommandTest extends CommandTestAbstract {
       }
       options.remove(optionSpec);
     }
-    assertThat(options.stream().map(CommandLine.Model.OptionSpec::longestName)).isEmpty();
+    assertThat(
+            options.stream()
+                .filter(optionSpec -> !optionSpec.hidden())
+                .map(CommandLine.Model.OptionSpec::longestName))
+        .isEmpty();
   }
 
   @Test
@@ -2070,7 +2074,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
     verify(mockControllerBuilder).build();
 
     assertThat(enclaveArg.getValue().isEnabled()).isEqualTo(true);
-    assertThat(enclaveArg.getValue().getUrl()).isEqualTo(ENCLAVE_URI);
+    assertThat(enclaveArg.getValue().getEnclaveUri()).isEqualTo(URI.create(ENCLAVE_URI));
     assertThat(enclaveArg.getValue().getEnclavePublicKey()).isEqualTo(ENCLAVE_PUBLIC_KEY);
 
     assertThat(commandOutput.toString()).isEmpty();

@@ -34,8 +34,9 @@ docker run pegasyseng/pantheon:1.0
     * [`--data-path`](../Reference/Pantheon-CLI-Syntax.md#data-path), see [Data Directory](#data-directory)
     * [`--config-file`](../Reference/Pantheon-CLI-Syntax.md#config), see [Custom Configuration File](#custom-configuration-file)
     * [`--genesis-file`](../Reference/Pantheon-CLI-Syntax.md#genesis-file), see [Custom Genesis File](#custom-genesis-file).
-    * [`--permissions-accounts-config-file`](../Reference/Pantheon-CLI-Syntax.md#permissions-config-file)
-    and [`--permissions-nodes-config-file`], see [Permissions Configuration File](#permissions-configuration-file). 
+    * [`--permissions-accounts-config-file`](../Reference/Pantheon-CLI-Syntax.md#permissions-accounts-config-file)
+    and [`--permissions-nodes-config-file`](../Reference/Pantheon-CLI-Syntax.md#permissions-nodes-config-file), 
+    see [Permissions Configuration File](#permissions-configuration-file). 
     * [`--privacy-public-key-file`](../Reference/Pantheon-CLI-Syntax.md#privacy-public-key-file), see [Privacy Public Key File](#privacy-public-key-file).
     * [`--rpc-http-authentication-credentials-file`](../Reference/Pantheon-CLI-Syntax.md#rpc-http-authentication-credentials-file) and
       [`--rpc-ws-authentication-credentials-file`](../Reference/Pantheon-CLI-Syntax.md#rpc-ws-authentication-credentials-file), see [Credentials Files](#credentials-files).
@@ -149,7 +150,7 @@ Specify a permissions configuration file. This is equivalent to specifying the `
 or the `--permissions-nodes-config-file` option.
 
 !!! note 
-    When using Docker, the accounts and nodes permissions must be contained in the same [permissions file](../Permissions/Permissioning.md#permissions-configuration-file). 
+    When using Docker, the accounts and nodes permissions must be contained in the same [permissions file](../Permissions/Local-Permissioning.md#permissions-configuration-file). 
 
 To run Pantheon specifying a permissions configuration file: 
 ```bash
