@@ -12,10 +12,11 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.Message;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
@@ -26,11 +27,17 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 public class NoopP2PNetwork implements P2PNetwork {
   @Override
   public Collection<PeerConnection> getPeers() {
     throw new P2pDisabledException("P2P networking disabled.  Peers list unavailable.");
+  }
+
+  @Override
+  public Stream<DiscoveryPeer> getDiscoveredPeers() {
+    return Stream.empty();
   }
 
   @Override

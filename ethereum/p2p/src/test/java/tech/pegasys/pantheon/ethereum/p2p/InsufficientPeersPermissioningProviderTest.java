@@ -21,7 +21,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
@@ -41,19 +41,19 @@ import org.mockito.junit.MockitoJUnitRunner;
 public class InsufficientPeersPermissioningProviderTest {
   @Mock private P2PNetwork p2pNetwork;
   private final EnodeURL SELF_ENODE =
-      new EnodeURL(
+      EnodeURL.fromString(
           "enode://00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001@192.168.0.1:30303");
   private final EnodeURL ENODE_2 =
-      new EnodeURL(
+      EnodeURL.fromString(
           "enode://00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002@192.168.0.2:30303");
   private final EnodeURL ENODE_3 =
-      new EnodeURL(
+      EnodeURL.fromString(
           "enode://00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003@192.168.0.3:30303");
   private final EnodeURL ENODE_4 =
-      new EnodeURL(
+      EnodeURL.fromString(
           "enode://00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004@192.168.0.4:30303");
   private final EnodeURL ENODE_5 =
-      new EnodeURL(
+      EnodeURL.fromString(
           "enode://00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005@192.168.0.5:30303");
 
   @Test

@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.api;
 
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
@@ -19,7 +20,6 @@ import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Set;
 
 /** A P2P connection to another node. */
@@ -65,12 +65,18 @@ public interface PeerConnection {
     send(capability(protocol), message);
   }
 
+  /** @return The unix timestamp representing the time at which this connection was established. */
+  long getConnectedAt();
+
   /**
    * Returns the Peer's Description.
    *
    * @return Peer Description
    */
-  PeerInfo getPeer();
+  PeerInfo getPeerInfo();
+
+  /** @return The peer associated with this connection. */
+  Peer getPeer();
 
   /**
    * Immediately terminate the connection without sending a disconnect message.
@@ -90,9 +96,16 @@ public interface PeerConnection {
   /** @return True if the peer is disconnected */
   boolean isDisconnected();
 
-  SocketAddress getLocalAddress();
+  InetSocketAddress getLocalAddress();
 
-  SocketAddress getRemoteAddress();
+  InetSocketAddress getRemoteAddress();
+
+  default EnodeURL getRemoteEnodeURL() {
+    final PeerInfo peerInfo = getPeerInfo();
+    final String nodeId = peerInfo.getNodeId().toString().substring(2);
+    final int localPort = peerInfo.getPort();
+    return new EnodeURL(nodeId, getRemoteAddress().getAddress(), localPort);
+  }
 
   class PeerNotConnected extends IOException {
 
@@ -102,10 +115,8 @@ public interface PeerConnection {
   }
 
   default boolean isRemoteEnode(final EnodeURL remoteEnodeUrl) {
-    return ((remoteEnodeUrl.getNodeId().equals(this.getPeer().getAddress().toString()))
-        && (remoteEnodeUrl.getListeningPort() == this.getPeer().getPort())
-        && (remoteEnodeUrl
-            .getInetAddress()
-            .equals(((InetSocketAddress) this.getRemoteAddress()).getAddress())));
+    return ((remoteEnodeUrl.getNodeId().equals(this.getPeerInfo().getAddress()))
+        && (remoteEnodeUrl.getListeningPort() == this.getPeerInfo().getPort())
+        && (remoteEnodeUrl.getInetAddress().equals(this.getRemoteAddress().getAddress())));
   }
 }

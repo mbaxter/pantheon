@@ -26,10 +26,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.EvictResult;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.EvictResult.EvictOutcome;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
-import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
-import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
-import tech.pegasys.pantheon.ethereum.permissioning.node.NodeWhitelistUpdatedEvent;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerPermissions;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
 import tech.pegasys.pantheon.metrics.MetricCategory;
@@ -119,9 +116,7 @@ public class PeerDiscoveryController {
   // The peer representation of this node
   private final DiscoveryPeer localPeer;
   private final OutboundMessageHandler outboundMessageHandler;
-  private final PeerBlacklist peerBlacklist;
-  private final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController;
-  private final Optional<NodePermissioningController> nodePermissioningController;
+  private final PeerPermissions peerPermissions;
   private final DiscoveryProtocolLogger discoveryProtocolLogger;
   private final LabelledMetric<Counter> interactionCounter;
   private final LabelledMetric<Counter> interactionRetryCounter;
@@ -153,9 +148,7 @@ public class PeerDiscoveryController {
       final AsyncExecutor workerExecutor,
       final long tableRefreshIntervalMs,
       final PeerRequirement peerRequirement,
-      final PeerBlacklist peerBlacklist,
-      final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController,
-      final Optional<NodePermissioningController> nodePermissioningController,
+      final PeerPermissions peerPermissions,
       final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers,
       final Subscribers<Consumer<PeerDroppedEvent>> peerDroppedObservers,
       final MetricsSystem metricsSystem) {
@@ -167,9 +160,7 @@ public class PeerDiscoveryController {
     this.workerExecutor = workerExecutor;
     this.tableRefreshIntervalMs = tableRefreshIntervalMs;
     this.peerRequirement = peerRequirement;
-    this.peerBlacklist = peerBlacklist;
-    this.nodeWhitelistController = nodeWhitelistController;
-    this.nodePermissioningController = nodePermissioningController;
+    this.peerPermissions = peerPermissions;
     this.outboundMessageHandler = outboundMessageHandler;
     this.peerBondedObservers = peerBondedObservers;
     this.peerDroppedObservers = peerDroppedObservers;
@@ -194,6 +185,8 @@ public class PeerDiscoveryController {
             "discovery_interaction_retry_count",
             "Total number of interaction retries performed",
             "type");
+
+    peerPermissions.subscribeUpdate(() -> getPeers().filter(p -> !peerPermissions.isPermitted(p)).forEach(this::dropFromPeerTable));
   }
 
   public void start() {
@@ -203,14 +196,13 @@ public class PeerDiscoveryController {
 
     final List<DiscoveryPeer> initialDiscoveryPeers =
         bootstrapNodes.stream()
-            .filter(p -> isPeerPermitted(localPeer, p))
+            .filter(p -> peerPermissions.isPermitted(p))
             .collect(Collectors.toList());
     initialDiscoveryPeers.stream().forEach(peerTable::tryAdd);
 
     recursivePeerRefreshState =
         new RecursivePeerRefreshState(
-            peerBlacklist,
-            nodePermissioningController,
+            peerPermissions,
             this::bond,
             this::findNodes,
             timerUtil,
@@ -219,20 +211,12 @@ public class PeerDiscoveryController {
             PEER_REFRESH_ROUND_TIMEOUT_IN_SECONDS,
             100);
 
-    if (nodePermissioningController.isPresent()) {
-
-      // if smart contract permissioning is enabled, bond with bootnodes
-      if (nodePermissioningController.get().getSyncStatusNodePermissioningProvider().isPresent()) {
-        for (DiscoveryPeer p : initialDiscoveryPeers) {
-          bond(p);
-        }
+    if (!peerPermissions.isReady()) {
+      // If permissions isn't ready, there's no point in running discovery, so just bond with the
+      // bootnodes for now
+      for (DiscoveryPeer p : initialDiscoveryPeers) {
+        bond(p);
       }
-
-      nodePermissioningController
-          .get()
-          .startPeerDiscoveryCallback(
-              () -> recursivePeerRefreshState.start(initialDiscoveryPeers, localPeer.getId()));
-
     } else {
       recursivePeerRefreshState.start(initialDiscoveryPeers, localPeer.getId());
     }
@@ -242,9 +226,6 @@ public class PeerDiscoveryController {
             Math.min(REFRESH_CHECK_INTERVAL_MILLIS, tableRefreshIntervalMs),
             this::refreshTableIfRequired);
     tableRefreshTimerId = OptionalLong.of(timerId);
-
-    nodeWhitelistController.ifPresent(
-        c -> c.subscribeToListUpdatedEvent(this::handleNodeWhitelistUpdatedEvent));
   }
 
   public CompletableFuture<?> stop() {
@@ -257,12 +238,6 @@ public class PeerDiscoveryController {
     inflightInteractions.values().forEach(PeerInteractionState::cancelTimers);
     inflightInteractions.clear();
     return CompletableFuture.completedFuture(null);
-  }
-
-  private boolean isPeerPermitted(final Peer sourcePeer, final Peer destinationPeer) {
-    return nodePermissioningController
-        .map(c -> c.isPermitted(sourcePeer.getEnodeURL(), destinationPeer.getEnodeURL()))
-        .orElse(true);
   }
 
   /**
@@ -284,8 +259,8 @@ public class PeerDiscoveryController {
       return;
     }
 
-    if (!isPeerPermitted(sender, localPeer)) {
-      LOG.trace("Dropping packet from peer not in the whitelist ({})", sender.getEnodeURLString());
+    if (!peerPermissions.isPermitted(sender)) {
+      LOG.debug("Dropping discovery message from prohibited peer {}.", sender.getId());
       return;
     }
 
@@ -293,11 +268,10 @@ public class PeerDiscoveryController {
     final Optional<DiscoveryPeer> maybeKnownPeer = peerTable.get(sender);
     final DiscoveryPeer peer = maybeKnownPeer.orElse(sender);
     final boolean peerKnown = maybeKnownPeer.isPresent();
-    final boolean peerBlacklisted = peerBlacklist.contains(peer);
 
     switch (packet.getType()) {
       case PING:
-        if (!peerBlacklisted && addToPeerTable(peer)) {
+        if (addToPeerTable(peer)) {
           final PingPacketData ping = packet.getPacketData(PingPacketData.class).get();
           respondToPing(ping, packet.getHash(), peer);
         }
@@ -306,9 +280,6 @@ public class PeerDiscoveryController {
         matchInteraction(packet)
             .ifPresent(
                 interaction -> {
-                  if (peerBlacklisted) {
-                    return;
-                  }
                   addToPeerTable(peer);
                   recursivePeerRefreshState.onBondingComplete(peer);
                 });
@@ -321,7 +292,7 @@ public class PeerDiscoveryController {
                         peer, packet.getPacketData(NeighborsPacketData.class).orElse(null)));
         break;
       case FIND_NEIGHBORS:
-        if (!peerKnown || peerBlacklisted) {
+        if (!peerKnown) {
           break;
         }
         final FindNeighborsPacketData fn =
@@ -361,12 +332,6 @@ public class PeerDiscoveryController {
     return true;
   }
 
-  private void handleNodeWhitelistUpdatedEvent(final NodeWhitelistUpdatedEvent event) {
-    event.getRemovedNodes().stream()
-        .map(e -> new DiscoveryPeer(DiscoveryPeer.fromURI(e.toURI())))
-        .forEach(this::dropFromPeerTable);
-  }
-
   @VisibleForTesting
   boolean dropFromPeerTable(final DiscoveryPeer peer) {
     final EvictResult evictResult = peerTable.tryEvict(peer);
@@ -399,6 +364,11 @@ public class PeerDiscoveryController {
   }
 
   private void refreshTableIfRequired() {
+    if (!peerPermissions.isReady()) {
+      // No point in running discovery if we're not ready to accept new peers
+      LOG.debug("Skipping discovery refresh because we're not ready to accept new peers.");
+      return;
+    }
     final long now = System.currentTimeMillis();
     if (lastRefreshTime + tableRefreshIntervalMs <= now) {
       LOG.info("Peer table refresh triggered by timer expiry");

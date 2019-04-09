@@ -18,8 +18,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static tech.pegasys.pantheon.util.bytes.BytesValue.wrapBuffer;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
-import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
-import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
@@ -32,10 +30,8 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PingPacketData;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.TimerUtil;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeerId;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
-import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
-import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerPermissions;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.NetworkUtility;
 import tech.pegasys.pantheon.util.Subscribers;
@@ -47,6 +43,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -61,7 +58,7 @@ import org.apache.logging.log4j.Logger;
  * The peer discovery agent is the network component that sends and receives peer discovery messages
  * via UDP.
  */
-public abstract class PeerDiscoveryAgent implements DisconnectCallback {
+public abstract class PeerDiscoveryAgent {
   protected static final Logger LOG = LogManager.getLogger();
 
   // The devp2p specification says only accept packets up to 1280, but some
@@ -70,10 +67,8 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
   private static final long PEER_REFRESH_INTERVAL_MS = MILLISECONDS.convert(30, TimeUnit.MINUTES);
 
   protected final List<DiscoveryPeer> bootstrapPeers;
-  private final PeerRequirement peerRequirement;
-  private final PeerBlacklist peerBlacklist;
-  private final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController;
-  private final Optional<NodePermissioningController> nodePermissioningController;
+  private final List<PeerRequirement> peerRequirements = new CopyOnWriteArrayList<>();
+  private final PeerPermissions peerPermissions;
   private final MetricsSystem metricsSystem;
   /* The peer controller, which takes care of the state machine of peers. */
   protected Optional<PeerDiscoveryController> controller = Optional.empty();
@@ -85,7 +80,7 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
   protected final DiscoveryConfiguration config;
 
   /* This is the {@link tech.pegasys.pantheon.ethereum.p2p.Peer} object holding who we are. */
-  private DiscoveryPeer advertisedPeer;
+  private volatile DiscoveryPeer advertisedPeer;
 
   /* Is discovery enabled? */
   private boolean isActive = false;
@@ -95,10 +90,7 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
   public PeerDiscoveryAgent(
       final SECP256K1.KeyPair keyPair,
       final DiscoveryConfiguration config,
-      final PeerRequirement peerRequirement,
-      final PeerBlacklist peerBlacklist,
-      final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController,
-      final Optional<NodePermissioningController> nodePermissioningController,
+      final PeerPermissions peerPermissions,
       final MetricsSystem metricsSystem) {
     this.metricsSystem = metricsSystem;
     checkArgument(keyPair != null, "keypair cannot be null");
@@ -106,10 +98,7 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
 
     validateConfiguration(config);
 
-    this.peerRequirement = peerRequirement;
-    this.peerBlacklist = peerBlacklist;
-    this.nodeWhitelistController = nodeWhitelistController;
-    this.nodePermissioningController = nodePermissioningController;
+    this.peerPermissions = peerPermissions;
     this.bootstrapPeers =
         config.getBootstrapPeers().stream().map(DiscoveryPeer::new).collect(Collectors.toList());
 
@@ -149,8 +138,14 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
               });
     } else {
       this.isActive = false;
+      advertisedPeer =
+          new DiscoveryPeer(id, config.getAdvertisedHost(), config.getBindPort(), tcpPort);
       return CompletableFuture.completedFuture(null);
     }
+  }
+
+  public void addPeerRequirement(final PeerRequirement peerRequirement) {
+    this.peerRequirements.add(peerRequirement);
   }
 
   private void startController() {
@@ -169,10 +164,8 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
         createTimer(),
         createWorkerExecutor(),
         PEER_REFRESH_INTERVAL_MS,
-        peerRequirement,
-        peerBlacklist,
-        nodeWhitelistController,
-        nodePermissioningController,
+        PeerRequirement.combine(peerRequirements),
+        peerPermissions,
         peerBondedObservers,
         peerDroppedObservers,
         metricsSystem);
@@ -229,8 +222,16 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
     return controller.map(PeerDiscoveryController::getPeers).orElse(Stream.empty());
   }
 
-  public Optional<DiscoveryPeer> getAdvertisedPeer() {
+  public Optional<Peer> getAdvertisedPeer() {
     return Optional.ofNullable(advertisedPeer);
+  }
+
+  public int getDiscoveryPort() {
+    if (advertisedPeer != null) {
+      return advertisedPeer.getDiscoveryPort();
+    } else {
+      return config.getBindPort();
+    }
   }
 
   public BytesValue getId() {
@@ -309,12 +310,7 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
     checkArgument(config.getBucketSize() > 0, "bucket size cannot be negative nor zero");
   }
 
-  @Override
-  public void onDisconnect(
-      final PeerConnection connection,
-      final DisconnectMessage.DisconnectReason reason,
-      final boolean initiatedByPeer) {
-    final BytesValue nodeId = connection.getPeer().getNodeId();
+  public void dropPeer(final BytesValue nodeId) {
     peerTable.tryEvict(new DefaultPeerId(nodeId));
   }
 

@@ -39,8 +39,14 @@ import java.util.function.Consumer;
  */
 public class Subscribers<T> {
 
+  public static Subscribers<?> NONE = new EmptySubscribers<>();
   private final AtomicLong subscriberId = new AtomicLong();
   private final Map<Long, T> subscribers = new ConcurrentHashMap<>();
+
+  @SuppressWarnings("unchecked")
+  public static <T> Subscribers<T> none() {
+    return (Subscribers<T>) NONE;
+  }
 
   /**
    * Add a subscriber to the list.
@@ -78,6 +84,11 @@ public class Subscribers<T> {
     subscribers.values().forEach(action);
   }
 
+  /** Remove all subscribers */
+  public void clear() {
+    subscribers.clear();
+  }
+
   /**
    * Get the current subscriber count.
    *
@@ -85,5 +96,28 @@ public class Subscribers<T> {
    */
   public int getSubscriberCount() {
     return subscribers.size();
+  }
+
+  private static class EmptySubscribers<T> extends Subscribers<T> {
+
+    @Override
+    public long subscribe(final T subscriber) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean unsubscribe(final long subscriberId) {
+      return false;
+    }
+
+    @Override
+    public void forEach(final Consumer<T> action) {
+      return;
+    }
+
+    @Override
+    public int getSubscriberCount() {
+      return 0;
+    }
   }
 }

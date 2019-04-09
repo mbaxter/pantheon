@@ -16,8 +16,7 @@ import static tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerDistance
 
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
-import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerPermissions;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.List;
@@ -38,8 +37,7 @@ public class RecursivePeerRefreshState {
   private static final Logger LOG = LogManager.getLogger();
   private static final int MAX_CONCURRENT_REQUESTS = 3;
   private BytesValue target;
-  private final PeerBlacklist peerBlacklist;
-  private final Optional<NodePermissioningController> nodePermissioningController;
+  private final PeerPermissions peerPermissions;
   private final PeerTable peerTable;
   private final DiscoveryPeer localPeer;
 
@@ -58,8 +56,7 @@ public class RecursivePeerRefreshState {
   List<DiscoveryPeer> initialPeers;
 
   RecursivePeerRefreshState(
-      final PeerBlacklist peerBlacklist,
-      final Optional<NodePermissioningController> nodePermissioningController,
+      final PeerPermissions peerPermissions,
       final BondingAgent bondingAgent,
       final FindNeighbourDispatcher neighborFinder,
       final TimerUtil timerUtil,
@@ -67,8 +64,7 @@ public class RecursivePeerRefreshState {
       final PeerTable peerTable,
       final int timeoutPeriodInSeconds,
       final int maxRounds) {
-    this.peerBlacklist = peerBlacklist;
-    this.nodePermissioningController = nodePermissioningController;
+    this.peerPermissions = peerPermissions;
     this.bondingAgent = bondingAgent;
     this.findNeighbourDispatcher = neighborFinder;
     this.timerUtil = timerUtil;
@@ -182,16 +178,9 @@ public class RecursivePeerRefreshState {
 
   private boolean satisfiesMapAdditionCriteria(final DiscoveryPeer discoPeer) {
     return !oneTrueMap.containsKey(discoPeer.getId())
-        && !peerBlacklist.contains(discoPeer)
-        && isPeerPermitted(discoPeer)
+        && peerPermissions.isPermitted(discoPeer)
         && (initialPeers.contains(discoPeer) || !peerTable.get(discoPeer).isPresent())
         && !discoPeer.getId().equals(localPeer.getId());
-  }
-
-  private Boolean isPeerPermitted(final DiscoveryPeer discoPeer) {
-    return nodePermissioningController
-        .map(controller -> controller.isPermitted(localPeer.getEnodeURL(), discoPeer.getEnodeURL()))
-        .orElse(true);
   }
 
   void onNeighboursPacketReceived(

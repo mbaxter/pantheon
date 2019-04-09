@@ -25,7 +25,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.MockPeerDiscoveryAg
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.NeighborsPacketData;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.Packet;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PacketType;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -65,7 +65,7 @@ public class PeerDiscoveryAgentTest {
     // Start 20 agents with no bootstrap peers.
     final List<MockPeerDiscoveryAgent> otherAgents =
         helper.startDiscoveryAgents(20, Collections.emptyList());
-    final List<DiscoveryPeer> otherPeers =
+    final List<Peer> otherPeers =
         otherAgents.stream()
             .map(MockPeerDiscoveryAgent::getAdvertisedPeer)
             .map(Optional::get)
@@ -111,166 +111,32 @@ public class PeerDiscoveryAgentTest {
     otherPeers.removeAll(neighbors.getNodes());
     assertThat(otherPeers.size()).isBetween(4, 5);
     if (otherPeers.size() == 5) {
-      assertThat(neighbors.getNodes()).contains(testAgent.getAdvertisedPeer().get());
+      List<BytesValue> neighborIds =
+          neighbors.getNodes().stream().map(Peer::getId).collect(toList());
+      assertThat(neighborIds).contains(testAgent.getAdvertisedPeer().get().getId());
     }
   }
 
   @Test
-  public void shouldEvictPeerOnDisconnect() {
+  public void dropPeer() {
     final MockPeerDiscoveryAgent peerDiscoveryAgent1 = helper.startDiscoveryAgent();
     peerDiscoveryAgent1.start(BROADCAST_TCP_PORT).join();
-    final DiscoveryPeer peer = peerDiscoveryAgent1.getAdvertisedPeer().get();
+    final Peer peer = peerDiscoveryAgent1.getAdvertisedPeer().get();
 
     final MockPeerDiscoveryAgent peerDiscoveryAgent2 = helper.startDiscoveryAgent(peer);
     peerDiscoveryAgent2.start(BROADCAST_TCP_PORT).join();
 
     assertThat(peerDiscoveryAgent2.getPeers().collect(toList()).size()).isEqualTo(1);
 
-    final PeerConnection peerConnection = createAnonymousPeerConnection(peer.getId());
-    peerDiscoveryAgent2.onDisconnect(peerConnection, DisconnectReason.REQUESTED, true);
+    peerDiscoveryAgent2.dropPeer(peer.getId());
 
     assertThat(peerDiscoveryAgent2.getPeers().collect(toList()).size()).isEqualTo(0);
-  }
-
-  @Test
-  public void doesNotBlacklistPeerForNormalDisconnect() {
-    // Start an agent with no bootstrap peers.
-    final PeerBlacklist blacklist = new PeerBlacklist();
-    final MockPeerDiscoveryAgent agent =
-        helper.startDiscoveryAgent(Collections.emptyList(), blacklist);
-    // Setup peer
-    final MockPeerDiscoveryAgent otherNode = helper.startDiscoveryAgent();
-    final PeerConnection wirePeer = createAnonymousPeerConnection(otherNode.getId());
-
-    // Bond to peer
-    bondViaIncomingPing(agent, otherNode);
-    assertThat(agent.getPeers()).hasSize(1);
-
-    // Disconnect with innocuous reason
-    blacklist.onDisconnect(wirePeer, DisconnectReason.TOO_MANY_PEERS, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.TOO_MANY_PEERS, false);
-    // Confirm peer was removed
-    assertThat(agent.getPeers()).hasSize(0);
-
-    // Bond again
-    bondViaIncomingPing(agent, otherNode);
-
-    // Check peer was allowed to connect
-    assertThat(agent.getPeers()).hasSize(1);
   }
 
   protected void bondViaIncomingPing(
       final MockPeerDiscoveryAgent agent, final MockPeerDiscoveryAgent otherNode) {
     Packet pingPacket = helper.createPingPacket(otherNode, agent);
     helper.sendMessageBetweenAgents(otherNode, agent, pingPacket);
-  }
-
-  @Test
-  public void blacklistPeerForBadBehavior() {
-    // Start an agent with no bootstrap peers.
-    final PeerBlacklist blacklist = new PeerBlacklist();
-    final MockPeerDiscoveryAgent agent =
-        helper.startDiscoveryAgent(Collections.emptyList(), blacklist);
-    // Setup peer
-    final MockPeerDiscoveryAgent otherNode = helper.startDiscoveryAgent();
-    final PeerConnection wirePeer = createAnonymousPeerConnection(otherNode.getId());
-
-    // Bond to peer
-    bondViaIncomingPing(agent, otherNode);
-    assertThat(agent.getPeers()).hasSize(1);
-
-    // Disconnect with problematic reason
-    blacklist.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, false);
-    // Confirm peer was removed
-    assertThat(agent.getPeers()).hasSize(0);
-
-    // Bond again
-    bondViaIncomingPing(agent, otherNode);
-
-    // Check peer was not allowed to connect
-    assertThat(agent.getPeers()).hasSize(0);
-  }
-
-  @Test
-  public void doesNotBlacklistPeerForOurBadBehavior() throws Exception {
-    // Start an agent with no bootstrap peers.
-    final PeerBlacklist blacklist = new PeerBlacklist();
-    final MockPeerDiscoveryAgent agent =
-        helper.startDiscoveryAgent(Collections.emptyList(), blacklist);
-    // Setup peer
-    final MockPeerDiscoveryAgent otherNode = helper.startDiscoveryAgent();
-    final PeerConnection wirePeer = createAnonymousPeerConnection(otherNode.getId());
-
-    // Bond to peer
-    bondViaIncomingPing(agent, otherNode);
-    assertThat(agent.getPeers()).hasSize(1);
-
-    // Disconnect with problematic reason
-    blacklist.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, true);
-    agent.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, true);
-    // Confirm peer was removed
-    assertThat(agent.getPeers()).hasSize(0);
-
-    // Bond again
-    bondViaIncomingPing(agent, otherNode);
-
-    // Check peer was allowed to connect
-    assertThat(agent.getPeers()).hasSize(1);
-  }
-
-  @Test
-  public void blacklistIncompatiblePeer() throws Exception {
-    // Start an agent with no bootstrap peers.
-    final PeerBlacklist blacklist = new PeerBlacklist();
-    final MockPeerDiscoveryAgent agent =
-        helper.startDiscoveryAgent(Collections.emptyList(), blacklist);
-    // Setup peer
-    final MockPeerDiscoveryAgent otherNode = helper.startDiscoveryAgent();
-    final PeerConnection wirePeer = createAnonymousPeerConnection(otherNode.getId());
-
-    // Bond to peer
-    bondViaIncomingPing(agent, otherNode);
-    assertThat(agent.getPeers()).hasSize(1);
-
-    // Disconnect
-    blacklist.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, false);
-    // Confirm peer was removed
-    assertThat(agent.getPeers()).hasSize(0);
-
-    // Bond again
-    bondViaIncomingPing(agent, otherNode);
-
-    // Check peer was not allowed to connect
-    assertThat(agent.getPeers()).hasSize(0);
-  }
-
-  @Test
-  public void blacklistIncompatiblePeerWhoIssuesDisconnect() throws Exception {
-    // Start an agent with no bootstrap peers.
-    final PeerBlacklist blacklist = new PeerBlacklist();
-    final MockPeerDiscoveryAgent agent =
-        helper.startDiscoveryAgent(Collections.emptyList(), blacklist);
-    // Setup peer
-    final MockPeerDiscoveryAgent otherNode = helper.startDiscoveryAgent();
-    final PeerConnection wirePeer = createAnonymousPeerConnection(otherNode.getId());
-
-    // Bond to peer
-    bondViaIncomingPing(agent, otherNode);
-    assertThat(agent.getPeers()).hasSize(1);
-
-    // Disconnect
-    blacklist.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, true);
-    agent.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, true);
-    // Confirm peer was removed
-    assertThat(agent.getPeers()).hasSize(0);
-
-    // Bond again
-    bondViaIncomingPing(agent, otherNode);
-
-    // Check peer was not allowed to connect
-    assertThat(agent.getPeers()).hasSize(0);
   }
 
   @Test
@@ -292,7 +158,7 @@ public class PeerDiscoveryAgentTest {
   private PeerConnection createAnonymousPeerConnection(final BytesValue id) {
     PeerConnection conn = mock(PeerConnection.class);
     PeerInfo peerInfo = new PeerInfo(0, null, null, 0, id);
-    when(conn.getPeer()).thenReturn(peerInfo);
+    when(conn.getPeerInfo()).thenReturn(peerInfo);
     return conn;
   }
 }

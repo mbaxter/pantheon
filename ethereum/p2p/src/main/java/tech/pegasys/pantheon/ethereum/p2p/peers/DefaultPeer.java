@@ -43,16 +43,8 @@ public class DefaultPeer extends DefaultPeerId implements Peer {
 
   private final Endpoint endpoint;
 
-  public static DefaultPeer fromEnodeURL(final EnodeURL enodeURL) {
-    final int udpPort = enodeURL.getDiscoveryPort().orElse(enodeURL.getListeningPort());
-
-    final Endpoint endpoint =
-        new Endpoint(
-            enodeURL.getInetAddress().getHostAddress(),
-            udpPort,
-            OptionalInt.of(enodeURL.getListeningPort()));
-
-    return new DefaultPeer(BytesValue.fromHexString(enodeURL.getNodeId()), endpoint);
+  public static DefaultPeer fromEnodeURL(final EnodeURL enode) {
+    return new DefaultPeer(enode.getNodeId(), Endpoint.fromEnode(enode));
   }
 
   /**

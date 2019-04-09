@@ -14,12 +14,14 @@ package tech.pegasys.pantheon.ethereum.eth.manager;
 
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
+import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -34,8 +36,10 @@ public class MockPeerConnection implements PeerConnection {
   private final Set<Capability> caps;
   private volatile boolean disconnected = false;
   private final Bytes32 nodeId;
+  private final long id;
 
   public MockPeerConnection(final Set<Capability> caps, final PeerSendHandler onSend) {
+    this.id = ID_GENERATOR.incrementAndGet();
     this.caps = caps;
     this.onSend = onSend;
     this.nodeId = generateUsefulNodeId();
@@ -43,8 +47,7 @@ public class MockPeerConnection implements PeerConnection {
 
   private Bytes32 generateUsefulNodeId() {
     // EthPeer only shows the first 20 characters of the node ID so add some padding.
-    return Bytes32.fromHexStringLenient(
-        "0x" + ID_GENERATOR.incrementAndGet() + Strings.repeat("0", 46));
+    return Bytes32.fromHexStringLenient("0x" + this.id + Strings.repeat("0", 46));
   }
 
   public MockPeerConnection(final Set<Capability> caps) {
@@ -65,8 +68,18 @@ public class MockPeerConnection implements PeerConnection {
   }
 
   @Override
-  public PeerInfo getPeer() {
+  public long getConnectedAt() {
+    return this.id;
+  }
+
+  @Override
+  public PeerInfo getPeerInfo() {
     return new PeerInfo(5, "Mock", new ArrayList<>(caps), 0, nodeId);
+  }
+
+  @Override
+  public Peer getPeer() {
+    return new DefaultPeer(nodeId, "127.0.0.1", 0, 0);
   }
 
   @Override
@@ -80,12 +93,12 @@ public class MockPeerConnection implements PeerConnection {
   }
 
   @Override
-  public SocketAddress getLocalAddress() {
+  public InetSocketAddress getLocalAddress() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public SocketAddress getRemoteAddress() {
+  public InetSocketAddress getRemoteAddress() {
     throw new UnsupportedOperationException();
   }
 

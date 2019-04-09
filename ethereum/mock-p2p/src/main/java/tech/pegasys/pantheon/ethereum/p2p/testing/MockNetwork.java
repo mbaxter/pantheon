@@ -12,13 +12,14 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.testing;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.Message;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.DefaultMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
@@ -26,7 +27,7 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.Discon
 import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -37,7 +38,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 /**
  * Mock network implementation that allows passing {@link MessageData} between arbitrary peers. This
@@ -46,6 +49,7 @@ import java.util.function.Consumer;
  * MockNetwork.MockP2PNetwork}s.
  */
 public final class MockNetwork {
+  private static final AtomicLong NEXT_CONNECTION_ID = new AtomicLong(0);
 
   private final Map<Peer, MockNetwork.MockP2PNetwork> nodes = new HashMap<>();
   private final List<Capability> capabilities;
@@ -125,6 +129,11 @@ public final class MockNetwork {
       synchronized (network) {
         return new ArrayList<>(connections.values());
       }
+    }
+
+    @Override
+    public Stream<DiscoveryPeer> getDiscoveredPeers() {
+      return Stream.empty();
     }
 
     @Override
@@ -229,11 +238,13 @@ public final class MockNetwork {
     private final Peer to;
 
     private final MockNetwork network;
+    private final long id;
 
     MockPeerConnection(final Peer source, final Peer target, final MockNetwork network) {
       from = source;
       to = target;
       this.network = network;
+      this.id = NEXT_CONNECTION_ID.incrementAndGet();
     }
 
     @Override
@@ -260,13 +271,23 @@ public final class MockNetwork {
     }
 
     @Override
-    public PeerInfo getPeer() {
+    public long getConnectedAt() {
+      return id;
+    }
+
+    @Override
+    public PeerInfo getPeerInfo() {
       return new PeerInfo(
           5,
           "mock-network-client",
           capabilities,
           to.getEndpoint().getTcpPort().getAsInt(),
           to.getId());
+    }
+
+    @Override
+    public Peer getPeer() {
+      return to;
     }
 
     @Override
@@ -287,12 +308,12 @@ public final class MockNetwork {
     }
 
     @Override
-    public SocketAddress getLocalAddress() {
+    public InetSocketAddress getLocalAddress() {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public SocketAddress getRemoteAddress() {
+    public InetSocketAddress getRemoteAddress() {
       throw new UnsupportedOperationException();
     }
   }

@@ -57,6 +57,10 @@ public class DiscoveryPeer extends DefaultPeer {
     return status;
   }
 
+  public int getDiscoveryPort() {
+    return getEndpoint().getUdpPort();
+  }
+
   public void setStatus(final PeerDiscoveryStatus status) {
     this.status = status;
   }
