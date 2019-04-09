@@ -332,11 +332,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
       checkNotNull(keyPair);
       checkNotNull(config);
       checkState(supportedCapabilities != null && supportedCapabilities.size() > 0);
-      checkNotNull(peerPermissions);
-      checkNotNull(maintainedPeers);
       checkNotNull(metricsSystem);
       checkState(!nodePermissioningController.isPresent() || blockchain != null);
-      peerDiscoveryAgent = peerDiscoveryAgent == null ? createDiscoveryAgent() : peerDiscoveryAgent;
     }
 
     protected PeerDiscoveryAgent createDiscoveryAgent() {

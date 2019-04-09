@@ -64,8 +64,8 @@ public class DefaultP2PNetworkTest {
     try (final P2PNetwork listener = builder().keyPair(listenKp).build();
         final P2PNetwork connector = builder().build()) {
 
-      final int listenPort = listener.getLocalPeerInfo().getPort();
       listener.start();
+      final int listenPort = listener.getLocalPeerInfo().getPort();
       connector.start();
       final BytesValue listenId = listenKp.getPublicKey().getEncodedBytes();
       assertThat(
@@ -86,20 +86,22 @@ public class DefaultP2PNetworkTest {
 
   @Test
   public void rejectPeerWithNoSharedCaps() throws Exception {
-    final SECP256K1.KeyPair listenKp = SECP256K1.KeyPair.generate();
+    final KeyPair listenKeyPair = KeyPair.generate();
+    final BytesValue listenId = listenKeyPair.getPublicKey().getEncodedBytes();
+    final KeyPair connectorKeyPair = KeyPair.generate();
 
     final SubProtocol subprotocol1 = subProtocol("eth");
     final Capability cap1 = Capability.create(subprotocol1.getName(), 63);
     final SubProtocol subprotocol2 = subProtocol("oth");
     final Capability cap2 = Capability.create(subprotocol2.getName(), 63);
     try (final P2PNetwork listener =
-            builder().keyPair(listenKp).supportedCapabilities(cap1).build();
+            builder().keyPair(listenKeyPair).supportedCapabilities(cap1).build();
         final P2PNetwork connector =
-            builder().keyPair(listenKp).supportedCapabilities(cap2).build()) {
-      final int listenPort = listener.getLocalPeerInfo().getPort();
+            builder().keyPair(connectorKeyPair).supportedCapabilities(cap2).build()) {
+
       listener.start();
+      final int listenPort = listener.getLocalPeerInfo().getPort();
       connector.start();
-      final BytesValue listenId = listenKp.getPublicKey().getEncodedBytes();
 
       final Peer listenerPeer =
           new DefaultPeer(
@@ -109,6 +111,7 @@ public class DefaultP2PNetworkTest {
                   listenPort,
                   OptionalInt.of(listenPort)));
       final CompletableFuture<PeerConnection> connectFuture = connector.connect(listenerPeer);
+
       assertThatThrownBy(connectFuture::get)
           .hasCauseInstanceOf(IncompatiblePeerConnectionException.class);
     }
@@ -122,7 +125,7 @@ public class DefaultP2PNetworkTest {
     return new SubProtocol() {
       @Override
       public String getName() {
-        return "eth";
+        return name;
       }
 
       @Override
