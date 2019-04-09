@@ -16,9 +16,7 @@ import static tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerDistance
 
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerPermissions;
-import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.List;

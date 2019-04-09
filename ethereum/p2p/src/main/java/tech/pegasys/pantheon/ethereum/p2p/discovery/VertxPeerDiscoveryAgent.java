@@ -22,10 +22,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerDiscoveryContro
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.TimerUtil;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.VertxTimerUtil;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerPermissions;
-import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
-import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.NetworkUtility;
@@ -35,7 +32,6 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
-import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
