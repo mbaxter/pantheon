@@ -20,6 +20,8 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 
 public class PeerConnectionEventDispatcher {
+  public static PeerConnectionEventDispatcher NOOP = new PeerConnectionEventDispatcher(DisconnectCallback.NOOP, MessageCallback.NOOP);
+
   private final DisconnectCallback disconnectDispatcher;
   private final MessageCallback messageDispatcher;
 
