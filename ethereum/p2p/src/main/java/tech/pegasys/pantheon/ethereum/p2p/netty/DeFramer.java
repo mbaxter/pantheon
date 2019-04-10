@@ -14,6 +14,7 @@ package tech.pegasys.pantheon.ethereum.p2p.netty;
 
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
+import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.BreachOfProtocolException;
 import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.IncompatiblePeerException;
 import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.PeerDisconnectedException;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.Framer;
@@ -121,10 +122,11 @@ final class DeFramer extends ByteToMessageDecoder {
         connectFuture.complete(connection);
       } else if (message.getCode() == WireMessageCodes.DISCONNECT) {
         DisconnectMessage disconnectMessage = DisconnectMessage.readFrom(message);
-        connectFuture.completeExceptionally(
-            new PeerDisconnectedException(disconnectMessage.getReason()));
         LOG.debug(
             "Peer disconnected before sending HELLO.  Reason: " + disconnectMessage.getReason());
+        ctx.close();
+        connectFuture.completeExceptionally(
+            new PeerDisconnectedException(disconnectMessage.getReason()));
       } else {
         // Unexpected message - disconnect
         LOG.debug(
@@ -132,9 +134,11 @@ final class DeFramer extends ByteToMessageDecoder {
             message.getCode(),
             message.getData().toString());
         ctx.writeAndFlush(
-            new OutboundMessage(
-                null, DisconnectMessage.create(DisconnectReason.BREACH_OF_PROTOCOL)));
-        ctx.close();
+                new OutboundMessage(
+                    null, DisconnectMessage.create(DisconnectReason.BREACH_OF_PROTOCOL)))
+            .addListener((f) -> ctx.close());
+        connectFuture.completeExceptionally(
+            new BreachOfProtocolException("Message received before HELLO's exchanged"));
       }
     }
   }
