@@ -15,10 +15,12 @@ package tech.pegasys.pantheon.ethereum.p2p.netty;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.IncompatiblePeerException;
+import tech.pegasys.pantheon.ethereum.p2p.netty.exceptions.PeerDisconnectedException;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.Framer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.FramingException;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
+import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.HelloMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.WireMessageCodes;
@@ -73,7 +75,9 @@ final class DeFramer extends ByteToMessageDecoder {
     MessageData message;
     while ((message = framer.deframe(in)) != null) {
 
-      if (!hellosExchanged && message.getCode() == WireMessageCodes.HELLO) {
+      if (hellosExchanged) {
+        out.add(message);
+      } else if (message.getCode() == WireMessageCodes.HELLO) {
         hellosExchanged = true;
         // Decode first hello and use the payload to modify pipeline
         final PeerInfo peerInfo;
@@ -116,8 +120,22 @@ final class DeFramer extends ByteToMessageDecoder {
                 new ApiHandler(capabilityMultiplexer, connection, callbacks, waitingForPong),
                 new MessageFramer(capabilityMultiplexer, framer));
         connectFuture.complete(connection);
+      } else if (message.getCode() == WireMessageCodes.DISCONNECT) {
+        DisconnectMessage disconnectMessage = DisconnectMessage.readFrom(message);
+        connectFuture.completeExceptionally(
+            new PeerDisconnectedException(disconnectMessage.getReason()));
+        LOG.debug(
+            "Peer disconnected before sending HELLO.  Reason: " + disconnectMessage.getReason());
       } else {
-        out.add(message);
+        // Unexpected message - disconnect
+        LOG.debug(
+            "Message received before HELLO's exchanged, disconnecting.  Code: {}, Data: {}",
+            message.getCode(),
+            message.getData().toString());
+        ctx.writeAndFlush(
+            new OutboundMessage(
+                null, DisconnectMessage.create(DisconnectReason.BREACH_OF_PROTOCOL)));
+        ctx.close();
       }
     }
   }
