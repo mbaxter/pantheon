@@ -203,7 +203,7 @@ public class JsonRpcHttpServiceTest {
   }
 
   @Test
-  public void handleExtraRequestParams() throws Exception {
+  public void handleUnknownRequestFields() throws Exception {
     final String id = "123";
     // Create a request with an extra "beta" param
     final RequestBody body =
