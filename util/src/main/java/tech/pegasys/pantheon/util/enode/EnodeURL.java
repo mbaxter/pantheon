@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 
 import com.google.common.base.Objects;
 import com.google.common.net.InetAddresses;
+import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 public class EnodeURL {
 
@@ -38,7 +39,7 @@ public class EnodeURL {
           + "(?<listening>\\d+)"
           + "(\\?discport=(?<discovery>\\d+))?$";
 
-  private final String nodeId;
+  private final BytesValue nodeId;
   private final InetAddress ip;
   private final Integer listeningPort;
   // DiscoveryPort will only be present if it differs from listening port, otherwise
@@ -66,11 +67,7 @@ public class EnodeURL {
       final InetAddress address,
       final Integer listeningPort,
       final OptionalInt discoveryPort) {
-    if (nodeId.startsWith("0x")) {
-      this.nodeId = nodeId.substring(2);
-    } else {
-      this.nodeId = nodeId;
-    }
+    this.nodeId = BytesValue.fromHexString(nodeId);
     this.ip = address;
     this.listeningPort = listeningPort;
     // Only explicitly define a discovery port if it differs from the listening port
@@ -99,7 +96,7 @@ public class EnodeURL {
 
   public URI toURI() {
     final String uri =
-        String.format("enode://%s@%s:%d", nodeId, InetAddresses.toUriString(ip), listeningPort);
+        String.format("enode://%s@%s:%d", nodeId.toUnprefixedString(), InetAddresses.toUriString(ip), listeningPort);
     if (discoveryPort.isPresent()) {
       return URI.create(uri + String.format("?discport=%d", discoveryPort.getAsInt()));
     } else {
@@ -152,7 +149,7 @@ public class EnodeURL {
     }
   }
 
-  public String getNodeId() {
+  public BytesValue getNodeId() {
     return nodeId;
   }
 

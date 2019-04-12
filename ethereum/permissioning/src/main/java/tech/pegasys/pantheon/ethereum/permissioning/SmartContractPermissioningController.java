@@ -125,7 +125,7 @@ public class SmartContractPermissioningController implements NodePermissioningPr
 
   private static BytesValue encodeEnodeUrl(final EnodeURL enode) {
     return BytesValues.concatenate(
-        encodeEnodeId(enode.getNodeId()),
+        enode.getNodeId(),
         encodeIp(enode.getInetAddress()),
         encodePort(enode.getListeningPort()));
   }
@@ -155,11 +155,5 @@ public class SmartContractPermissioningController implements NodePermissioningPr
     res[31] = (byte) ((port) & 0xFF);
     res[30] = (byte) ((port >> 8) & 0xFF);
     return BytesValue.wrap(res);
-  }
-
-  // The enode high and low need to be 32 bytes each. They then get concatenated as they are
-  // adjacent parameters
-  private static BytesValue encodeEnodeId(final String id) {
-    return BytesValue.fromHexString(id);
   }
 }
