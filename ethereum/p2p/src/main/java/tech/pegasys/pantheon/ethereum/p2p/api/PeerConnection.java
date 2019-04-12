@@ -90,9 +90,9 @@ public interface PeerConnection {
   /** @return True if the peer is disconnected */
   boolean isDisconnected();
 
-  SocketAddress getLocalAddress();
+  InetSocketAddress getLocalAddress();
 
-  SocketAddress getRemoteAddress();
+  InetSocketAddress getRemoteAddress();
 
   class PeerNotConnected extends IOException {
 

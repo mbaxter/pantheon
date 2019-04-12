@@ -632,12 +632,9 @@ public class NettyP2PNetwork implements P2PNetwork {
         .map(
             c -> {
               final EnodeURL localPeerEnodeURL =
-                  peerInfoToEnodeURL(
-                      ourPeerInfo, (InetSocketAddress) peerConnection.getLocalAddress());
+                  peerInfoToEnodeURL(ourPeerInfo, peerConnection.getLocalAddress());
               final EnodeURL remotePeerEnodeURL =
-                  peerInfoToEnodeURL(
-                      peerConnection.getPeer(),
-                      (InetSocketAddress) peerConnection.getRemoteAddress());
+                  peerInfoToEnodeURL(peerConnection.getPeer(), peerConnection.getRemoteAddress());
               return c.isPermitted(localPeerEnodeURL, remotePeerEnodeURL);
             })
         .orElse(true);
