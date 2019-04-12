@@ -15,6 +15,7 @@ package tech.pegasys.pantheon.util.enode;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import tech.pegasys.pantheon.util.NetworkUtility;
+import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.net.InetAddress;
 import java.net.URI;
@@ -24,7 +25,6 @@ import java.util.regex.Pattern;
 
 import com.google.common.base.Objects;
 import com.google.common.net.InetAddresses;
-import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 public class EnodeURL {
 
@@ -96,7 +96,9 @@ public class EnodeURL {
 
   public URI toURI() {
     final String uri =
-        String.format("enode://%s@%s:%d", nodeId.toUnprefixedString(), InetAddresses.toUriString(ip), listeningPort);
+        String.format(
+            "enode://%s@%s:%d",
+            nodeId.toUnprefixedString(), InetAddresses.toUriString(ip), listeningPort);
     if (discoveryPort.isPresent()) {
       return URI.create(uri + String.format("?discport=%d", discoveryPort.getAsInt()));
     } else {
