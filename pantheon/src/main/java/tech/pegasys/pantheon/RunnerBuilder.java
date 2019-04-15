@@ -91,7 +91,7 @@ public class RunnerBuilder {
   private boolean p2pEnabled = true;
   private boolean discovery;
   private EthNetworkConfig ethNetworkConfig;
-  private String discoveryHost;
+  private String advertisedHost;
   private int listenPort;
   private int maxPeers;
   private JsonRpcConfiguration jsonRpcConfiguration;
@@ -107,7 +107,7 @@ public class RunnerBuilder {
     BytesValue nodeId = pantheonController.getLocalNodeKeyPair().getPublicKey().getEncodedBytes();
     return EnodeURL.builder()
         .nodeId(nodeId)
-        .ipAddress(discoveryHost)
+        .ipAddress(advertisedHost)
         .listeningPort(listenPort)
         .build();
   }
@@ -137,12 +137,12 @@ public class RunnerBuilder {
     return this;
   }
 
-  public RunnerBuilder discoveryHost(final String discoveryHost) {
-    this.discoveryHost = discoveryHost;
+  public RunnerBuilder advertisedHost(final String advertisedHost) {
+    this.advertisedHost = advertisedHost;
     return this;
   }
 
-  public RunnerBuilder discoveryPort(final int listenPort) {
+  public RunnerBuilder listenPort(final int listenPort) {
     this.listenPort = listenPort;
     return this;
   }
@@ -208,7 +208,7 @@ public class RunnerBuilder {
       discoveryConfiguration =
           DiscoveryConfiguration.create()
               .setBindPort(listenPort)
-              .setAdvertisedHost(discoveryHost)
+              .setAdvertisedHost(advertisedHost)
               .setBootstrapPeers(bootstrap);
     } else {
       discoveryConfiguration = DiscoveryConfiguration.create().setActive(false);
