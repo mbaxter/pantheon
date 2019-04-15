@@ -108,7 +108,7 @@ final class NettyPeerConnection implements PeerConnection {
   }
 
   @Override
-  public PeerInfo getPeer() {
+  public PeerInfo getPeerInfo() {
     return peerInfo;
   }
 

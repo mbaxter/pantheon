@@ -69,7 +69,7 @@ public interface PeerConnection {
    *
    * @return Peer Description
    */
-  PeerInfo getPeer();
+  PeerInfo getPeerInfo();
 
   /**
    * Immediately terminate the connection without sending a disconnect message.
@@ -102,8 +102,8 @@ public interface PeerConnection {
 
   default EnodeURL getRemoteEnode() {
     return EnodeURL.builder()
-        .nodeId(getPeer().getNodeId())
-        .listeningPort(getPeer().getPort())
+        .nodeId(getPeerInfo().getNodeId())
+        .listeningPort(getPeerInfo().getPort())
         .ipAddress(getRemoteAddress().getAddress())
         .build();
   }

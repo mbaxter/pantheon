@@ -260,7 +260,7 @@ public final class MockNetwork {
     }
 
     @Override
-    public PeerInfo getPeer() {
+    public PeerInfo getPeerInfo() {
       return new PeerInfo(
           5,
           "mock-network-client",

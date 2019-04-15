@@ -65,7 +65,7 @@ public class MockPeerConnection implements PeerConnection {
   }
 
   @Override
-  public PeerInfo getPeer() {
+  public PeerInfo getPeerInfo() {
     return new PeerInfo(5, "Mock", new ArrayList<>(caps), 0, nodeId);
   }
 
