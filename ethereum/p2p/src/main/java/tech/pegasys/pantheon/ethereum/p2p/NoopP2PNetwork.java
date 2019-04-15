@@ -64,11 +64,6 @@ public class NoopP2PNetwork implements P2PNetwork {
   public void awaitStop() {}
 
   @Override
-  public Optional<? extends Peer> getAdvertisedPeer() {
-    return Optional.empty();
-  }
-
-  @Override
   public PeerInfo getLocalPeerInfo() {
     throw new P2pDisabledException("P2P networking disabled.  Local peer info unavailable.");
   }
@@ -80,6 +75,11 @@ public class NoopP2PNetwork implements P2PNetwork {
 
   @Override
   public boolean isP2pEnabled() {
+    return false;
+  }
+
+  @Override
+  public boolean isDiscoveryEnabled() {
     return false;
   }
 

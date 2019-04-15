@@ -70,15 +70,13 @@ public class AdminNodeInfo implements JsonRpcMethod {
       final PeerInfo peerInfo = peerNetwork.getLocalPeerInfo();
       final BytesValue nodeId = peerInfo.getNodeId();
       peerNetwork
-          .getAdvertisedPeer()
+          .getSelfEnodeURL()
           .ifPresent(
-              advertisedPeer -> {
-                response.put("enode", advertisedPeer.getEnodeURLString());
-                ports.put("discovery", advertisedPeer.getEndpoint().getUdpPort());
-                response.put("ip", advertisedPeer.getEndpoint().getHost());
-                response.put(
-                    "listenAddr",
-                    advertisedPeer.getEndpoint().getHost() + ":" + peerInfo.getPort());
+              enode -> {
+                response.put("enode", enode.toString());
+                ports.put("discovery", enode.getEffectiveDiscoveryPort());
+                response.put("ip", enode.getIp());
+                response.put("listenAddr", enode.getIp() + ":" + peerInfo.getPort());
               });
       response.put("id", nodeId.toString().substring(2));
       response.put("name", clientVersion);

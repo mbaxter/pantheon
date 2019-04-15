@@ -17,7 +17,6 @@ import tech.pegasys.pantheon.ethereum.p2p.api.Message;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
-import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.DefaultMessage;
@@ -179,11 +178,6 @@ public final class MockNetwork {
     public void awaitStop() {}
 
     @Override
-    public Optional<Peer> getAdvertisedPeer() {
-      return Optional.of(new DefaultPeer(self.getId(), "127.0.0.1", 0, 0));
-    }
-
-    @Override
     public void start() {}
 
     @Override
@@ -202,6 +196,11 @@ public final class MockNetwork {
 
     @Override
     public boolean isP2pEnabled() {
+      return true;
+    }
+
+    @Override
+    public boolean isDiscoveryEnabled() {
       return true;
     }
 

@@ -146,6 +146,7 @@ public class NettyP2PNetwork implements P2PNetwork {
 
   private final PeerDiscoveryAgent peerDiscoveryAgent;
   private final PeerBlacklist peerBlacklist;
+  private final NetworkingConfiguration config;
   private OptionalLong peerBondedObserverId = OptionalLong.empty();
   private OptionalLong peerDroppedObserverId = OptionalLong.empty();
 
@@ -230,6 +231,7 @@ public class NettyP2PNetwork implements P2PNetwork {
       final Optional<NodePermissioningController> nodePermissioningController,
       final Blockchain blockchain) {
 
+    this.config = config;
     maxPeers = config.getRlpx().getMaxPeers();
     connections = new PeerConnectionRegistry(metricsSystem);
     this.peerBlacklist = peerBlacklist;
@@ -713,11 +715,6 @@ public class NettyP2PNetwork implements P2PNetwork {
   }
 
   @Override
-  public Optional<? extends Peer> getAdvertisedPeer() {
-    return peerDiscoveryAgent.getAdvertisedPeer();
-  }
-
-  @Override
   public PeerInfo getLocalPeerInfo() {
     return ourPeerInfo;
   }
@@ -730,6 +727,11 @@ public class NettyP2PNetwork implements P2PNetwork {
   @Override
   public boolean isP2pEnabled() {
     return true;
+  }
+
+  @Override
+  public boolean isDiscoveryEnabled() {
+    return config.getDiscovery().isActive();
   }
 
   @Override

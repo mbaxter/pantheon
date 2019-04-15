@@ -92,8 +92,6 @@ public interface P2PNetwork extends Closeable {
   /** Blocks until the P2P network layer has stopped. */
   void awaitStop();
 
-  Optional<? extends Peer> getAdvertisedPeer();
-
   /**
    * Returns {@link PeerInfo} object for this node
    *
@@ -114,6 +112,9 @@ public interface P2PNetwork extends Closeable {
    * @return true if the P2P network is enabled, false, otherwise.
    */
   boolean isP2pEnabled();
+
+  /** @return Return true if peer discovery is enabled. */
+  boolean isDiscoveryEnabled();
 
   /**
    * Returns the EnodeURL used to identify this peer in the network.
