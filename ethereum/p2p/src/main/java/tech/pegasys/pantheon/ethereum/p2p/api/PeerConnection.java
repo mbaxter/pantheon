@@ -19,7 +19,6 @@ import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.Set;
 
 /** A P2P connection to another node. */
@@ -101,11 +100,11 @@ public interface PeerConnection {
     }
   }
 
-  default boolean isRemoteEnode(final EnodeURL remoteEnodeUrl) {
-    return ((remoteEnodeUrl.getNodeId().equals(this.getPeer().getAddress()))
-        && (remoteEnodeUrl.getListeningPort() == this.getPeer().getPort())
-        && (remoteEnodeUrl
-            .getInetAddress()
-            .equals(((InetSocketAddress) this.getRemoteAddress()).getAddress())));
+  default EnodeURL getRemoteEnode() {
+    return EnodeURL.builder()
+        .nodeId(getPeer().getNodeId())
+        .listeningPort(getPeer().getPort())
+        .ipAddress(getRemoteAddress().getAddress())
+        .build();
   }
 }
