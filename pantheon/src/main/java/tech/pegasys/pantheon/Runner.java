@@ -18,6 +18,7 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketService;
 import tech.pegasys.pantheon.ethereum.p2p.NetworkRunner;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsService;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -197,7 +198,7 @@ public class Runner implements AutoCloseable {
   }
 
   @VisibleForTesting
-  P2PNetwork getP2PNetwork() {
-    return networkRunner.getNetwork();
+  Optional<EnodeURL> getLocalEnode() {
+    return networkRunner.getNetwork().getLocalEnode();
   }
 }

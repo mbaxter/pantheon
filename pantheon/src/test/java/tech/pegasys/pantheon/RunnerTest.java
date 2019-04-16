@@ -192,7 +192,7 @@ public final class RunnerTest {
               noOpMetricsSystem,
               TestClock.fixed(),
               PendingTransactions.MAX_PENDING_TRANSACTIONS);
-      final EnodeURL enode = runnerAhead.getP2PNetwork().getLocalEnode().get();
+      final EnodeURL enode = runnerAhead.getLocalEnode().get();
       final EthNetworkConfig behindEthNetworkConfiguration =
           new EthNetworkConfig(
               EthNetworkConfig.jsonConfig(DEV),
