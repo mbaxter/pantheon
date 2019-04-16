@@ -138,7 +138,7 @@ public class TestNode implements Closeable {
             .metricsSystem(new NoOpMetricsSystem())
             .build();
     network = networkRunner.getNetwork();
-    this.port = network.getLocalPeerInfo().getPort();
+    this.port = network.getSelfEnodeURL().get().getListeningPort();
     network.subscribeDisconnect(
         (connection, reason, initiatedByPeer) -> disconnections.put(connection, reason));
 

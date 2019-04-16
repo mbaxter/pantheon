@@ -99,7 +99,7 @@ public final class MockNetwork {
     }
   }
 
-  private final class MockP2PNetwork implements P2PNetwork {
+  private static final class MockP2PNetwork implements P2PNetwork {
 
     private final MockNetwork network;
 
@@ -182,12 +182,6 @@ public final class MockNetwork {
 
     @Override
     public void close() {}
-
-    @Override
-    public PeerInfo getLocalPeerInfo() {
-      return new PeerInfo(
-          5, self.getId().toString(), new ArrayList<>(capabilities), 0, self.getId());
-    }
 
     @Override
     public boolean isListening() {

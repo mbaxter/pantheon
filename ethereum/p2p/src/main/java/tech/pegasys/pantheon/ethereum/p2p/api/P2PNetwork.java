@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.ethereum.p2p.api;
 
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
-import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.io.Closeable;
@@ -91,13 +90,6 @@ public interface P2PNetwork extends Closeable {
 
   /** Blocks until the P2P network layer has stopped. */
   void awaitStop();
-
-  /**
-   * Returns {@link PeerInfo} object for this node
-   *
-   * @return the PeerInfo for this node.
-   */
-  PeerInfo getLocalPeerInfo();
 
   /**
    * Checks if the node is listening for network connections

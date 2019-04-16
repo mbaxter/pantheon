@@ -715,11 +715,6 @@ public class NettyP2PNetwork implements P2PNetwork {
   }
 
   @Override
-  public PeerInfo getLocalPeerInfo() {
-    return ourPeerInfo;
-  }
-
-  @Override
   public boolean isListening() {
     return peerDiscoveryAgent.isActive();
   }
