@@ -633,7 +633,7 @@ public class NettyP2PNetwork implements P2PNetwork {
     return nodePermissioningController
         .map(
             c -> {
-              final EnodeURL localPeerEnodeURL = getSelfEnodeURL().orElse(buildSelfEnodeURL());
+              final EnodeURL localPeerEnodeURL = getLocalEnode().orElse(buildSelfEnodeURL());
               final EnodeURL remotePeerEnodeURL = peerConnection.getRemoteEnode();
               return c.isPermitted(localPeerEnodeURL, remotePeerEnodeURL);
             })
