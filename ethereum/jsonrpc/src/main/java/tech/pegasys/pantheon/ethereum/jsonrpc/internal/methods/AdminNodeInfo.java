@@ -75,7 +75,7 @@ public class AdminNodeInfo implements JsonRpcMethod {
     ports.put("discovery", enode.getEffectiveDiscoveryPort());
     response.put("ip", enode.getIp());
     response.put("listenAddr", enode.getIp() + ":" + enode.getListeningPort());
-    response.put("id", nodeId.toString().substring(2));
+    response.put("id", nodeId.toUnprefixedString());
     response.put("name", clientVersion);
 
     ports.put("listener", enode.getListeningPort());
