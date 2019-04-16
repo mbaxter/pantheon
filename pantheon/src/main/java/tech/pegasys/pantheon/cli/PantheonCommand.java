@@ -239,14 +239,14 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   @Option(
       names = {"--p2p-host"},
       paramLabel = MANDATORY_HOST_FORMAT_HELP,
-      description = "Host for P2P peer discovery to listen on (default: ${DEFAULT-VALUE})",
+      description = "The ip address we advertise to our peers (default: ${DEFAULT-VALUE})",
       arity = "1")
   private String p2pHost = autoDiscoverDefaultIP().getHostAddress();
 
   @Option(
       names = {"--p2p-port"},
       paramLabel = MANDATORY_PORT_FORMAT_HELP,
-      description = "Port for P2P peer discovery to listen on (default: ${DEFAULT-VALUE})",
+      description = "Port on which we listen for p2p communication (default: ${DEFAULT-VALUE})",
       arity = "1")
   private final Integer p2pPort = DEFAULT_PORT;
 
@@ -956,8 +956,8 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       final boolean peerDiscoveryEnabled,
       final EthNetworkConfig ethNetworkConfig,
       final int maxPeers,
-      final String discoveryHost,
-      final int discoveryPort,
+      final String p2pAdvertisedHost,
+      final int p2pListenPort,
       final JsonRpcConfiguration jsonRpcConfiguration,
       final WebSocketConfiguration webSocketConfiguration,
       final MetricsConfiguration metricsConfiguration,
@@ -976,8 +976,8 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
             .p2pEnabled(p2pEnabled)
             .discovery(peerDiscoveryEnabled)
             .ethNetworkConfig(ethNetworkConfig)
-            .p2pAdvertisedHost(discoveryHost)
-            .p2pListenPort(discoveryPort)
+            .p2pAdvertisedHost(p2pAdvertisedHost)
+            .p2pListenPort(p2pListenPort)
             .maxPeers(maxPeers)
             .jsonRpcConfiguration(jsonRpcConfiguration)
             .webSocketConfiguration(webSocketConfiguration)
