@@ -64,7 +64,7 @@ public class AdminNodeInfo implements JsonRpcMethod {
     if (!peerNetwork.isP2pEnabled()) {
       return new JsonRpcErrorResponse(req.getId(), JsonRpcError.P2P_DISABLED);
     }
-    final Optional<EnodeURL> maybeEnode = peerNetwork.getSelfEnodeURL();
+    final Optional<EnodeURL> maybeEnode = peerNetwork.getLocalEnode();
     if (!maybeEnode.isPresent()) {
       return new JsonRpcErrorResponse(req.getId(), JsonRpcError.P2P_NETWORK_NOT_RUNNING);
     }

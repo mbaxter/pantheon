@@ -41,7 +41,7 @@ public class NetEnode implements JsonRpcMethod {
       return p2pDisabledResponse(req);
     }
 
-    final Optional<EnodeURL> enodeURL = p2pNetwork.getSelfEnodeURL();
+    final Optional<EnodeURL> enodeURL = p2pNetwork.getLocalEnode();
     if (!enodeURL.isPresent()) {
       return enodeUrlNotAvailable(req);
     }

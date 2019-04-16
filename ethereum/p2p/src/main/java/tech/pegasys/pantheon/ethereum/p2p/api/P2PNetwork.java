@@ -114,5 +114,5 @@ public interface P2PNetwork extends Closeable {
    * @return the enodeURL associated with this node if P2P has been enabled. Returns empty
    *     otherwise.
    */
-  Optional<EnodeURL> getSelfEnodeURL();
+  Optional<EnodeURL> getLocalEnode();
 }

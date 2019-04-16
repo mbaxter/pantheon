@@ -156,7 +156,7 @@ public class TestNode implements Closeable {
             metricsSystem,
             syncState);
     networkRunner.start();
-    this.port = network.getSelfEnodeURL().get().getListeningPort();
+    this.port = network.getLocalEnode().get().getListeningPort();
     selfPeer = new DefaultPeer(id(), endpoint());
   }
 

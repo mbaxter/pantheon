@@ -730,7 +730,7 @@ public class NettyP2PNetwork implements P2PNetwork {
   }
 
   @Override
-  public Optional<EnodeURL> getSelfEnodeURL() {
+  public Optional<EnodeURL> getLocalEnode() {
     return Optional.ofNullable(ourEnodeURL);
   }
 

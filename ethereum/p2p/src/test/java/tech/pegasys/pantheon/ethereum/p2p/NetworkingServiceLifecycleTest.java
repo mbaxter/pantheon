@@ -61,7 +61,7 @@ public class NetworkingServiceLifecycleTest {
             Optional.empty(),
             Optional.empty())) {
       service.start();
-      final EnodeURL enode = service.getSelfEnodeURL().get();
+      final EnodeURL enode = service.getLocalEnode().get();
       final int udpPort = enode.getEffectiveDiscoveryPort();
       final int tcpPort = enode.getListeningPort();
 
@@ -213,7 +213,7 @@ public class NetworkingServiceLifecycleTest {
       final NetworkingConfiguration config = configWithRandomPorts();
       config
           .getDiscovery()
-          .setBindPort(service1.getSelfEnodeURL().get().getEffectiveDiscoveryPort());
+          .setBindPort(service1.getLocalEnode().get().getEffectiveDiscoveryPort());
       try (final NettyP2PNetwork service2 =
           new NettyP2PNetwork(
               vertx,

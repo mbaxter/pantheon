@@ -199,7 +199,7 @@ public final class MockNetwork {
     }
 
     @Override
-    public Optional<EnodeURL> getSelfEnodeURL() {
+    public Optional<EnodeURL> getLocalEnode() {
       return Optional.empty();
     }
   }

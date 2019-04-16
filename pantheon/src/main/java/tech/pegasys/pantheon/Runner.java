@@ -147,7 +147,7 @@ public class Runner implements AutoCloseable {
     if (networkRunner.getNetwork().isP2pEnabled()) {
       networkRunner
           .getNetwork()
-          .getSelfEnodeURL()
+          .getLocalEnode()
           .ifPresent(
               enode -> {
                 if (network.isDiscoveryEnabled()) {

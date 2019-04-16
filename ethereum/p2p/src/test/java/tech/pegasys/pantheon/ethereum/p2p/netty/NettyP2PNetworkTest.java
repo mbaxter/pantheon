@@ -144,7 +144,7 @@ public final class NettyP2PNetworkTest {
 
       listener.start();
       connector.start();
-      final EnodeURL listenerEnode = listener.getSelfEnodeURL().get();
+      final EnodeURL listenerEnode = listener.getLocalEnode().get();
       final BytesValue listenId = listenerEnode.getNodeId();
       final int listenPort = listenerEnode.getListeningPort();
 
@@ -200,7 +200,7 @@ public final class NettyP2PNetworkTest {
 
       listener.start();
       connector.start();
-      final EnodeURL listenerEnode = listener.getSelfEnodeURL().get();
+      final EnodeURL listenerEnode = listener.getLocalEnode().get();
       final BytesValue listenId = listenerEnode.getNodeId();
       final int listenPort = listenerEnode.getListeningPort();
 
@@ -286,7 +286,7 @@ public final class NettyP2PNetworkTest {
       // Setup listener and first connection
       listener.start();
       connector1.start();
-      final EnodeURL listenerEnode = listener.getSelfEnodeURL().get();
+      final EnodeURL listenerEnode = listener.getLocalEnode().get();
       final BytesValue listenId = listenerEnode.getNodeId();
       final int listenPort = listenerEnode.getListeningPort();
 
@@ -366,7 +366,7 @@ public final class NettyP2PNetworkTest {
 
       listener.start();
       connector.start();
-      final EnodeURL listenerEnode = listener.getSelfEnodeURL().get();
+      final EnodeURL listenerEnode = listener.getLocalEnode().get();
       final BytesValue listenId = listenerEnode.getNodeId();
       final int listenPort = listenerEnode.getListeningPort();
 
@@ -422,11 +422,11 @@ public final class NettyP2PNetworkTest {
       localNetwork.start();
       remoteNetwork.start();
 
-      final EnodeURL localEnode = localNetwork.getSelfEnodeURL().get();
+      final EnodeURL localEnode = localNetwork.getLocalEnode().get();
       final BytesValue localId = localEnode.getNodeId();
       final int localPort = localEnode.getListeningPort();
 
-      final EnodeURL remoteEnode = remoteNetwork.getSelfEnodeURL().get();
+      final EnodeURL remoteEnode = remoteNetwork.getLocalEnode().get();
       final BytesValue remoteId = remoteEnode.getNodeId();
       final int remotePort = remoteEnode.getListeningPort();
 
@@ -526,7 +526,7 @@ public final class NettyP2PNetworkTest {
       localNetwork.start();
       remoteNetwork.start();
 
-      final EnodeURL localEnode = localNetwork.getSelfEnodeURL().get();
+      final EnodeURL localEnode = localNetwork.getLocalEnode().get();
       final BytesValue localId = localEnode.getNodeId();
       final int localPort = localEnode.getListeningPort();
 
@@ -828,7 +828,7 @@ public final class NettyP2PNetworkTest {
   public void beforeStartingNetworkEnodeURLShouldNotBePresent() {
     final NettyP2PNetwork nettyP2PNetwork = mockNettyP2PNetwork();
 
-    assertThat(nettyP2PNetwork.getSelfEnodeURL()).isNotPresent();
+    assertThat(nettyP2PNetwork.getLocalEnode()).isNotPresent();
   }
 
   @Test
@@ -836,7 +836,7 @@ public final class NettyP2PNetworkTest {
     final NettyP2PNetwork nettyP2PNetwork = mockNettyP2PNetwork();
     nettyP2PNetwork.start();
 
-    assertThat(nettyP2PNetwork.getSelfEnodeURL()).isPresent();
+    assertThat(nettyP2PNetwork.getLocalEnode()).isPresent();
   }
 
   @Test

@@ -74,7 +74,7 @@ public class AdminNodeInfoTest {
   @Test
   public void shouldReturnCorrectResult() {
     when(p2pNetwork.isP2pEnabled()).thenReturn(true);
-    when(p2pNetwork.getSelfEnodeURL()).thenReturn(Optional.of(defaultPeer.getEnodeURL()));
+    when(p2pNetwork.getLocalEnode()).thenReturn(Optional.of(defaultPeer.getEnodeURL()));
     final JsonRpcRequest request = adminNodeInfo();
 
     final Map<String, Object> expected = new HashMap<>();
@@ -126,7 +126,7 @@ public class AdminNodeInfoTest {
   @Test
   public void returnsErrorWhenP2PNotReady() {
     when(p2pNetwork.isP2pEnabled()).thenReturn(true);
-    when(p2pNetwork.getSelfEnodeURL()).thenReturn(Optional.empty());
+    when(p2pNetwork.getLocalEnode()).thenReturn(Optional.empty());
     final JsonRpcRequest request = adminNodeInfo();
 
     final JsonRpcResponse expectedResponse =
