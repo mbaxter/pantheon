@@ -239,14 +239,14 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   @Option(
       names = {"--p2p-host"},
       paramLabel = MANDATORY_HOST_FORMAT_HELP,
-      description = "The ip address we advertise to our peers (default: ${DEFAULT-VALUE})",
+      description = "Ip address this node advertises to its peers (default: ${DEFAULT-VALUE})",
       arity = "1")
   private String p2pHost = autoDiscoverDefaultIP().getHostAddress();
 
   @Option(
       names = {"--p2p-port"},
       paramLabel = MANDATORY_PORT_FORMAT_HELP,
-      description = "Port on which we listen for p2p communication (default: ${DEFAULT-VALUE})",
+      description = "Port on which to listen for p2p communication (default: ${DEFAULT-VALUE})",
       arity = "1")
   private final Integer p2pPort = DEFAULT_PORT;
 
