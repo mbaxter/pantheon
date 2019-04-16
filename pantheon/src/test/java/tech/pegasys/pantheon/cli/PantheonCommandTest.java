@@ -146,8 +146,8 @@ public class PantheonCommandTest extends CommandTestAbstract {
                 EthNetworkConfig.jsonConfig(MAINNET),
                 EthNetworkConfig.MAINNET_NETWORK_ID,
                 MAINNET_BOOTSTRAP_NODES));
-    verify(mockRunnerBuilder).advertisedHost(eq("127.0.0.1"));
-    verify(mockRunnerBuilder).listenPort(eq(30303));
+    verify(mockRunnerBuilder).p2pAdvertisedHost(eq("127.0.0.1"));
+    verify(mockRunnerBuilder).p2pListenPort(eq(30303));
     verify(mockRunnerBuilder).maxPeers(eq(25));
     verify(mockRunnerBuilder).jsonRpcConfiguration(eq(defaultJsonRpcConfiguration));
     verify(mockRunnerBuilder).webSocketConfiguration(eq(defaultWebSocketConfiguration));
@@ -281,8 +281,8 @@ public class PantheonCommandTest extends CommandTestAbstract {
 
     verify(mockRunnerBuilder).discovery(eq(false));
     verify(mockRunnerBuilder).ethNetworkConfig(ethNetworkConfigArgumentCaptor.capture());
-    verify(mockRunnerBuilder).advertisedHost(eq("1.2.3.4"));
-    verify(mockRunnerBuilder).listenPort(eq(1234));
+    verify(mockRunnerBuilder).p2pAdvertisedHost(eq("1.2.3.4"));
+    verify(mockRunnerBuilder).p2pListenPort(eq(1234));
     verify(mockRunnerBuilder).maxPeers(eq(42));
     verify(mockRunnerBuilder).jsonRpcConfiguration(eq(jsonRpcConfiguration));
     verify(mockRunnerBuilder).webSocketConfiguration(eq(webSocketConfiguration));
@@ -599,8 +599,8 @@ public class PantheonCommandTest extends CommandTestAbstract {
                 EthNetworkConfig.jsonConfig(MAINNET),
                 EthNetworkConfig.MAINNET_NETWORK_ID,
                 MAINNET_BOOTSTRAP_NODES));
-    verify(mockRunnerBuilder).advertisedHost(eq("127.0.0.1"));
-    verify(mockRunnerBuilder).listenPort(eq(30303));
+    verify(mockRunnerBuilder).p2pAdvertisedHost(eq("127.0.0.1"));
+    verify(mockRunnerBuilder).p2pListenPort(eq(30303));
     verify(mockRunnerBuilder).maxPeers(eq(25));
     verify(mockRunnerBuilder).jsonRpcConfiguration(eq(jsonRpcConfiguration));
     verify(mockRunnerBuilder).webSocketConfiguration(eq(webSocketConfiguration));
@@ -984,8 +984,8 @@ public class PantheonCommandTest extends CommandTestAbstract {
     final int port = 1234;
     parseCommand("--p2p-host", host, "--p2p-port", String.valueOf(port));
 
-    verify(mockRunnerBuilder).advertisedHost(stringArgumentCaptor.capture());
-    verify(mockRunnerBuilder).listenPort(intArgumentCaptor.capture());
+    verify(mockRunnerBuilder).p2pAdvertisedHost(stringArgumentCaptor.capture());
+    verify(mockRunnerBuilder).p2pListenPort(intArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(stringArgumentCaptor.getValue()).isEqualTo(host);
@@ -1001,7 +1001,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
     final String host = "localhost";
     parseCommand("--p2p-host", host);
 
-    verify(mockRunnerBuilder).advertisedHost(stringArgumentCaptor.capture());
+    verify(mockRunnerBuilder).p2pAdvertisedHost(stringArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(stringArgumentCaptor.getValue()).isEqualTo(host);
@@ -1016,7 +1016,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
     final String host = "2600:DB8::8545";
     parseCommand("--p2p-host", host);
 
-    verify(mockRunnerBuilder).advertisedHost(stringArgumentCaptor.capture());
+    verify(mockRunnerBuilder).p2pAdvertisedHost(stringArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
     assertThat(stringArgumentCaptor.getValue()).isEqualTo(host);
