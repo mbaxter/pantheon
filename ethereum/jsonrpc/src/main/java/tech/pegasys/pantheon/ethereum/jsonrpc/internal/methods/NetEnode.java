@@ -54,6 +54,6 @@ public class NetEnode implements JsonRpcMethod {
   }
 
   private JsonRpcErrorResponse enodeUrlNotAvailable(final JsonRpcRequest req) {
-    return new JsonRpcErrorResponse(req.getId(), JsonRpcError.ENODE_NOT_AVAILABLE);
+    return new JsonRpcErrorResponse(req.getId(), JsonRpcError.P2P_NETWORK_NOT_RUNNING);
   }
 }

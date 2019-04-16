@@ -88,7 +88,7 @@ public class NetEnodeTest {
 
     final JsonRpcRequest request = netEnodeRequest();
     final JsonRpcResponse expectedResponse =
-        new JsonRpcErrorResponse(request.getId(), JsonRpcError.ENODE_NOT_AVAILABLE);
+        new JsonRpcErrorResponse(request.getId(), JsonRpcError.P2P_NETWORK_NOT_RUNNING);
 
     assertThat(method.response(request)).isEqualToComparingFieldByField(expectedResponse);
   }
