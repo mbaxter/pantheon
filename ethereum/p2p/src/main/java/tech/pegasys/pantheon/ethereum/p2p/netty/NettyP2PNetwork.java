@@ -176,7 +176,7 @@ public class NettyP2PNetwork implements P2PNetwork {
 
   private final String advertisedHost;
 
-  private EnodeURL ourEnodeURL;
+  private volatile EnodeURL ourEnodeURL;
 
   private final Optional<NodePermissioningController> nodePermissioningController;
   private final Optional<Blockchain> blockchain;
