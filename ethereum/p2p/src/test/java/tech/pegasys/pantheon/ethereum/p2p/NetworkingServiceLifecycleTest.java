@@ -211,9 +211,7 @@ public class NetworkingServiceLifecycleTest {
             Optional.empty())) {
       service1.start();
       final NetworkingConfiguration config = configWithRandomPorts();
-      config
-          .getDiscovery()
-          .setBindPort(service1.getLocalEnode().get().getEffectiveDiscoveryPort());
+      config.getDiscovery().setBindPort(service1.getLocalEnode().get().getEffectiveDiscoveryPort());
       try (final NettyP2PNetwork service2 =
           new NettyP2PNetwork(
               vertx,
