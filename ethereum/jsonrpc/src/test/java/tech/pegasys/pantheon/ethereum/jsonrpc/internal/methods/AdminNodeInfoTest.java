@@ -113,7 +113,6 @@ public class AdminNodeInfoTest {
   @Test
   public void returnsErrorWhenP2PDisabled() {
     when(p2pNetwork.isP2pEnabled()).thenReturn(false);
-    when(p2pNetwork.getSelfEnodeURL()).thenReturn(Optional.empty());
     final JsonRpcRequest request = adminNodeInfo();
 
     final JsonRpcResponse expectedResponse =
