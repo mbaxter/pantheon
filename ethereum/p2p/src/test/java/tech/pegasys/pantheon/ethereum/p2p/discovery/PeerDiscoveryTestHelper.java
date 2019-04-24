@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.ethereum.p2p.discovery;
 
 import static java.util.Arrays.asList;
+import static org.mockito.ArgumentMatchers.argThat;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
@@ -46,6 +47,10 @@ public class PeerDiscoveryTestHelper {
 
   public static List<SECP256K1.KeyPair> generateKeyPairs(final int count) {
     return Stream.generate(SECP256K1.KeyPair::generate).limit(count).collect(Collectors.toList());
+  }
+
+  public static DiscoveryPeer matchesPeer(final DiscoveryPeer peer) {
+    return argThat((DiscoveryPeer p) -> p.getId().equals(peer.getId()));
   }
 
   /**
