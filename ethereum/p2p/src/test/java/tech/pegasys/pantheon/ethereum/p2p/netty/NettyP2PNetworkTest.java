@@ -33,7 +33,6 @@ import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.chain.BlockAddedEvent;
 import tech.pegasys.pantheon.ethereum.chain.BlockAddedObserver;
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
-import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
@@ -149,13 +148,7 @@ public final class NettyP2PNetworkTest {
 
       assertThat(
               connector
-                  .connect(
-                      new DefaultPeer(
-                          listenId,
-                          new Endpoint(
-                              InetAddress.getLoopbackAddress().getHostAddress(),
-                              listenPort,
-                              OptionalInt.of(listenPort))))
+                  .connect(createPeer(listenId, listenPort))
                   .get(30L, TimeUnit.SECONDS)
                   .getPeerInfo()
                   .getNodeId())
@@ -205,25 +198,13 @@ public final class NettyP2PNetworkTest {
 
       assertThat(
               connector
-                  .connect(
-                      new DefaultPeer(
-                          listenId,
-                          new Endpoint(
-                              InetAddress.getLoopbackAddress().getHostAddress(),
-                              listenPort,
-                              OptionalInt.of(listenPort))))
+                  .connect(createPeer(listenId, listenPort))
                   .get(30L, TimeUnit.SECONDS)
                   .getPeerInfo()
                   .getNodeId())
           .isEqualTo(listenId);
       final CompletableFuture<PeerConnection> secondConnectionFuture =
-          connector.connect(
-              new DefaultPeer(
-                  listenId,
-                  new Endpoint(
-                      InetAddress.getLoopbackAddress().getHostAddress(),
-                      listenPort,
-                      OptionalInt.of(listenPort))));
+          connector.connect(createPeer(listenId, listenPort));
       assertThatThrownBy(secondConnectionFuture::get)
           .hasCause(new IllegalStateException("Client already connected"));
     }
@@ -289,13 +270,7 @@ public final class NettyP2PNetworkTest {
       final BytesValue listenId = listenerEnode.getNodeId();
       final int listenPort = listenerEnode.getListeningPort();
 
-      final Peer listeningPeer =
-          new DefaultPeer(
-              listenId,
-              new Endpoint(
-                  InetAddress.getLoopbackAddress().getHostAddress(),
-                  listenPort,
-                  OptionalInt.of(listenPort)));
+      final Peer listeningPeer = createPeer(listenId, listenPort);
       assertThat(
               connector1
                   .connect(listeningPeer)
@@ -369,13 +344,7 @@ public final class NettyP2PNetworkTest {
       final BytesValue listenId = listenerEnode.getNodeId();
       final int listenPort = listenerEnode.getListeningPort();
 
-      final Peer listenerPeer =
-          new DefaultPeer(
-              listenId,
-              new Endpoint(
-                  InetAddress.getLoopbackAddress().getHostAddress(),
-                  listenPort,
-                  OptionalInt.of(listenPort)));
+      final Peer listenerPeer = createPeer(listenId, listenPort);
       final CompletableFuture<PeerConnection> connectFuture = connector.connect(listenerPeer);
       assertThatThrownBy(connectFuture::get).hasCauseInstanceOf(IncompatiblePeerException.class);
     }
@@ -429,21 +398,8 @@ public final class NettyP2PNetworkTest {
       final BytesValue remoteId = remoteEnode.getNodeId();
       final int remotePort = remoteEnode.getListeningPort();
 
-      final Peer localPeer =
-          new DefaultPeer(
-              localId,
-              new Endpoint(
-                  InetAddress.getLoopbackAddress().getHostAddress(),
-                  localPort,
-                  OptionalInt.of(localPort)));
-
-      final Peer remotePeer =
-          new DefaultPeer(
-              remoteId,
-              new Endpoint(
-                  InetAddress.getLoopbackAddress().getHostAddress(),
-                  remotePort,
-                  OptionalInt.of(remotePort)));
+      final Peer localPeer = createPeer(localId, localPort);
+      final Peer remotePeer = createPeer(remoteId, remotePort);
 
       // Blacklist the remote peer
       localBlacklist.add(remotePeer);
@@ -529,13 +485,7 @@ public final class NettyP2PNetworkTest {
       final BytesValue localId = localEnode.getNodeId();
       final int localPort = localEnode.getListeningPort();
 
-      final Peer localPeer =
-          new DefaultPeer(
-              localId,
-              new Endpoint(
-                  InetAddress.getLoopbackAddress().getHostAddress(),
-                  localPort,
-                  OptionalInt.of(localPort)));
+      final Peer localPeer = createPeer(localId, localPort);
 
       // Setup disconnect listener
       final CompletableFuture<PeerConnection> peerFuture = new CompletableFuture<>();
@@ -836,8 +786,7 @@ public final class NettyP2PNetworkTest {
   @Test
   public void handlePeerBondedEvent_forPeerWithNoTcpPort() {
     final NettyP2PNetwork network = mockNettyP2PNetwork();
-    DiscoveryPeer peer =
-        new DiscoveryPeer(generatePeerId(0), "127.0.0.1", 999, OptionalInt.empty());
+    DiscoveryPeer peer = createDiscoveryPeer();
     PeerBondedEvent peerBondedEvent = new PeerBondedEvent(peer, System.currentTimeMillis());
 
     network.handlePeerBondedEvent().accept(peerBondedEvent);
@@ -851,7 +800,7 @@ public final class NettyP2PNetworkTest {
         mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
 
     doReturn(2).when(network).connectionCount();
-    DiscoveryPeer peer = createDiscoveryPeer(0);
+    DiscoveryPeer peer = createDiscoveryPeer();
     peer.setStatus(PeerDiscoveryStatus.BONDED);
 
     doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
@@ -872,7 +821,7 @@ public final class NettyP2PNetworkTest {
         mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
 
     doReturn(2).when(network).connectionCount();
-    DiscoveryPeer peer = createDiscoveryPeer(0);
+    DiscoveryPeer peer = createDiscoveryPeer();
     peer.setStatus(PeerDiscoveryStatus.KNOWN);
 
     doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
@@ -888,7 +837,7 @@ public final class NettyP2PNetworkTest {
         mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
 
     doReturn(2).when(network).connectionCount();
-    DiscoveryPeer peer = createDiscoveryPeer(0);
+    DiscoveryPeer peer = createDiscoveryPeer();
     peer.setStatus(PeerDiscoveryStatus.BONDED);
 
     doReturn(true).when(network).isConnecting(peer);
@@ -905,7 +854,7 @@ public final class NettyP2PNetworkTest {
         mockNettyP2PNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
 
     doReturn(2).when(network).connectionCount();
-    DiscoveryPeer peer = createDiscoveryPeer(0);
+    DiscoveryPeer peer = createDiscoveryPeer();
     peer.setStatus(PeerDiscoveryStatus.BONDED);
 
     doReturn(true).when(network).isConnected(peer);
@@ -927,7 +876,7 @@ public final class NettyP2PNetworkTest {
             .limit(10)
             .map(
                 (seed) -> {
-                  DiscoveryPeer peer = createDiscoveryPeer(seed);
+                  DiscoveryPeer peer = createDiscoveryPeer();
                   peer.setStatus(PeerDiscoveryStatus.BONDED);
                   return peer;
                 })
@@ -956,7 +905,7 @@ public final class NettyP2PNetworkTest {
             .limit(10)
             .map(
                 (seed) -> {
-                  DiscoveryPeer peer = createDiscoveryPeer(seed);
+                  DiscoveryPeer peer = createDiscoveryPeer();
                   peer.setStatus(PeerDiscoveryStatus.BONDED);
                   return peer;
                 })
@@ -968,13 +917,13 @@ public final class NettyP2PNetworkTest {
     verify(network, times(0)).connect(any());
   }
 
-  private DiscoveryPeer createDiscoveryPeer(final int seed) {
-    return new DiscoveryPeer(generatePeerId(seed), "127.0.0.1", 999, OptionalInt.empty());
-  }
-
-  private BytesValue generatePeerId(final int seed) {
-    BlockDataGenerator gen = new BlockDataGenerator(seed);
-    return gen.bytesValue(DefaultPeer.PEER_ID_SIZE);
+  private DiscoveryPeer createDiscoveryPeer() {
+    return DiscoveryPeer.fromEnode(
+        EnodeURL.builder()
+            .nodeId(Peer.randomId())
+            .ipAddress("127.0.0.1")
+            .listeningPort(999)
+            .build());
   }
 
   private BlockAddedEvent blockAddedEvent() {
@@ -1071,6 +1020,15 @@ public final class NettyP2PNetworkTest {
     return DefaultPeer.fromURI(enodeURL);
   }
 
+  private Peer createPeer(final BytesValue nodeId, final int listenPort) {
+    return DefaultPeer.fromEnodeURL(
+        EnodeURL.builder()
+            .ipAddress(InetAddress.getLoopbackAddress().getHostAddress())
+            .nodeId(nodeId)
+            .listeningPort(listenPort)
+            .build());
+  }
+
   public static class EnodeURLMatcher implements ArgumentMatcher<EnodeURL> {
 
     private final EnodeURL enodeURL;
@@ -1086,7 +1044,7 @@ public final class NettyP2PNetworkTest {
       } else {
         return enodeURL.getNodeId().equals(argument.getNodeId())
             && enodeURL.getIp().equals(argument.getIp())
-            && enodeURL.getListeningPort().equals(argument.getListeningPort());
+            && enodeURL.getListeningPort() == argument.getListeningPort();
       }
     }
   }

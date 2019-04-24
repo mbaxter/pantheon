@@ -13,12 +13,9 @@
 package tech.pegasys.pantheon.ethereum.p2p.discovery;
 
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerId;
-import tech.pegasys.pantheon.util.bytes.BytesValue;
-
-import java.util.OptionalInt;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 /**
  * Represents an Ethereum node that we interacting with through the discovery and wire protocols.
@@ -31,26 +28,16 @@ public class DiscoveryPeer extends DefaultPeer {
   private long lastContacted = 0;
   private long lastSeen = 0;
 
-  public DiscoveryPeer(
-      final BytesValue id, final String host, final int udpPort, final int tcpPort) {
-    super(id, host, udpPort, tcpPort);
+  private DiscoveryPeer(final EnodeURL enode) {
+    super(enode);
   }
 
-  public DiscoveryPeer(
-      final BytesValue id, final String host, final int udpPort, final OptionalInt tcpPort) {
-    super(id, host, udpPort, tcpPort);
+  public static DiscoveryPeer fromEnode(final EnodeURL enode) {
+    return new DiscoveryPeer(enode);
   }
 
-  public DiscoveryPeer(final BytesValue id, final String host, final int udpPort) {
-    super(id, host, udpPort);
-  }
-
-  public DiscoveryPeer(final BytesValue id, final Endpoint endpoint) {
-    super(id, endpoint);
-  }
-
-  public DiscoveryPeer(final Peer peer) {
-    super(peer.getId(), peer.getEndpoint());
+  public static DiscoveryPeer fromPeer(final Peer peer) {
+    return new DiscoveryPeer(peer.getEnodeURL());
   }
 
   public PeerDiscoveryStatus getStatus() {
@@ -90,7 +77,7 @@ public class DiscoveryPeer extends DefaultPeer {
   public String toString() {
     final StringBuilder sb = new StringBuilder("DiscoveryPeer{");
     sb.append("status=").append(status);
-    sb.append(", endPoint=").append(this.getEndpoint());
+    sb.append(", enode=").append(this.getEnodeURL());
     sb.append(", firstDiscovered=").append(firstDiscovered);
     sb.append(", lastContacted=").append(lastContacted);
     sb.append(", lastSeen=").append(lastSeen);

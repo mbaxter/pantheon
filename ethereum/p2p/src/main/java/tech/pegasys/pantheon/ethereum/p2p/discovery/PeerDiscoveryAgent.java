@@ -32,6 +32,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PingPacketData;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.TimerUtil;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeerId;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
@@ -40,6 +41,7 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.NetworkUtility;
 import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.net.InetSocketAddress;
 import java.net.SocketException;
@@ -111,7 +113,10 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
     this.nodeWhitelistController = nodeWhitelistController;
     this.nodePermissioningController = nodePermissioningController;
     this.bootstrapPeers =
-        config.getBootstrapPeers().stream().map(DiscoveryPeer::new).collect(Collectors.toList());
+        config.getBootstrapPeers().stream()
+            .map(Peer::getEnodeURL)
+            .map(DiscoveryPeer::fromEnode)
+            .collect(Collectors.toList());
 
     this.config = config;
     this.keyPair = keyPair;
@@ -142,8 +147,13 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
               (InetSocketAddress localAddress) -> {
                 // Once listener is set up, finish initializing
                 advertisedPeer =
-                    new DiscoveryPeer(
-                        id, config.getAdvertisedHost(), localAddress.getPort(), tcpPort);
+                    DiscoveryPeer.fromEnode(
+                        EnodeURL.builder()
+                            .nodeId(id)
+                            .ipAddress(config.getAdvertisedHost())
+                            .listeningPort(tcpPort)
+                            .discoveryPort(localAddress.getPort())
+                            .build());
                 isActive = true;
                 startController();
               });
@@ -194,7 +204,15 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
     // Notify the peer controller.
     String host = sourceEndpoint.getHost();
     int port = sourceEndpoint.getUdpPort();
-    final DiscoveryPeer peer = new DiscoveryPeer(packet.getNodeId(), host, port, tcpPort);
+    final DiscoveryPeer peer =
+        DiscoveryPeer.fromEnode(
+            EnodeURL.builder()
+                .nodeId(packet.getNodeId())
+                .ipAddress(host)
+                .listeningPort(tcpPort.orElse(port))
+                .discoveryPort(port)
+                .build());
+
     controller.ifPresent(c -> c.onMessage(packet, peer));
   }
 

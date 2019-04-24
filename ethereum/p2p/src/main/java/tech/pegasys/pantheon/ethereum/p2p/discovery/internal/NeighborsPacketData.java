@@ -14,22 +14,23 @@ package tech.pegasys.pantheon.ethereum.p2p.discovery.internal;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
 import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
 
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class NeighborsPacketData implements PacketData {
 
-  private final List<DiscoveryPeer> peers;
+  private final List<? extends Peer> peers;
 
   /* In millis after epoch. */
   private final long expiration;
 
-  private NeighborsPacketData(final List<DiscoveryPeer> peers, final long expiration) {
+  private NeighborsPacketData(final List<? extends Peer> peers, final long expiration) {
     checkArgument(peers != null, "peer list cannot be null");
     checkArgument(expiration >= 0, "expiration must be positive");
 
@@ -38,15 +39,14 @@ public class NeighborsPacketData implements PacketData {
   }
 
   @SuppressWarnings("unchecked")
-  public static NeighborsPacketData create(final List<DiscoveryPeer> peers) {
+  public static NeighborsPacketData create(final List<? extends Peer> peers) {
     return new NeighborsPacketData(
         peers, System.currentTimeMillis() + PacketData.DEFAULT_EXPIRATION_PERIOD_MS);
   }
 
   public static NeighborsPacketData readFrom(final RLPInput in) {
     in.enterList();
-    final List<DiscoveryPeer> peers =
-        in.readList(rlp -> new DiscoveryPeer(DefaultPeer.readFrom(rlp)));
+    final List<Peer> peers = in.readList(DefaultPeer::readFrom);
     final long expiration = in.readLongScalar();
     in.leaveList();
     return new NeighborsPacketData(peers, expiration);
@@ -60,8 +60,12 @@ public class NeighborsPacketData implements PacketData {
     out.endList();
   }
 
-  public List<DiscoveryPeer> getNodes() {
+  public List<? extends Peer> getNodes() {
     return peers;
+  }
+
+  public <T extends Peer> List<T> getNodes(final Function<Peer, T> peerFactory) {
+    return peers.stream().map(peerFactory).collect(Collectors.toList());
   }
 
   public long getExpiration() {
