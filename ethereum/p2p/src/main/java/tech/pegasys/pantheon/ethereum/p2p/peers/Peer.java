@@ -13,7 +13,6 @@
 package tech.pegasys.pantheon.ethereum.p2p.peers;
 
 import tech.pegasys.pantheon.crypto.SecureRandomProvider;
-import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
@@ -49,27 +48,6 @@ public interface Peer extends PeerId {
     final byte[] id = new byte[64];
     SecureRandomProvider.publicSecureRandom().nextBytes(id);
     return BytesValue.wrap(id);
-  }
-
-  /**
-   * Encodes this peer to its RLP representation.
-   *
-   * @param out The RLP output stream to which to write.
-   */
-  default void writeTo(final RLPOutput out) {
-    final EnodeURL enode = getEnodeURL();
-
-    out.startList();
-    out.writeInetAddress(enode.getIp());
-    out.writeUnsignedShort(enode.getEffectiveDiscoveryPort());
-    if (enode.getDiscoveryPort().isPresent()) {
-      // Discovery port is distinct from listening port, write both
-      out.writeUnsignedShort(enode.getListeningPort());
-    } else {
-      out.writeNull();
-    }
-    out.writeBytesValue(getId());
-    out.endList();
   }
 
   /**
