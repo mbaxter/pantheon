@@ -17,7 +17,12 @@ import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
+import java.util.OptionalInt;
+
 public interface Peer extends PeerId {
+
+  /** @return The enode representing the location of this peer. */
+  EnodeURL getEnodeURL();
 
   /**
    * A struct-like immutable object encapsulating the peer's network coordinates, namely their
@@ -25,8 +30,15 @@ public interface Peer extends PeerId {
    * RLPx communications.
    *
    * @return An object encapsulating the peer's network coordinates.
+   * @deprecated Use {@link #getEnodeURL()}
    */
-  Endpoint getEndpoint();
+  default Endpoint getEndpoint() {
+    final EnodeURL enode = getEnodeURL();
+    return new Endpoint(
+        enode.getInetAddress().getHostAddress(),
+        enode.getEffectiveDiscoveryPort(),
+        OptionalInt.of(enode.getListeningPort()));
+  }
 
   /**
    * Generates a random peer ID in a secure manner.
@@ -45,8 +57,17 @@ public interface Peer extends PeerId {
    * @param out The RLP output stream to which to write.
    */
   default void writeTo(final RLPOutput out) {
+    final EnodeURL enode = getEnodeURL();
+
     out.startList();
-    getEndpoint().encodeInline(out);
+    out.writeInetAddress(enode.getIp());
+    out.writeUnsignedShort(enode.getEffectiveDiscoveryPort());
+    if (enode.getDiscoveryPort().isPresent()) {
+      // Discovery port is distinct from listening port, write both
+      out.writeUnsignedShort(enode.getListeningPort());
+    } else {
+      out.writeNull();
+    }
     out.writeBytesValue(getId());
     out.endList();
   }
@@ -58,19 +79,5 @@ public interface Peer extends PeerId {
    */
   default String getEnodeURLString() {
     return this.getEnodeURL().toString();
-  }
-
-  default EnodeURL getEnodeURL() {
-    final Endpoint endpoint = this.getEndpoint();
-
-    final int tcpPort = endpoint.getFunctionalTcpPort();
-    final int udpPort = endpoint.getUdpPort();
-
-    return EnodeURL.builder()
-        .nodeId(this.getId())
-        .ipAddress(endpoint.getHost())
-        .listeningPort(tcpPort)
-        .discoveryPort(udpPort)
-        .build();
   }
 }

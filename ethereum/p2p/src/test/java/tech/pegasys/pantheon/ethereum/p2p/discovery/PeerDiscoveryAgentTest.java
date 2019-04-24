@@ -115,7 +115,8 @@ public class PeerDiscoveryAgentTest {
     otherPeers.removeAll(neighbors.getNodes());
     assertThat(otherPeers.size()).isBetween(4, 5);
     if (otherPeers.size() == 5) {
-      assertThat(neighbors.getNodes()).contains(testAgent.getAdvertisedPeer().get());
+      assertThat(neighbors.getNodes(DiscoveryPeer::fromPeer))
+          .contains(testAgent.getAdvertisedPeer().get());
     }
   }
 

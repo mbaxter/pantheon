@@ -32,6 +32,7 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.permissioning.LocalPermissioningConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,11 +49,11 @@ public class RecursivePeerRefreshStateTest {
   private final FindNeighbourDispatcher neighborFinder = mock(FindNeighbourDispatcher.class);
   private final MockTimerUtil timerUtil = new MockTimerUtil();
 
-  private final DiscoveryPeer localPeer = new DiscoveryPeer(createId(9), "127.0.0.9", 9, 9);
-  private final DiscoveryPeer peer1 = new DiscoveryPeer(createId(1), "127.0.0.1", 1, 1);
-  private final DiscoveryPeer peer2 = new DiscoveryPeer(createId(2), "127.0.0.2", 2, 2);
-  private final DiscoveryPeer peer3 = new DiscoveryPeer(createId(3), "127.0.0.3", 3, 3);
-  private final DiscoveryPeer peer4 = new DiscoveryPeer(createId(4), "127.0.0.3", 4, 4);
+  private final DiscoveryPeer localPeer = createPeer(9, "127.0.0.9", 9, 9);
+  private final DiscoveryPeer peer1 = createPeer(1, "127.0.0.1", 1, 1);
+  private final DiscoveryPeer peer2 = createPeer(2, "127.0.0.2", 2, 2);
+  private final DiscoveryPeer peer3 = createPeer(3, "127.0.0.3", 3, 3);
+  private final DiscoveryPeer peer4 = createPeer(4, "127.0.0.3", 4, 4);
 
   private RecursivePeerRefreshState recursivePeerRefreshState =
       new RecursivePeerRefreshState(
@@ -214,23 +215,23 @@ public class RecursivePeerRefreshStateTest {
     final BytesValue id0 =
         BytesValue.fromHexString(
             "0x11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111");
-    final DiscoveryPeer peer0 = new DiscoveryPeer(id0, "0.0.0.0", 1, 1);
+    final DiscoveryPeer peer0 = createPeer(id0, "0.0.0.0", 1, 1);
     final BytesValue id1 =
         BytesValue.fromHexString(
             "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000");
-    final DiscoveryPeer peer1 = new DiscoveryPeer(id1, "0.0.0.0", 1, 1);
+    final DiscoveryPeer peer1 = createPeer(id1, "0.0.0.0", 1, 1);
     final BytesValue id2 =
         BytesValue.fromHexString(
             "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010");
-    final DiscoveryPeer peer2 = new DiscoveryPeer(id2, "0.0.0.0", 1, 1);
+    final DiscoveryPeer peer2 = createPeer(id2, "0.0.0.0", 1, 1);
     final BytesValue id3 =
         BytesValue.fromHexString(
             "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100");
-    final DiscoveryPeer peer3 = new DiscoveryPeer(id3, "0.0.0.0", 1, 1);
+    final DiscoveryPeer peer3 = createPeer(id3, "0.0.0.0", 1, 1);
     final BytesValue id4 =
         BytesValue.fromHexString(
             "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000");
-    final DiscoveryPeer peer4 = new DiscoveryPeer(id4, "0.0.0.0", 1, 1);
+    final DiscoveryPeer peer4 = createPeer(id4, "0.0.0.0", 1, 1);
 
     recursivePeerRefreshState.start(singletonList(peer0), TARGET);
 
@@ -293,23 +294,23 @@ public class RecursivePeerRefreshStateTest {
     final BytesValue id0 =
         BytesValue.fromHexString(
             "0x11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111");
-    final DiscoveryPeer peer0 = new DiscoveryPeer(id0, "0.0.0.0", 1, 1);
+    final DiscoveryPeer peer0 = createPeer(id0, "0.0.0.0", 1, 1);
     final BytesValue id1 =
         BytesValue.fromHexString(
             "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000");
-    final DiscoveryPeer peer1 = new DiscoveryPeer(id1, "0.0.0.0", 1, 1);
+    final DiscoveryPeer peer1 = createPeer(id1, "0.0.0.0", 1, 1);
     final BytesValue id2 =
         BytesValue.fromHexString(
             "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010");
-    final DiscoveryPeer peer2 = new DiscoveryPeer(id2, "0.0.0.0", 1, 1);
+    final DiscoveryPeer peer2 = createPeer(id2, "0.0.0.0", 1, 1);
     final BytesValue id3 =
         BytesValue.fromHexString(
             "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100");
-    final DiscoveryPeer peer3 = new DiscoveryPeer(id3, "0.0.0.0", 1, 1);
+    final DiscoveryPeer peer3 = createPeer(id3, "0.0.0.0", 1, 1);
     final BytesValue id4 =
         BytesValue.fromHexString(
             "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000");
-    final DiscoveryPeer peer4 = new DiscoveryPeer(id4, "0.0.0.0", 1, 1);
+    final DiscoveryPeer peer4 = createPeer(id4, "0.0.0.0", 1, 1);
     final List<DiscoveryPeer> peerTable = asList(peer1, peer2, peer3, peer4);
 
     final NeighborsPacketData neighborsPacketData = NeighborsPacketData.create(peerTable);
@@ -447,8 +448,8 @@ public class RecursivePeerRefreshStateTest {
 
   @Test
   public void shouldNotBondWithNodesOnBlacklist() {
-    final DiscoveryPeer peerA = new DiscoveryPeer(createId(1), "127.0.0.1", 1, 1);
-    final DiscoveryPeer peerB = new DiscoveryPeer(createId(2), "127.0.0.2", 2, 2);
+    final DiscoveryPeer peerA = createPeer(1, "127.0.0.1", 1, 1);
+    final DiscoveryPeer peerB = createPeer(2, "127.0.0.2", 2, 2);
 
     final PeerBlacklist blacklist = new PeerBlacklist();
     blacklist.add(peerB);
@@ -480,8 +481,8 @@ public class RecursivePeerRefreshStateTest {
 
   @Test
   public void shouldNotBondWithSelf() {
-    final DiscoveryPeer peerA = new DiscoveryPeer(createId(1), "127.0.0.1", 1, 1);
-    final DiscoveryPeer peerB = new DiscoveryPeer(createId(2), "127.0.0.2", 2, 2);
+    final DiscoveryPeer peerA = createPeer(1, "127.0.0.1", 1, 1);
+    final DiscoveryPeer peerB = createPeer(2, "127.0.0.2", 2, 2);
 
     recursivePeerRefreshState.start(singletonList(peerA), TARGET);
 
@@ -500,9 +501,9 @@ public class RecursivePeerRefreshStateTest {
 
   @Test
   public void shouldNotBondWithNodesNotPermitted() throws Exception {
-    final DiscoveryPeer localPeer = new DiscoveryPeer(createId(999), "127.0.0.9", 9, 9);
-    final DiscoveryPeer peerA = new DiscoveryPeer(createId(1), "127.0.0.1", 1, 1);
-    final DiscoveryPeer peerB = new DiscoveryPeer(createId(2), "127.0.0.2", 2, 2);
+    final DiscoveryPeer localPeer = createPeer(999, "127.0.0.9", 9, 9);
+    final DiscoveryPeer peerA = createPeer(1, "127.0.0.1", 1, 1);
+    final DiscoveryPeer peerB = createPeer(2, "127.0.0.2", 2, 2);
 
     final Path tempFile = Files.createTempFile("test", "test");
     tempFile.toFile().deleteOnExit();
@@ -543,6 +544,22 @@ public class RecursivePeerRefreshStateTest {
 
   private static BytesValue createId(final int id) {
     return BytesValue.fromHexString(String.format("%0128x", id));
+  }
+
+  private static DiscoveryPeer createPeer(
+      final int id, final String ip, final int discoveryPort, final int listeningPort) {
+    return createPeer(createId(id), ip, discoveryPort, listeningPort);
+  }
+
+  private static DiscoveryPeer createPeer(
+      final BytesValue id, final String ip, final int discoveryPort, final int listeningPort) {
+    return DiscoveryPeer.fromEnode(
+        EnodeURL.builder()
+            .nodeId(id)
+            .ipAddress(ip)
+            .discoveryPort(discoveryPort)
+            .listeningPort(listeningPort)
+            .build());
   }
 
   private void completeBonding(final DiscoveryPeer peer1) {

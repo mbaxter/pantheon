@@ -155,10 +155,7 @@ public class EnodeURLTest {
     final String enodeURLString = "enode://wrong_size_string@" + IPV4_ADDRESS + ":" + P2P_PORT;
     final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
-    assertThat(thrown)
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage(
-            "Enode URL contains an invalid node ID. Node ID must have 128 characters and shouldn't include the '0x' hex prefix.");
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -170,10 +167,7 @@ public class EnodeURLTest {
             + P2P_PORT;
     final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
-    assertThat(thrown)
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage(
-            "Enode URL contains an invalid node ID. Node ID must have 128 characters and shouldn't include the '0x' hex prefix.");
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -181,9 +175,7 @@ public class EnodeURLTest {
     final String enodeURLString = "enode://" + VALID_NODE_ID + "@:" + P2P_PORT;
     final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
-    assertThat(thrown)
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Invalid enode URL IP format.");
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -191,9 +183,7 @@ public class EnodeURLTest {
     final String enodeURLString = "enode://" + VALID_NODE_ID + "@192.0.1:" + P2P_PORT;
     final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
-    assertThat(thrown)
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Invalid enode URL IP format.");
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -223,9 +213,7 @@ public class EnodeURLTest {
     final String enodeURLString = "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":98765";
     final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
-    assertThat(thrown)
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Invalid listening port range. Port should be between 0 - 65535");
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -234,27 +222,21 @@ public class EnodeURLTest {
         "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + P2P_PORT + "?discport=98765";
     final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
-    assertThat(thrown)
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Invalid discovery port range. Port should be between 0 - 65535");
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void fromString_withNullEnodeURLShouldFail() {
     final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(null));
 
-    assertThat(thrown)
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Can't convert null/empty string to EnodeURLProperty.");
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   public void fromString_withEmptyEnodeURLShouldFail() {
     final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(""));
 
-    assertThat(thrown)
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Can't convert null/empty string to EnodeURLProperty.");
+    assertThat(thrown).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

@@ -362,9 +362,7 @@ public class PeerDiscoveryController {
   }
 
   private void handleNodeWhitelistUpdatedEvent(final NodeWhitelistUpdatedEvent event) {
-    event.getRemovedNodes().stream()
-        .map(e -> new DiscoveryPeer(DiscoveryPeer.fromURI(e.toURI())))
-        .forEach(this::dropFromPeerTable);
+    event.getRemovedNodes().stream().map(DiscoveryPeer::fromEnode).forEach(this::dropFromPeerTable);
   }
 
   @VisibleForTesting

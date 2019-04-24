@@ -725,8 +725,9 @@ public class NettyP2PNetwork implements P2PNetwork {
     final OptionalInt discoveryPort =
         peerDiscoveryAgent
             .getAdvertisedPeer()
-            .map(p -> OptionalInt.of(p.getEndpoint().getUdpPort()))
-            .filter(port -> port.getAsInt() != listeningPort)
+            .map(Peer::getEnodeURL)
+            .map(EnodeURL::getEffectiveDiscoveryPort)
+            .map(OptionalInt::of)
             .orElse(OptionalInt.empty());
 
     return EnodeURL.builder()

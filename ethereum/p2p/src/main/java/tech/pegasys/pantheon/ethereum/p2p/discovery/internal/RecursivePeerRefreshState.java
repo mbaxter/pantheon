@@ -201,7 +201,8 @@ public class RecursivePeerRefreshState {
       return;
     }
     LOG.debug("Received neighbours packet with {} neighbours", neighboursPacket.getNodes().size());
-    for (final DiscoveryPeer receivedDiscoPeer : neighboursPacket.getNodes()) {
+    for (final DiscoveryPeer receivedDiscoPeer :
+        neighboursPacket.getNodes(DiscoveryPeer::fromPeer)) {
       if (satisfiesMapAdditionCriteria(receivedDiscoPeer)) {
         final MetadataPeer receivedMetadataPeer =
             new MetadataPeer(receivedDiscoPeer, distance(target, receivedDiscoPeer.getId()));

@@ -19,76 +19,25 @@ import static tech.pegasys.pantheon.util.bytes.BytesValue.fromHexString;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
+
+import java.util.OptionalInt;
 
 import org.junit.Test;
 
 public class PeerTest {
 
   @Test
-  public void createPeer() {
-    final BytesValue id =
-        fromHexString(
-            "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b");
-    final String host = "127.0.0.1";
-    final int port = 30303;
-
-    final DiscoveryPeer peer = new DiscoveryPeer(id, host, port);
-    assertEquals(id, peer.getId());
-    assertEquals(host, peer.getEndpoint().getHost());
-    assertEquals(port, peer.getEndpoint().getUdpPort());
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void createPeer_NullHost() {
-    final BytesValue id =
-        fromHexString(
-            "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b");
-    final String host = null;
-    final int port = 30303;
-
-    new DiscoveryPeer(id, host, port);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void createPeer_NegativePort() {
-    final BytesValue id =
-        fromHexString(
-            "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b");
-    final String host = "127.0.0.1";
-    final int port = -1;
-
-    new DiscoveryPeer(id, host, port);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void createPeer_ZeroPort() {
-    final BytesValue id =
-        fromHexString(
-            "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b");
-    final String host = "127.0.0.1";
-    final int port = 0;
-
-    new DiscoveryPeer(id, host, port);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void createPeer_TooBigPort() {
-    final BytesValue id =
-        fromHexString(
-            "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b");
-    final String host = "127.0.0.1";
-    final int port = 70000;
-
-    new DiscoveryPeer(id, host, port);
-  }
-
-  @Test
   public void notEquals() {
     final BytesValue id =
         fromHexString(
             "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b");
-    final Peer peer = new DiscoveryPeer(id, "127.0.0.1", 5000);
-    final Peer peer2 = new DiscoveryPeer(id, "127.0.0.1", 5001);
+    final Peer peer =
+        DiscoveryPeer.fromEnode(
+            EnodeURL.builder().nodeId(id).ipAddress("127.0.0.1").listeningPort(5000).build());
+    final Peer peer2 =
+        DiscoveryPeer.fromEnode(
+            EnodeURL.builder().nodeId(id).ipAddress("127.0.0.1").listeningPort(5001).build());
     assertNotEquals(peer, peer2);
   }
 
@@ -97,24 +46,24 @@ public class PeerTest {
     final BytesValue id =
         fromHexString(
             "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b");
-    final DiscoveryPeer peer = new DiscoveryPeer(id, "127.0.0.1", 5000);
-    final DiscoveryPeer peer2 = new DiscoveryPeer(id, "127.0.0.1", 5001);
+    final Peer peer =
+        DiscoveryPeer.fromEnode(
+            EnodeURL.builder().nodeId(id).ipAddress("127.0.0.1").listeningPort(5000).build());
+    final Peer peer2 =
+        DiscoveryPeer.fromEnode(
+            EnodeURL.builder().nodeId(id).ipAddress("127.0.0.1").listeningPort(5001).build());
     assertNotEquals(peer.hashCode(), peer2.hashCode());
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void nullId() {
-    new DiscoveryPeer(null, "127.0.0.1", 5000);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void emptyId() {
-    new DiscoveryPeer(BytesValue.wrap(new byte[0]), "127.0.0.1", 5000);
   }
 
   @Test
   public void getStatus() {
-    final DiscoveryPeer peer = new DiscoveryPeer(Peer.randomId(), "127.0.0.1", 5000);
+    final DiscoveryPeer peer =
+        DiscoveryPeer.fromEnode(
+            EnodeURL.builder()
+                .nodeId(Peer.randomId())
+                .ipAddress("127.0.0.1")
+                .listeningPort(5000)
+                .build());
     assertEquals(PeerDiscoveryStatus.KNOWN, peer.getStatus());
   }
 
@@ -127,9 +76,9 @@ public class PeerTest {
         fromHexString(
             "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b"),
         peer.getId());
-    assertEquals("172.20.0.4", peer.getEndpoint().getHost());
-    assertEquals(30403, peer.getEndpoint().getUdpPort());
-    assertEquals(30403, peer.getEndpoint().getTcpPort().getAsInt());
+    assertEquals("172.20.0.4", peer.getEnodeURL().getIpAsString());
+    assertEquals(30403, peer.getEnodeURL().getListeningPort());
+    assertEquals(OptionalInt.empty(), peer.getEnodeURL().getDiscoveryPort());
   }
 
   @Test
@@ -143,9 +92,9 @@ public class PeerTest {
         peer.getId());
     // We expect bracket unwrapping, zero group removal via double colon, and leading zeros
     // trimmed, and lowercase hex digits.
-    assertEquals("2001:db8:85a3::8a2e:370:7334", peer.getEndpoint().getHost());
-    assertEquals(30403, peer.getEndpoint().getUdpPort());
-    assertEquals(30403, peer.getEndpoint().getTcpPort().getAsInt());
+    assertEquals("2001:db8:85a3::8a2e:370:7334", peer.getEnodeURL().getIpAsString());
+    assertEquals(30403, peer.getEnodeURL().getListeningPort());
+    assertEquals(OptionalInt.empty(), peer.getEnodeURL().getDiscoveryPort());
   }
 
   @Test(expected = IllegalArgumentException.class)
