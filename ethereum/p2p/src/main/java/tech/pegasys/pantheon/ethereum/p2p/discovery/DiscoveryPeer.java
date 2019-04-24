@@ -13,7 +13,6 @@
 package tech.pegasys.pantheon.ethereum.p2p.discovery;
 
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerId;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
@@ -34,10 +33,6 @@ public class DiscoveryPeer extends DefaultPeer {
 
   public static DiscoveryPeer fromEnode(final EnodeURL enode) {
     return new DiscoveryPeer(enode);
-  }
-
-  public static DiscoveryPeer fromPeer(final Peer peer) {
-    return new DiscoveryPeer(peer.getEnodeURL());
   }
 
   public PeerDiscoveryStatus getStatus() {
