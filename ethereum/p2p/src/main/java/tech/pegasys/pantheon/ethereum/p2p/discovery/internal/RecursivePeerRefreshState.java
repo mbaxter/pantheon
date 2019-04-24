@@ -194,15 +194,13 @@ public class RecursivePeerRefreshState {
         .orElse(true);
   }
 
-  void onNeighboursPacketReceived(
-      final DiscoveryPeer peer, final NeighborsPacketData neighboursPacket) {
+  void onNeighboursReceived(final DiscoveryPeer peer, final List<DiscoveryPeer> peers) {
     final MetadataPeer metadataPeer = oneTrueMap.get(peer.getId());
     if (metadataPeer == null) {
       return;
     }
-    LOG.debug("Received neighbours packet with {} neighbours", neighboursPacket.getNodes().size());
-    for (final DiscoveryPeer receivedDiscoPeer :
-        neighboursPacket.getNodes(DiscoveryPeer::fromEnode)) {
+    LOG.debug("Received neighbours packet with {} neighbours", peers.size());
+    for (final DiscoveryPeer receivedDiscoPeer : peers) {
       if (satisfiesMapAdditionCriteria(receivedDiscoPeer)) {
         final MetadataPeer receivedMetadataPeer =
             new MetadataPeer(receivedDiscoPeer, distance(target, receivedDiscoPeer.getId()));

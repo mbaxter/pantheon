@@ -22,7 +22,6 @@ import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 public class MockPacketDataFactory {
@@ -31,13 +30,7 @@ public class MockPacketDataFactory {
       final DiscoveryPeer from, final DiscoveryPeer... neighbors) {
     final Packet packet = mock(Packet.class);
 
-    // TODO: Rework tests to not depend on peers returned matching the same instances passed
-    // to this method.
-    //    final NeighborsPacketData packetData =
-    // NeighborsPacketData.create(Arrays.asList(neighbors));
-    final NeighborsPacketData packetData = mock(NeighborsPacketData.class);
-    List<Peer> nodes = Arrays.asList(neighbors);
-    when(packetData.getNodes(any())).thenReturn(nodes);
+    final NeighborsPacketData packetData = NeighborsPacketData.create(Arrays.asList(neighbors));
 
     when(packet.getPacketData(any())).thenReturn(Optional.of(packetData));
     final BytesValue id = from.getId();

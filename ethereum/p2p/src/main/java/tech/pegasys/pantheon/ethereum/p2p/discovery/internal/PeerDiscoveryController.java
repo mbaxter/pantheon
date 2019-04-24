@@ -38,6 +38,7 @@ import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -317,8 +318,8 @@ public class PeerDiscoveryController {
         matchInteraction(packet)
             .ifPresent(
                 interaction ->
-                    recursivePeerRefreshState.onNeighboursPacketReceived(
-                        peer, packet.getPacketData(NeighborsPacketData.class).orElse(null)));
+                    recursivePeerRefreshState.onNeighboursReceived(
+                        peer, getPeersFromNeighborsPacket(packet)));
         break;
       case FIND_NEIGHBORS:
         if (!peerKnown || peerBlacklisted) {
@@ -329,6 +330,19 @@ public class PeerDiscoveryController {
         respondToFindNeighbors(fn, peer);
         break;
     }
+  }
+
+  private List<DiscoveryPeer> getPeersFromNeighborsPacket(final Packet packet) {
+    final Optional<NeighborsPacketData> maybeNeighborsData =
+        packet.getPacketData(NeighborsPacketData.class);
+    if (!maybeNeighborsData.isPresent()) {
+      return Collections.emptyList();
+    }
+    final NeighborsPacketData neighborsData = maybeNeighborsData.get();
+
+    return neighborsData.getNodes(DiscoveryPeer::fromEnode).stream()
+        .map(p -> peerTable.get(p).orElse(p))
+        .collect(Collectors.toList());
   }
 
   private boolean addToPeerTable(final DiscoveryPeer peer) {
