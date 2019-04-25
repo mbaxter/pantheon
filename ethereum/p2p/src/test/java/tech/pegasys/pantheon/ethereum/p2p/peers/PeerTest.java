@@ -123,9 +123,9 @@ public class PeerTest {
         fromHexString(
             "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b"),
         peer.getId());
-    assertEquals("172.20.0.4", peer.getEndpoint().getHost());
-    assertEquals(22222, peer.getEndpoint().getUdpPort());
-    assertEquals(12345, peer.getEndpoint().getTcpPort().getAsInt());
+    assertEquals("172.20.0.4", peer.getEnodeURL().getIpAsString());
+    assertEquals(22222, peer.getEnodeURL().getEffectiveDiscoveryPort());
+    assertEquals(12345, peer.getEnodeURL().getListeningPort());
   }
 
   @Test

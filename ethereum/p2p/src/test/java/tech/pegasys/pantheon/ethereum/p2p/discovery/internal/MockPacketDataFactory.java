@@ -41,7 +41,7 @@ public class MockPacketDataFactory {
     return packet;
   }
 
-  public static Packet mockPongPacket(final Peer from, final BytesValue pingHash) {
+  public static Packet mockPongPacket(final DiscoveryPeer from, final BytesValue pingHash) {
     final Packet packet = mock(Packet.class);
 
     final PongPacketData pongPacketData = PongPacketData.create(from.getEndpoint(), pingHash);
