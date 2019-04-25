@@ -31,7 +31,6 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBonde
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
-import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
@@ -464,7 +463,7 @@ public class NettyP2PNetwork implements P2PNetwork {
   public CompletableFuture<PeerConnection> connect(final Peer peer) {
     LOG.trace("Initiating connection to peer: {}", peer.getId());
     final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
-    final Endpoint endpoint = peer.getEndpoint();
+    final EnodeURL enode = peer.getEnodeURL();
     final CompletableFuture<PeerConnection> existingPendingConnection =
         pendingConnections.putIfAbsent(peer, connectionFuture);
     if (existingPendingConnection != null) {
@@ -475,7 +474,7 @@ public class NettyP2PNetwork implements P2PNetwork {
     new Bootstrap()
         .group(workers)
         .channel(NioSocketChannel.class)
-        .remoteAddress(new InetSocketAddress(endpoint.getHost(), endpoint.getFunctionalTcpPort()))
+        .remoteAddress(new InetSocketAddress(enode.getIp(), enode.getListeningPort()))
         .option(ChannelOption.TCP_NODELAY, true)
         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, TIMEOUT_SECONDS * 1000)
         .handler(

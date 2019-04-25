@@ -13,7 +13,6 @@
 package tech.pegasys.pantheon.ethereum.p2p.discovery;
 
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerId;
 import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
 import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
@@ -97,7 +96,6 @@ public class DiscoveryPeer extends DefaultPeer {
     this.lastSeen = lastSeen;
   }
 
-  @Override
   public Endpoint getEndpoint() {
     return endpoint;
   }

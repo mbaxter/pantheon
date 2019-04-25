@@ -16,28 +16,10 @@ import tech.pegasys.pantheon.crypto.SecureRandomProvider;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
-import java.util.OptionalInt;
-
 public interface Peer extends PeerId {
 
   /** @return The enode representing the location of this peer. */
   EnodeURL getEnodeURL();
-
-  /**
-   * A struct-like immutable object encapsulating the peer's network coordinates, namely their
-   * hostname (as an IP address in the current implementation), UDP port and optional TCP port for
-   * RLPx communications.
-   *
-   * @return An object encapsulating the peer's network coordinates.
-   * @deprecated Use {@link #getEnodeURL()}
-   */
-  default Endpoint getEndpoint() {
-    final EnodeURL enode = getEnodeURL();
-    return new Endpoint(
-        enode.getInetAddress().getHostAddress(),
-        enode.getEffectiveDiscoveryPort(),
-        OptionalInt.of(enode.getListeningPort()));
-  }
 
   /**
    * Generates a random peer ID in a secure manner.
