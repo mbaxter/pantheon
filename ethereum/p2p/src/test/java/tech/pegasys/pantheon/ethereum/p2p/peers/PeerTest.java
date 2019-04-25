@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.peers;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static tech.pegasys.pantheon.util.bytes.BytesValue.fromHexString;
@@ -23,6 +24,7 @@ import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.util.OptionalInt;
 
+import com.google.common.net.InetAddresses;
 import org.junit.Test;
 
 public class PeerTest {
@@ -90,9 +92,8 @@ public class PeerTest {
         fromHexString(
             "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b"),
         peer.getId());
-    // We expect bracket unwrapping, zero group removal via double colon, and leading zeros
-    // trimmed, and lowercase hex digits.
-    assertEquals("2001:db8:85a3::8a2e:370:7334", peer.getEnodeURL().getIpAsString());
+    assertEquals(
+        InetAddresses.forString("2001:db8:85a3::8a2e:370:7334"), peer.getEnodeURL().getIp());
     assertEquals(30403, peer.getEnodeURL().getListeningPort());
     assertEquals(OptionalInt.empty(), peer.getEnodeURL().getDiscoveryPort());
   }
@@ -114,20 +115,6 @@ public class PeerTest {
   }
 
   @Test
-  public void createFromURIWithoutPortUsesDefault() {
-    final Peer peer =
-        DefaultPeer.fromURI(
-            "enode://c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b@172.20.0.4");
-    assertEquals(
-        fromHexString(
-            "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b"),
-        peer.getId());
-    assertEquals("172.20.0.4", peer.getEndpoint().getHost());
-    assertEquals(30303, peer.getEndpoint().getUdpPort());
-    assertEquals(30303, peer.getEndpoint().getTcpPort().getAsInt());
-  }
-
-  @Test
   public void createPeerFromURIWithDifferentUdpAndTcpPorts() {
     final Peer peer =
         DefaultPeer.fromURI(
@@ -142,23 +129,10 @@ public class PeerTest {
   }
 
   @Test
-  public void createPeerFromURIWithDifferentUdpAndTcpPorts_InvalidTcpPort() {
-    final Peer[] peers =
-        new Peer[] {
-          DefaultPeer.fromURI(
-              "enode://c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b@172.20.0.4:12345?discport=99999"),
-          DefaultPeer.fromURI(
-              "enode://c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b@172.20.0.4:12345?discport=99999000")
-        };
-
-    for (final Peer peer : peers) {
-      assertEquals(
-          fromHexString(
-              "c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b"),
-          peer.getId());
-      assertEquals("172.20.0.4", peer.getEndpoint().getHost());
-      assertEquals(12345, peer.getEndpoint().getUdpPort());
-      assertEquals(12345, peer.getEndpoint().getTcpPort().getAsInt());
-    }
+  public void fromURI_invalidDiscoveryPort() {
+    String invalidEnode =
+        "enode://c7849b663d12a2b5bf05b1ebf5810364f4870d5f1053fbd7500d38bc54c705b453d7511ca8a4a86003d34d4c8ee0bbfcd387aa724f5b240b3ab4bbb994a1e09b@172.20.0.4:12345?discport=99999";
+    assertThatThrownBy(() -> DefaultPeer.fromURI(invalidEnode))
+        .hasCauseInstanceOf(IllegalArgumentException.class);
   }
 }

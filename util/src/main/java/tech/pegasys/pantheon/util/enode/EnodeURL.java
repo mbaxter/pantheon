@@ -70,17 +70,31 @@ public class EnodeURL {
     return new Builder();
   }
 
+  public static EnodeURL fromString(final String value) {
+    try {
+      checkStringArgumentNotEmpty(value, "Invalid empty value.");
+      return fromURI(URI.create(value));
+    } catch (IllegalArgumentException e) {
+      String message =
+          "Invalid enode URL syntax. Enode URL should have the following format 'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.";
+      if (e.getMessage() != null) {
+        message += " " + e.getMessage();
+      }
+      throw new IllegalArgumentException(message, e);
+    }
+  }
+
   public static EnodeURL fromURI(final URI uri) {
     checkArgument(uri != null, "URI cannot be null");
-    checkArgument(uri.getScheme() != null, "Scheme cannot be null");
-    checkArgument(uri.getUserInfo() != null, "Node id cannot be null");
-    checkArgument(uri.getHost() != null, "Host cannot be null");
+    checkStringArgumentNotEmpty(uri.getScheme(), "Missing 'enode' scheme.");
+    checkStringArgumentNotEmpty(uri.getHost(), "Missing or invalid ip address.");
+    checkStringArgumentNotEmpty(uri.getUserInfo(), "Missing node ID.");
 
     checkArgument(
-        uri.getScheme().equalsIgnoreCase("enode"), "Invalid uri scheme (must equal \"enode\")");
+        uri.getScheme().equalsIgnoreCase("enode"), "Invalid URI scheme (must equal \"enode\").");
     checkArgument(
         NODE_ID_PATTERN.matcher(uri.getUserInfo()).matches(),
-        "Enode URL contains an invalid node ID. Node ID must have 128 hexadecimal characters and shouldn't include the '0x' hex prefix.");
+        "Invalid node ID: node ID must have exactly 128 hexadecimal characters and should not include any '0x' hex prefix.");
 
     // Parse discport if it exists
     OptionalInt discoveryPort = OptionalInt.empty();
@@ -88,7 +102,7 @@ public class EnodeURL {
     final Matcher discPortMatcher = DISCPORT_QUERY_STRING_REGEX.matcher(query);
     if (discPortMatcher.matches()) {
       Integer discPort = Ints.tryParse(discPortMatcher.group(1));
-      checkArgument(discPort != null, "Unable to extract discport query value from URI.");
+      checkArgument(discPort != null, "Invalid discovery port: " + discPortMatcher.group(1) + ".");
       discoveryPort = OptionalInt.of(discPort);
     }
 
@@ -104,15 +118,8 @@ public class EnodeURL {
         .build();
   }
 
-  public static EnodeURL fromString(final String value) {
-    try {
-      checkArgument(value != null);
-      return fromURI(URI.create(value));
-    } catch (IllegalArgumentException e) {
-      throw new IllegalArgumentException(
-          "Invalid enode URL syntax. Enode URL should have the following format 'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.",
-          e);
-    }
+  private static void checkStringArgumentNotEmpty(final String argument, final String message) {
+    checkArgument(argument != null && !argument.trim().isEmpty(), message);
   }
 
   public URI toURI() {
@@ -233,7 +240,7 @@ public class EnodeURL {
       } else if (InetAddresses.isInetAddress(ip)) {
         this.ip = InetAddresses.forString(ip);
       } else {
-        throw new IllegalArgumentException("Invalid ip address");
+        throw new IllegalArgumentException("Invalid ip address.");
       }
       return this;
     }
