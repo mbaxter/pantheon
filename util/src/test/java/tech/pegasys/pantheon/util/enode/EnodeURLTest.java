@@ -146,8 +146,7 @@ public class EnodeURLTest {
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage(
-            "Invalid enode URL syntax. Enode URL should have the following format 'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.");
+        .hasMessageContaining("Missing node ID.");
   }
 
   @Test
@@ -157,8 +156,7 @@ public class EnodeURLTest {
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage(
-            "Enode URL contains an invalid node ID. Node ID must have 128 characters and shouldn't include the '0x' hex prefix.");
+        .hasMessageContaining("Invalid node ID");
   }
 
   @Test
@@ -172,8 +170,7 @@ public class EnodeURLTest {
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage(
-            "Enode URL contains an invalid node ID. Node ID must have 128 characters and shouldn't include the '0x' hex prefix.");
+        .hasMessageContaining("Invalid node ID");
   }
 
   @Test
@@ -183,7 +180,7 @@ public class EnodeURLTest {
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Invalid enode URL IP format.");
+        .hasMessageContaining("Missing or invalid ip address.");
   }
 
   @Test
@@ -193,7 +190,7 @@ public class EnodeURLTest {
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Invalid enode URL IP format.");
+        .hasMessageContaining("Missing or invalid ip address.");
   }
 
   @Test
@@ -203,8 +200,7 @@ public class EnodeURLTest {
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage(
-            "Invalid enode URL syntax. Enode URL should have the following format 'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.");
+        .hasMessageContaining("Invalid listening port.");
   }
 
   @Test
@@ -214,8 +210,7 @@ public class EnodeURLTest {
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage(
-            "Invalid enode URL syntax. Enode URL should have the following format 'enode://<node_id>@<ip>:<listening_port>[?discport=<discovery_port>]'.");
+        .hasMessageContaining("Invalid listening port.");
   }
 
   @Test
@@ -225,7 +220,7 @@ public class EnodeURLTest {
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Invalid listening port range. Port should be between 0 - 65535");
+        .hasMessageContaining("Invalid listening port.");
   }
 
   @Test
@@ -236,7 +231,7 @@ public class EnodeURLTest {
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Invalid discovery port range. Port should be between 0 - 65535");
+        .hasMessageContaining("Invalid discovery port.");
   }
 
   @Test
@@ -245,7 +240,7 @@ public class EnodeURLTest {
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Can't convert null/empty string to EnodeURLProperty.");
+        .hasMessageContaining("Invalid empty value");
   }
 
   @Test
@@ -254,7 +249,16 @@ public class EnodeURLTest {
 
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage("Can't convert null/empty string to EnodeURLProperty.");
+        .hasMessageContaining("Invalid empty value.");
+  }
+
+  @Test
+  public void fromString_withWhitespaceEnodeURLShouldFail() {
+    final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(" "));
+
+    assertThat(thrown)
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid empty value.");
   }
 
   @Test
