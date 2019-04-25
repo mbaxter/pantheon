@@ -17,6 +17,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.rlp.RLPException;
 import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
 import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -137,15 +138,20 @@ public class NeighborsPacketData implements PacketData {
       final BytesValue id = in.readBytesValue();
       in.leaveList();
 
-      final EnodeURL enode =
-          EnodeURL.builder()
-              .nodeId(id)
-              .ipAddress(addr)
-              .listeningPort(tcpPort.orElse(udpPort))
-              .discoveryPort(udpPort)
-              .build();
-
-      return new Neighbor(enode, mode);
+      // Try creating an enode with the supplied data
+      try {
+        final EnodeURL enode =
+            EnodeURL.builder()
+                .nodeId(id)
+                .ipAddress(addr)
+                .listeningPort(tcpPort.orElse(udpPort))
+                .discoveryPort(udpPort)
+                .build();
+        return new Neighbor(enode, mode);
+      } catch (IllegalArgumentException | NullPointerException e) {
+        // If individual values are invalid, throw an rlp exception
+        throw new RLPException("Unable to interpret neighbor as valid enode address.", e);
+      }
     }
 
     void writeTo(final RLPOutput out) {
