@@ -13,7 +13,11 @@
 package tech.pegasys.pantheon.ethereum.p2p.discovery;
 
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerId;
+import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
+import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
+import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 /**
@@ -21,18 +25,43 @@ import tech.pegasys.pantheon.util.enode.EnodeURL;
  */
 public class DiscoveryPeer extends DefaultPeer {
   private PeerDiscoveryStatus status = PeerDiscoveryStatus.KNOWN;
+  // Endpoint is a datastructure used in discovery messages
+  private final Endpoint endpoint;
 
   // Timestamps.
   private long firstDiscovered = 0;
   private long lastContacted = 0;
   private long lastSeen = 0;
 
-  private DiscoveryPeer(final EnodeURL enode) {
+  private DiscoveryPeer(final EnodeURL enode, final Endpoint endpoint) {
     super(enode);
+    this.endpoint = endpoint;
   }
 
   public static DiscoveryPeer fromEnode(final EnodeURL enode) {
-    return new DiscoveryPeer(enode);
+    return new DiscoveryPeer(enode, Endpoint.fromEnode(enode));
+  }
+
+  public static DiscoveryPeer fromIdAndEndpoint(final BytesValue id, final Endpoint endpoint) {
+    return new DiscoveryPeer(endpoint.toEnode(id), endpoint);
+  }
+
+  public static DiscoveryPeer readFrom(final RLPInput in) {
+    final int size = in.enterList();
+
+    // The last list item will be the id, pass size - 1 to Endpoint
+    final Endpoint endpoint = Endpoint.decodeInline(in, size - 1);
+    final BytesValue id = in.readBytesValue();
+    in.leaveList();
+
+    return DiscoveryPeer.fromIdAndEndpoint(id, endpoint);
+  }
+
+  public void writeTo(final RLPOutput out) {
+    out.startList();
+    endpoint.encodeInline(out);
+    out.writeBytesValue(getId());
+    out.endList();
   }
 
   public PeerDiscoveryStatus getStatus() {
@@ -66,6 +95,11 @@ public class DiscoveryPeer extends DefaultPeer {
 
   public void setLastSeen(final long lastSeen) {
     this.lastSeen = lastSeen;
+  }
+
+  @Override
+  public Endpoint getEndpoint() {
+    return endpoint;
   }
 
   @Override
