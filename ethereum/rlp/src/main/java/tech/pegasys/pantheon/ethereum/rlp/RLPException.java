@@ -17,7 +17,7 @@ public class RLPException extends RuntimeException {
     this(message, null);
   }
 
-  public RLPException(final String message, final Throwable throwable) {
+  RLPException(final String message, final Throwable throwable) {
     super(message, throwable);
   }
 }

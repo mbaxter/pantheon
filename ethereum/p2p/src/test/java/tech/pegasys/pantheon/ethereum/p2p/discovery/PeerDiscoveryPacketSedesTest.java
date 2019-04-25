@@ -84,7 +84,7 @@ public class PeerDiscoveryPacketSedesTest {
     assertNotNull(serialized);
 
     final NeighborsPacketData deserialized = NeighborsPacketData.readFrom(RLP.input(serialized));
-    assertThat(deserialized.getNodes(DiscoveryPeer::fromEnode)).isEqualTo(peers);
+    assertThat(deserialized.getNodes()).isEqualTo(peers);
     // Fuzziness: allow a skew of 1.5 seconds between the time the message was generated until the
     // assertion.
     assertThat(deserialized.getExpiration())

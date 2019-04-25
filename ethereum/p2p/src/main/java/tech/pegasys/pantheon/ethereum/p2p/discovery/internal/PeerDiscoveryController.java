@@ -340,7 +340,7 @@ public class PeerDiscoveryController {
     }
     final NeighborsPacketData neighborsData = maybeNeighborsData.get();
 
-    return neighborsData.getNodes(DiscoveryPeer::fromEnode).stream()
+    return neighborsData.getNodes().stream()
         .map(p -> peerTable.get(p).orElse(p))
         .collect(Collectors.toList());
   }

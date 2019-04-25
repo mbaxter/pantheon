@@ -19,6 +19,8 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryPacketDecodingE
 import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
 import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
 import tech.pegasys.pantheon.util.NetworkUtility;
+import tech.pegasys.pantheon.util.bytes.BytesValue;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.net.InetAddress;
 import java.util.Objects;
@@ -45,6 +47,24 @@ public class Endpoint {
     this.host = host;
     this.udpPort = udpPort;
     this.tcpPort = tcpPort;
+  }
+
+  public static Endpoint fromEnode(final EnodeURL enode) {
+    final OptionalInt tcpPort =
+        enode.getDiscoveryPort().isPresent()
+            ? OptionalInt.of(enode.getListeningPort())
+            : OptionalInt.empty();
+    return new Endpoint(
+        enode.getInetAddress().getHostAddress(), enode.getEffectiveDiscoveryPort(), tcpPort);
+  }
+
+  public EnodeURL toEnode(final BytesValue nodeId) {
+    return EnodeURL.builder()
+        .nodeId(nodeId)
+        .ipAddress(host)
+        .listeningPort(tcpPort.orElse(udpPort))
+        .discoveryPort(udpPort)
+        .build();
   }
 
   public String getHost() {
