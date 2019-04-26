@@ -28,7 +28,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
-import static tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryTestHelper.matchesPeer;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
@@ -717,8 +716,8 @@ public class PeerDiscoveryControllerTest {
         MockPacketDataFactory.mockNeighborsPacket(discoPeer, otherPeer, otherPeer2);
     controller.onMessage(neighborsPacket, discoPeer);
 
-    verify(controller, times(0)).bond(matchesPeer(otherPeer));
-    verify(controller, times(1)).bond(matchesPeer(otherPeer2));
+    verify(controller, times(0)).bond(eq(otherPeer));
+    verify(controller, times(1)).bond(eq(otherPeer2));
   }
 
   @Test
@@ -925,7 +924,7 @@ public class PeerDiscoveryControllerTest {
     }
 
     verify(outboundMessageHandler, times(1))
-        .send(matchesPeer(peers.get(16)), matchPacketOfType(PacketType.PING));
+        .send(eq(peers.get(16)), matchPacketOfType(PacketType.PING));
 
     final Packet pongPacket16 =
         MockPacketDataFactory.mockPongPacket(peers.get(16), pingPacket.getHash());
@@ -1038,8 +1037,8 @@ public class PeerDiscoveryControllerTest {
         MockPacketDataFactory.mockNeighborsPacket(discoveryPeer, notPermittedPeer, permittedPeer);
     controller.onMessage(neighborsPacket, discoveryPeer);
 
-    verify(controller, times(0)).bond(matchesPeer(notPermittedPeer));
-    verify(controller, times(1)).bond(matchesPeer(permittedPeer));
+    verify(controller, times(0)).bond(eq(notPermittedPeer));
+    verify(controller, times(1)).bond(eq(permittedPeer));
   }
 
   @Test
