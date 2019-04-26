@@ -12,7 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.netty;
 
-import static java.util.Collections.singletonList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Java6Assertions.catchThrowable;
@@ -30,6 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
+import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.chain.BlockAddedEvent;
 import tech.pegasys.pantheon.ethereum.chain.BlockAddedObserver;
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
@@ -94,6 +94,11 @@ public final class NettyP2PNetworkTest {
       ArgumentCaptor.forClass(BlockAddedObserver.class);
 
   private final Vertx vertx = Vertx.vertx();
+  private final NetworkingConfiguration config =
+      NetworkingConfiguration.create()
+          .setDiscovery(DiscoveryConfiguration.create().setActive(false))
+          .setSupportedProtocols(subProtocol())
+          .setRlpx(RlpxConfiguration.create().setBindPort(0));
 
   private final String selfEnodeString =
       "enode://5f8a80d14311c39f35f516fa664deaaaa13e85b2f7493f37f6144d86991ec012937307647bd3b9a82abe2974e1407241d54947bbb39763a4cac9f77166ad92a0@192.168.0.10:1111";
@@ -111,35 +116,9 @@ public final class NettyP2PNetworkTest {
 
   @Test
   public void handshaking() throws Exception {
-    final DiscoveryConfiguration noDiscovery = DiscoveryConfiguration.create().setActive(false);
     final SECP256K1.KeyPair listenKp = SECP256K1.KeyPair.generate();
-    final Capability cap = Capability.create("eth", 63);
-    try (final P2PNetwork listener =
-            new NettyP2PNetwork(
-                vertx,
-                listenKp,
-                NetworkingConfiguration.create()
-                    .setDiscovery(noDiscovery)
-                    .setSupportedProtocols(subProtocol())
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0)),
-                singletonList(cap),
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty());
-        final P2PNetwork connector =
-            new NettyP2PNetwork(
-                vertx,
-                SECP256K1.KeyPair.generate(),
-                NetworkingConfiguration.create()
-                    .setSupportedProtocols(subProtocol())
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0))
-                    .setDiscovery(noDiscovery),
-                singletonList(cap),
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty())) {
+    try (final P2PNetwork listener = builder().keyPair(listenKp).build();
+        final P2PNetwork connector = builder().build()) {
 
       listener.start();
       connector.start();
@@ -165,37 +144,9 @@ public final class NettyP2PNetworkTest {
 
   @Test
   public void preventMultipleConnections() throws Exception {
-
-    final DiscoveryConfiguration noDiscovery = DiscoveryConfiguration.create().setActive(false);
     final SECP256K1.KeyPair listenKp = SECP256K1.KeyPair.generate();
-    final List<Capability> capabilities = singletonList(Capability.create("eth", 62));
-    final SubProtocol subProtocol = subProtocol();
-    try (final P2PNetwork listener =
-            new NettyP2PNetwork(
-                vertx,
-                listenKp,
-                NetworkingConfiguration.create()
-                    .setSupportedProtocols(subProtocol)
-                    .setDiscovery(noDiscovery)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0)),
-                capabilities,
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty());
-        final P2PNetwork connector =
-            new NettyP2PNetwork(
-                vertx,
-                SECP256K1.KeyPair.generate(),
-                NetworkingConfiguration.create()
-                    .setSupportedProtocols(subProtocol)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0))
-                    .setDiscovery(noDiscovery),
-                capabilities,
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty())) {
+    try (final P2PNetwork listener = builder().keyPair(listenKp).build();
+        final P2PNetwork connector = builder().build()) {
 
       listener.start();
       connector.start();
@@ -237,50 +188,16 @@ public final class NettyP2PNetworkTest {
    */
   @Test
   public void limitMaxPeers() throws Exception {
-    final DiscoveryConfiguration noDiscovery = DiscoveryConfiguration.create().setActive(false);
     final SECP256K1.KeyPair listenKp = SECP256K1.KeyPair.generate();
     final int maxPeers = 1;
-    final List<Capability> cap = singletonList(Capability.create("eth", 62));
-    final SubProtocol subProtocol = subProtocol();
-    try (final P2PNetwork listener =
-            new NettyP2PNetwork(
-                vertx,
-                listenKp,
-                NetworkingConfiguration.create()
-                    .setDiscovery(noDiscovery)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0).setMaxPeers(maxPeers))
-                    .setSupportedProtocols(subProtocol),
-                cap,
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty());
-        final P2PNetwork connector1 =
-            new NettyP2PNetwork(
-                vertx,
-                SECP256K1.KeyPair.generate(),
-                NetworkingConfiguration.create()
-                    .setDiscovery(noDiscovery)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0))
-                    .setSupportedProtocols(subProtocol),
-                cap,
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty());
-        final P2PNetwork connector2 =
-            new NettyP2PNetwork(
-                vertx,
-                SECP256K1.KeyPair.generate(),
-                NetworkingConfiguration.create()
-                    .setDiscovery(noDiscovery)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0))
-                    .setSupportedProtocols(subProtocol),
-                cap,
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty())) {
+    final NetworkingConfiguration listenerConfig =
+        NetworkingConfiguration.create()
+            .setDiscovery(DiscoveryConfiguration.create().setActive(false))
+            .setSupportedProtocols(subProtocol())
+            .setRlpx(RlpxConfiguration.create().setBindPort(0).setMaxPeers(maxPeers));
+    try (final P2PNetwork listener = builder().keyPair(listenKp).config(listenerConfig).build();
+        final P2PNetwork connector1 = builder().build();
+        final P2PNetwork connector2 = builder().build()) {
 
       // Setup listener and first connection
       listener.start();
@@ -329,40 +246,16 @@ public final class NettyP2PNetworkTest {
 
   @Test
   public void rejectPeerWithNoSharedCaps() throws Exception {
-    final DiscoveryConfiguration noDiscovery = DiscoveryConfiguration.create().setActive(false);
     final SECP256K1.KeyPair listenKp = SECP256K1.KeyPair.generate();
 
-    final SubProtocol subprotocol1 = subProtocol();
+    final SubProtocol subprotocol1 = subProtocol("eth");
     final Capability cap1 = Capability.create(subprotocol1.getName(), 63);
-    final SubProtocol subprotocol2 = subProtocol2();
+    final SubProtocol subprotocol2 = subProtocol("oth");
     final Capability cap2 = Capability.create(subprotocol2.getName(), 63);
     try (final P2PNetwork listener =
-            new NettyP2PNetwork(
-                vertx,
-                listenKp,
-                NetworkingConfiguration.create()
-                    .setDiscovery(noDiscovery)
-                    .setSupportedProtocols(subprotocol1)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0)),
-                singletonList(cap1),
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty());
+            builder().keyPair(listenKp).supportedCapabilities(cap1).build();
         final P2PNetwork connector =
-            new NettyP2PNetwork(
-                vertx,
-                SECP256K1.KeyPair.generate(),
-                NetworkingConfiguration.create()
-                    .setSupportedProtocols(subprotocol2)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0))
-                    .setDiscovery(noDiscovery),
-                singletonList(cap2),
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty())) {
-
+            builder().keyPair(SECP256K1.KeyPair.generate()).supportedCapabilities(cap2).build()) {
       listener.start();
       connector.start();
       final EnodeURL listenerEnode = listener.getLocalEnode().get();
@@ -383,40 +276,11 @@ public final class NettyP2PNetworkTest {
 
   @Test
   public void rejectIncomingConnectionFromBlacklistedPeer() throws Exception {
-    final DiscoveryConfiguration noDiscovery = DiscoveryConfiguration.create().setActive(false);
-    final SECP256K1.KeyPair localKp = SECP256K1.KeyPair.generate();
-    final SECP256K1.KeyPair remoteKp = SECP256K1.KeyPair.generate();
     final PeerBlacklist localBlacklist = new PeerBlacklist();
     final PeerBlacklist remoteBlacklist = new PeerBlacklist();
 
-    final SubProtocol subprotocol = subProtocol();
-    final Capability cap = Capability.create(subprotocol.getName(), 63);
-    try (final P2PNetwork localNetwork =
-            new NettyP2PNetwork(
-                vertx,
-                localKp,
-                NetworkingConfiguration.create()
-                    .setDiscovery(noDiscovery)
-                    .setSupportedProtocols(subprotocol)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0)),
-                singletonList(cap),
-                localBlacklist,
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty());
-        final P2PNetwork remoteNetwork =
-            new NettyP2PNetwork(
-                vertx,
-                remoteKp,
-                NetworkingConfiguration.create()
-                    .setSupportedProtocols(subprotocol)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0))
-                    .setDiscovery(noDiscovery),
-                singletonList(cap),
-                remoteBlacklist,
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty())) {
+    try (final P2PNetwork localNetwork = builder().peerBlacklist(localBlacklist).build();
+        final P2PNetwork remoteNetwork = builder().peerBlacklist(remoteBlacklist).build()) {
 
       localNetwork.start();
       remoteNetwork.start();
@@ -474,11 +338,6 @@ public final class NettyP2PNetworkTest {
 
   @Test
   public void rejectIncomingConnectionFromNonWhitelistedPeer() throws Exception {
-    final DiscoveryConfiguration noDiscovery = DiscoveryConfiguration.create().setActive(false);
-    final SECP256K1.KeyPair localKp = SECP256K1.KeyPair.generate();
-    final SECP256K1.KeyPair remoteKp = SECP256K1.KeyPair.generate();
-    final PeerBlacklist localBlacklist = new PeerBlacklist();
-    final PeerBlacklist remoteBlacklist = new PeerBlacklist();
     final LocalPermissioningConfiguration config = LocalPermissioningConfiguration.createDefault();
     final Path tempFile = Files.createTempFile("test", "test");
     tempFile.toFile().deleteOnExit();
@@ -492,35 +351,13 @@ public final class NettyP2PNetworkTest {
         new NodePermissioningController(
             Optional.empty(), Collections.singletonList(localWhitelistController));
 
-    final SubProtocol subprotocol = subProtocol();
-    final Capability cap = Capability.create(subprotocol.getName(), 63);
     try (final P2PNetwork localNetwork =
-            new NettyP2PNetwork(
-                vertx,
-                localKp,
-                NetworkingConfiguration.create()
-                    .setDiscovery(noDiscovery)
-                    .setSupportedProtocols(subprotocol)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0)),
-                singletonList(cap),
-                localBlacklist,
-                new NoOpMetricsSystem(),
-                Optional.of(localWhitelistController),
-                Optional.of(nodePermissioningController),
-                blockchain);
-        final P2PNetwork remoteNetwork =
-            new NettyP2PNetwork(
-                vertx,
-                remoteKp,
-                NetworkingConfiguration.create()
-                    .setSupportedProtocols(subprotocol)
-                    .setRlpx(RlpxConfiguration.create().setBindPort(0))
-                    .setDiscovery(noDiscovery),
-                singletonList(cap),
-                remoteBlacklist,
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty())) {
+            builder()
+                .nodePermissioningController(nodePermissioningController)
+                .nodeLocalConfigPermissioningController(localWhitelistController)
+                .blockchain(blockchain)
+                .build();
+        final P2PNetwork remoteNetwork = builder().build()) {
 
       localNetwork.start();
       remoteNetwork.start();
@@ -621,35 +458,15 @@ public final class NettyP2PNetworkTest {
     }
   }
 
-  private SubProtocol subProtocol() {
-    return new SubProtocol() {
-      @Override
-      public String getName() {
-        return "eth";
-      }
-
-      @Override
-      public int messageSpace(final int protocolVersion) {
-        return 8;
-      }
-
-      @Override
-      public boolean isValidMessageCode(final int protocolVersion, final int code) {
-        return true;
-      }
-
-      @Override
-      public String messageName(final int protocolVersion, final int code) {
-        return INVALID_MESSAGE_NAME;
-      }
-    };
+  private static SubProtocol subProtocol() {
+    return subProtocol("eth");
   }
 
-  private SubProtocol subProtocol2() {
+  private static SubProtocol subProtocol(final String name) {
     return new SubProtocol() {
       @Override
       public String getName() {
-        return "ryj";
+        return name;
       }
 
       @Override
@@ -700,11 +517,9 @@ public final class NettyP2PNetworkTest {
   }
 
   @Test
-  public void whenStartingNetworkWithNodePermissioningWithoutBlockchainShouldThrowIllegalState() {
+  public void whenBuildingNetworkWithNodePermissioningWithoutBlockchainShouldThrowIllegalState() {
     blockchain = null;
-    final NettyP2PNetwork nettyP2PNetwork = nettyP2PNetwork();
-
-    final Throwable throwable = catchThrowable(nettyP2PNetwork::start);
+    final Throwable throwable = catchThrowable(this::nettyP2PNetwork);
     assertThat(throwable)
         .isInstanceOf(IllegalStateException.class)
         .hasMessage(
@@ -854,7 +669,7 @@ public final class NettyP2PNetworkTest {
     DiscoveryPeer peer = createDiscoveryPeer(0);
     peer.setStatus(PeerDiscoveryStatus.BONDED);
 
-    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
+    doReturn(Stream.of(peer)).when(network).getDiscoveredPeers();
     ArgumentCaptor<DiscoveryPeer> peerCapture = ArgumentCaptor.forClass(DiscoveryPeer.class);
     doReturn(CompletableFuture.completedFuture(mock(PeerConnection.class)))
         .when(network)
@@ -875,7 +690,7 @@ public final class NettyP2PNetworkTest {
     DiscoveryPeer peer = createDiscoveryPeer(0);
     peer.setStatus(PeerDiscoveryStatus.KNOWN);
 
-    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
+    doReturn(Stream.of(peer)).when(network).getDiscoveredPeers();
 
     network.attemptPeerConnections();
     verify(network, times(0)).connect(any());
@@ -892,7 +707,7 @@ public final class NettyP2PNetworkTest {
     peer.setStatus(PeerDiscoveryStatus.BONDED);
 
     doReturn(true).when(network).isConnecting(peer);
-    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
+    doReturn(Stream.of(peer)).when(network).getDiscoveredPeers();
 
     network.attemptPeerConnections();
     verify(network, times(0)).connect(any());
@@ -909,7 +724,7 @@ public final class NettyP2PNetworkTest {
     peer.setStatus(PeerDiscoveryStatus.BONDED);
 
     doReturn(true).when(network).isConnected(peer);
-    doReturn(Stream.of(peer)).when(network).getDiscoveryPeers();
+    doReturn(Stream.of(peer)).when(network).getDiscoveredPeers();
 
     network.attemptPeerConnections();
     verify(network, times(0)).connect(any());
@@ -933,7 +748,7 @@ public final class NettyP2PNetworkTest {
                 })
             .collect(Collectors.toList());
 
-    doReturn(peers.stream()).when(network).getDiscoveryPeers();
+    doReturn(peers.stream()).when(network).getDiscoveredPeers();
     ArgumentCaptor<DiscoveryPeer> peerCapture = ArgumentCaptor.forClass(DiscoveryPeer.class);
     doReturn(CompletableFuture.completedFuture(mock(PeerConnection.class)))
         .when(network)
@@ -962,7 +777,7 @@ public final class NettyP2PNetworkTest {
                 })
             .collect(Collectors.toList());
 
-    lenient().doReturn(peers.stream()).when(network).getDiscoveryPeers();
+    lenient().doReturn(peers.stream()).when(network).getDiscoveredPeers();
 
     network.attemptPeerConnections();
     verify(network, times(0)).connect(any());
@@ -1026,8 +841,6 @@ public final class NettyP2PNetworkTest {
 
   private NettyP2PNetwork nettyP2PNetwork(final Supplier<RlpxConfiguration> rlpxConfig) {
     final DiscoveryConfiguration noDiscovery = DiscoveryConfiguration.create().setActive(false);
-    final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
-    final Capability cap = Capability.create("eth", 63);
     final NetworkingConfiguration networkingConfiguration =
         NetworkingConfiguration.create()
             .setDiscovery(noDiscovery)
@@ -1036,16 +849,12 @@ public final class NettyP2PNetworkTest {
 
     lenient().when(nodePermissioningController.isPermitted(any(), any())).thenReturn(true);
 
-    return new NettyP2PNetwork(
-        mock(Vertx.class),
-        keyPair,
-        networkingConfiguration,
-        singletonList(cap),
-        new PeerBlacklist(),
-        new NoOpMetricsSystem(),
-        Optional.empty(),
-        Optional.of(nodePermissioningController),
-        blockchain);
+    return (NettyP2PNetwork)
+        builder()
+            .config(networkingConfiguration)
+            .nodePermissioningController(nodePermissioningController)
+            .blockchain(blockchain)
+            .build();
   }
 
   private Peer mockPeer() {
@@ -1093,5 +902,15 @@ public final class NettyP2PNetworkTest {
 
   private EnodeURL enodeEq(final EnodeURL enodeURL) {
     return argThat(new EnodeURLMatcher(enodeURL));
+  }
+
+  private NettyP2PNetwork.Builder builder() {
+    return NettyP2PNetwork.builder()
+        .vertx(vertx)
+        .config(config)
+        .keyPair(KeyPair.generate())
+        .peerBlacklist(new PeerBlacklist())
+        .metricsSystem(new NoOpMetricsSystem())
+        .supportedCapabilities(Arrays.asList(Capability.create("eth", 63)));
   }
 }

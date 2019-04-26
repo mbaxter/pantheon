@@ -12,7 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p;
 
-import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -26,11 +25,12 @@ import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryServiceException;
 import tech.pegasys.pantheon.ethereum.p2p.netty.NettyP2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.io.IOException;
-import java.util.Optional;
+import java.util.Arrays;
 
 import io.vertx.core.Vertx;
 import org.assertj.core.api.Assertions;
@@ -40,6 +40,8 @@ import org.junit.Test;
 public class NetworkingServiceLifecycleTest {
 
   private final Vertx vertx = Vertx.vertx();
+  private final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
+  private final NetworkingConfiguration config = configWithRandomPorts();
 
   @After
   public void closeVertx() {
@@ -47,19 +49,9 @@ public class NetworkingServiceLifecycleTest {
   }
 
   @Test
-  public void createP2PNetwork() {
-    final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
+  public void createP2PNetwork() throws IOException {
     final NetworkingConfiguration config = configWithRandomPorts();
-    try (final NettyP2PNetwork service =
-        new NettyP2PNetwork(
-            vertx,
-            keyPair,
-            config,
-            emptyList(),
-            new PeerBlacklist(),
-            new NoOpMetricsSystem(),
-            Optional.empty(),
-            Optional.empty())) {
+    try (final P2PNetwork service = builder().build()) {
       service.start();
       final EnodeURL enode = service.getLocalEnode().get();
       final int udpPort = enode.getEffectiveDiscoveryPort();
@@ -68,127 +60,59 @@ public class NetworkingServiceLifecycleTest {
       assertEquals(config.getDiscovery().getAdvertisedHost(), enode.getIp());
       assertThat(udpPort).isNotZero();
       assertThat(tcpPort).isNotZero();
-      assertThat(service.getDiscoveryPeers()).hasSize(0);
+      assertThat(service.getDiscoveredPeers()).hasSize(0);
     }
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void createP2PNetwork_NullHost() throws IOException {
-    final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
     final NetworkingConfiguration config =
         NetworkingConfiguration.create()
             .setDiscovery(DiscoveryConfiguration.create().setBindHost(null));
-    try (final P2PNetwork broken =
-        new NettyP2PNetwork(
-            vertx,
-            keyPair,
-            config,
-            emptyList(),
-            new PeerBlacklist(),
-            new NoOpMetricsSystem(),
-            Optional.empty(),
-            Optional.empty())) {
+    try (final P2PNetwork broken = builder().config(config).build()) {
       Assertions.fail("Expected Exception");
     }
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void createP2PNetwork_InvalidHost() throws IOException {
-    final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
     final NetworkingConfiguration config =
         NetworkingConfiguration.create()
             .setDiscovery(DiscoveryConfiguration.create().setBindHost("fake.fake.fake"));
-    try (final P2PNetwork broken =
-        new NettyP2PNetwork(
-            vertx,
-            keyPair,
-            config,
-            emptyList(),
-            new PeerBlacklist(),
-            new NoOpMetricsSystem(),
-            Optional.empty(),
-            Optional.empty())) {
+    try (final P2PNetwork broken = builder().config(config).build()) {
       Assertions.fail("Expected Exception");
     }
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void createP2PNetwork_InvalidPort() throws IOException {
-    final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
     final NetworkingConfiguration config =
         NetworkingConfiguration.create()
             .setDiscovery(DiscoveryConfiguration.create().setBindPort(-1));
-    try (final P2PNetwork broken =
-        new NettyP2PNetwork(
-            vertx,
-            keyPair,
-            config,
-            emptyList(),
-            new PeerBlacklist(),
-            new NoOpMetricsSystem(),
-            Optional.empty(),
-            Optional.empty())) {
+    try (final P2PNetwork broken = builder().config(config).build()) {
       Assertions.fail("Expected Exception");
     }
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test(expected = NullPointerException.class)
   public void createP2PNetwork_NullKeyPair() throws IOException {
-    try (final P2PNetwork broken =
-        new NettyP2PNetwork(
-            vertx,
-            null,
-            configWithRandomPorts(),
-            emptyList(),
-            new PeerBlacklist(),
-            new NoOpMetricsSystem(),
-            Optional.empty(),
-            Optional.empty())) {
+    try (final P2PNetwork broken = builder().config(config).keyPair(null).build()) {
       Assertions.fail("Expected Exception");
     }
   }
 
   @Test
-  public void startStopP2PNetwork() {
-    final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
-    try (final NettyP2PNetwork service =
-        new NettyP2PNetwork(
-            vertx,
-            keyPair,
-            configWithRandomPorts(),
-            emptyList(),
-            new PeerBlacklist(),
-            new NoOpMetricsSystem(),
-            Optional.empty(),
-            Optional.empty())) {
+  public void startStopP2PNetwork() throws IOException {
+    try (final P2PNetwork service = builder().build()) {
       service.start();
       service.stop();
     }
   }
 
   @Test
-  public void startDiscoveryAgentBackToBack() {
-    final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
-    try (final NettyP2PNetwork service1 =
-            new NettyP2PNetwork(
-                vertx,
-                keyPair,
-                configWithRandomPorts(),
-                emptyList(),
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty());
-        final NettyP2PNetwork service2 =
-            new NettyP2PNetwork(
-                vertx,
-                keyPair,
-                configWithRandomPorts(),
-                emptyList(),
-                new PeerBlacklist(),
-                new NoOpMetricsSystem(),
-                Optional.empty(),
-                Optional.empty())) {
+  public void startDiscoveryAgentBackToBack() throws IOException {
+    try (final P2PNetwork service1 = builder().build();
+        final P2PNetwork service2 = builder().build()) {
       service1.start();
       service1.stop();
       service2.start();
@@ -197,31 +121,12 @@ public class NetworkingServiceLifecycleTest {
   }
 
   @Test
-  public void startDiscoveryPortInUse() {
-    final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
-    try (final NettyP2PNetwork service1 =
-        new NettyP2PNetwork(
-            vertx,
-            keyPair,
-            configWithRandomPorts(),
-            emptyList(),
-            new PeerBlacklist(),
-            new NoOpMetricsSystem(),
-            Optional.empty(),
-            Optional.empty())) {
+  public void startDiscoveryPortInUse() throws IOException {
+    try (final P2PNetwork service1 = builder().config(config).build()) {
       service1.start();
       final NetworkingConfiguration config = configWithRandomPorts();
       config.getDiscovery().setBindPort(service1.getLocalEnode().get().getEffectiveDiscoveryPort());
-      try (final NettyP2PNetwork service2 =
-          new NettyP2PNetwork(
-              vertx,
-              keyPair,
-              config,
-              emptyList(),
-              new PeerBlacklist(),
-              new NoOpMetricsSystem(),
-              Optional.empty(),
-              Optional.empty())) {
+      try (final P2PNetwork service2 = builder().config(config).build()) {
         try {
           service2.start();
         } catch (final Exception e) {
@@ -240,20 +145,20 @@ public class NetworkingServiceLifecycleTest {
   }
 
   @Test
-  public void createP2PNetwork_NoActivePeers() {
-    final SECP256K1.KeyPair keyPair = SECP256K1.KeyPair.generate();
-    try (final NettyP2PNetwork agent =
-        new NettyP2PNetwork(
-            vertx,
-            keyPair,
-            configWithRandomPorts(),
-            emptyList(),
-            new PeerBlacklist(),
-            new NoOpMetricsSystem(),
-            Optional.empty(),
-            Optional.empty())) {
-      assertTrue(agent.getDiscoveryPeers().collect(toList()).isEmpty());
+  public void createP2PNetwork_NoActivePeers() throws IOException {
+    try (final P2PNetwork agent = builder().build()) {
+      assertTrue(agent.getDiscoveredPeers().collect(toList()).isEmpty());
       assertEquals(0, agent.getPeers().size());
     }
+  }
+
+  private NettyP2PNetwork.Builder builder() {
+    return NettyP2PNetwork.builder()
+        .vertx(vertx)
+        .keyPair(keyPair)
+        .config(config)
+        .peerBlacklist(new PeerBlacklist())
+        .metricsSystem(new NoOpMetricsSystem())
+        .supportedCapabilities(Arrays.asList(Capability.create("eth", 63)));
   }
 }

@@ -44,6 +44,7 @@ import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.p2p.ConnectingToLocalNodeException;
 import tech.pegasys.pantheon.ethereum.p2p.InsufficientPeersPermissioningProvider;
 import tech.pegasys.pantheon.ethereum.p2p.NetworkRunner;
+import tech.pegasys.pantheon.ethereum.p2p.NetworkRunner.NetworkBuilder;
 import tech.pegasys.pantheon.ethereum.p2p.NoopP2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.ProtocolManager;
@@ -268,27 +269,26 @@ public class RunnerBuilder {
                         .findFirst())
             .map(n -> (NodeLocalConfigPermissioningController) n);
 
+    NetworkBuilder inactiveNetwork = (caps) -> new NoopP2PNetwork();
+    NetworkBuilder activeNetwork =
+        (caps) ->
+            NettyP2PNetwork.builder()
+                .vertx(vertx)
+                .keyPair(keyPair)
+                .nodeLocalConfigPermissioningController(nodeWhitelistController)
+                .config(networkConfig)
+                .peerBlacklist(peerBlacklist)
+                .metricsSystem(metricsSystem)
+                .supportedCapabilities(caps)
+                .nodePermissioningController(nodePermissioningController)
+                .blockchain(context.getBlockchain())
+                .build();
+
     final NetworkRunner networkRunner =
         NetworkRunner.builder()
             .protocolManagers(protocolManagers)
             .subProtocols(subProtocols)
-            .network(
-                p2pEnabled
-                    ? caps ->
-                        new NettyP2PNetwork(
-                            vertx,
-                            keyPair,
-                            networkConfig,
-                            caps,
-                            peerBlacklist,
-                            metricsSystem,
-                            nodeWhitelistController,
-                            nodePermissioningController,
-                            // TODO this dependency on the Blockchain will be removed in PAN-2442
-                            nodePermissioningController.isPresent()
-                                ? context.getBlockchain()
-                                : null)
-                    : caps -> new NoopP2PNetwork())
+            .network(p2pEnabled ? activeNetwork : inactiveNetwork)
             .metricsSystem(metricsSystem)
             .build();
 
