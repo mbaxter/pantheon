@@ -49,10 +49,6 @@ public class PeerDiscoveryTestHelper {
     return Stream.generate(SECP256K1.KeyPair::generate).limit(count).collect(Collectors.toList());
   }
 
-  public static DiscoveryPeer matchesPeer(final DiscoveryPeer peer) {
-    return argThat((DiscoveryPeer p) -> p.getId().equals(peer.getId()));
-  }
-
   /**
    * Starts multiple discovery agents from generated peers.
    *
