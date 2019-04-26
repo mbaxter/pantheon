@@ -545,7 +545,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
         }
       } else {
         throw new IllegalStateException(
-            "NettyP2PNetwork permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
+            "Network permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
       }
     }
 
@@ -760,7 +760,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
       checkState(metricsSystem != null, "MetricsSystem must be set.");
       checkState(
           !nodePermissioningController.isPresent() || blockchain != null,
-          "NettyP2PNetwork permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
+          "Network permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
       checkState(vertx != null, "Vertx must be set.");
       checkState(
           nodeLocalConfigPermissioningController != null,
