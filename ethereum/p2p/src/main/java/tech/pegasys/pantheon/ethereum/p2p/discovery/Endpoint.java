@@ -15,7 +15,6 @@ package tech.pegasys.pantheon.ethereum.p2p.discovery;
 import static com.google.common.base.Preconditions.checkArgument;
 import static tech.pegasys.pantheon.util.Preconditions.checkGuard;
 
-import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
 import tech.pegasys.pantheon.ethereum.rlp.RLPOutput;
 import tech.pegasys.pantheon.util.NetworkUtility;
@@ -28,7 +27,10 @@ import java.util.OptionalInt;
 
 import com.google.common.net.InetAddresses;
 
-/** Encapsulates the network coordinates of a {@link Peer}. */
+/**
+ * Encapsulates the network coordinates of a {@link DiscoveryPeer} as well as serialization logic
+ * used in various Discovery messages.
+ */
 public class Endpoint {
   private final String host;
   private final int udpPort;
