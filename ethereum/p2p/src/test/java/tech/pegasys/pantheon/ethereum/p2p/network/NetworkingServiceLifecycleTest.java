@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p;
+package tech.pegasys.pantheon.ethereum.p2p.network;
 
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,7 +23,6 @@ import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryServiceException;
-import tech.pegasys.pantheon.ethereum.p2p.netty.NettyP2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
@@ -152,8 +151,8 @@ public class NetworkingServiceLifecycleTest {
     }
   }
 
-  private NettyP2PNetwork.Builder builder() {
-    return NettyP2PNetwork.builder()
+  private DefaultP2PNetwork.Builder builder() {
+    return DefaultP2PNetwork.builder()
         .vertx(vertx)
         .keyPair(keyPair)
         .config(config)

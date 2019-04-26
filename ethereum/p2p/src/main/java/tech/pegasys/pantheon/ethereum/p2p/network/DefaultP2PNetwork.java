@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 ConsenSys AG.
+ * Copyright 2019 ConsenSys AG.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.netty;
+package tech.pegasys.pantheon.ethereum.p2p.network;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -32,6 +32,11 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBonde
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
+import tech.pegasys.pantheon.ethereum.p2p.network.netty.Callbacks;
+import tech.pegasys.pantheon.ethereum.p2p.network.netty.HandshakeHandlerInbound;
+import tech.pegasys.pantheon.ethereum.p2p.network.netty.HandshakeHandlerOutbound;
+import tech.pegasys.pantheon.ethereum.p2p.network.netty.PeerConnectionRegistry;
+import tech.pegasys.pantheon.ethereum.p2p.network.netty.TimeoutHandler;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
@@ -128,7 +133,7 @@ import org.apache.logging.log4j.Logger;
  *     Selection</a>
  * @see <a href="https://github.com/ethereum/devp2p/blob/master/rlpx.md">devp2p RLPx</a>
  */
-public class NettyP2PNetwork implements P2PNetwork {
+public class DefaultP2PNetwork implements P2PNetwork {
 
   private static final Logger LOG = LogManager.getLogger();
   private static final int TIMEOUT_SECONDS = 30;
@@ -199,7 +204,7 @@ public class NettyP2PNetwork implements P2PNetwork {
    * @param nodePermissioningController Controls node permissioning.
    * @param blockchain The blockchain to subscribe to BlockAddedEvents.
    */
-  private NettyP2PNetwork(
+  DefaultP2PNetwork(
       final PeerDiscoveryAgent peerDiscoveryAgent,
       final SECP256K1.KeyPair keyPair,
       final NetworkingConfiguration config,
@@ -734,7 +739,7 @@ public class NettyP2PNetwork implements P2PNetwork {
     private P2PNetwork doBuild() {
       peerDiscoveryAgent = peerDiscoveryAgent == null ? createDiscoveryAgent() : peerDiscoveryAgent;
 
-      return new NettyP2PNetwork(
+      return new DefaultP2PNetwork(
           peerDiscoveryAgent,
           keyPair,
           config,

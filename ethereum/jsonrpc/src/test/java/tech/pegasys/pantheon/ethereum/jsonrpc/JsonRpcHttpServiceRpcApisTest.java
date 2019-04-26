@@ -36,7 +36,7 @@ import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
-import tech.pegasys.pantheon.ethereum.p2p.netty.NettyP2PNetwork;
+import tech.pegasys.pantheon.ethereum.p2p.network.DefaultP2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.permissioning.AccountWhitelistController;
@@ -238,7 +238,7 @@ public class JsonRpcHttpServiceRpcApisTest {
             .setDiscovery(DiscoveryConfiguration.create().setBindPort(0));
 
     final P2PNetwork p2pNetwork =
-        NettyP2PNetwork.builder()
+        DefaultP2PNetwork.builder()
             .supportedCapabilities(Capability.create("eth", 63))
             .keyPair(SECP256K1.KeyPair.generate())
             .vertx(vertx)

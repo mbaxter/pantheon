@@ -52,7 +52,7 @@ import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.SubProtocolConfiguration;
-import tech.pegasys.pantheon.ethereum.p2p.netty.NettyP2PNetwork;
+import tech.pegasys.pantheon.ethereum.p2p.network.DefaultP2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
@@ -272,7 +272,7 @@ public class RunnerBuilder {
     NetworkBuilder inactiveNetwork = (caps) -> new NoopP2PNetwork();
     NetworkBuilder activeNetwork =
         (caps) ->
-            NettyP2PNetwork.builder()
+            DefaultP2PNetwork.builder()
                 .vertx(vertx)
                 .keyPair(keyPair)
                 .nodeLocalConfigPermissioningController(nodeWhitelistController)
