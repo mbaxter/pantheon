@@ -13,7 +13,6 @@
 package tech.pegasys.pantheon.ethereum.p2p.discovery;
 
 import static java.util.Arrays.asList;
-import static org.mockito.ArgumentMatchers.argThat;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;

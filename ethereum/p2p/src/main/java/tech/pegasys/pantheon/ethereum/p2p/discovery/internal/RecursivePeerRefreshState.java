@@ -154,7 +154,10 @@ public class RecursivePeerRefreshState {
     currentRoundTimeout.ifPresent(RoundTimeout::cancelTimeout);
     final List<MetadataPeer> candidates = neighboursRoundCandidates();
     if (candidates.isEmpty() || reachedMaximumNumberOfRounds()) {
-      LOG.debug("Iterative peer search complete.  {} peers processed over {} rounds." , oneTrueMap.size(), currentRound + 1);
+      LOG.debug(
+          "Iterative peer search complete.  {} peers processed over {} rounds.",
+          oneTrueMap.size(),
+          currentRound + 1);
       iterativeSearchInProgress = false;
       return;
     }
