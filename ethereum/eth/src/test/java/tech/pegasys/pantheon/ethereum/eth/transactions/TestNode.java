@@ -41,7 +41,7 @@ import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
-import tech.pegasys.pantheon.ethereum.p2p.netty.NettyP2PNetwork;
+import tech.pegasys.pantheon.ethereum.p2p.network.DefaultP2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
@@ -56,7 +56,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import io.vertx.core.Vertx;
@@ -122,15 +121,14 @@ public class TestNode implements Closeable {
             .protocolManagers(singletonList(ethProtocolManager))
             .network(
                 capabilities ->
-                    new NettyP2PNetwork(
-                        vertx,
-                        this.kp,
-                        networkingConfiguration,
-                        capabilities,
-                        new PeerBlacklist(),
-                        new NoOpMetricsSystem(),
-                        Optional.empty(),
-                        Optional.empty()))
+                    DefaultP2PNetwork.builder()
+                        .vertx(vertx)
+                        .keyPair(this.kp)
+                        .config(networkingConfiguration)
+                        .peerBlacklist(new PeerBlacklist())
+                        .metricsSystem(new NoOpMetricsSystem())
+                        .supportedCapabilities(capabilities)
+                        .build())
             .metricsSystem(new NoOpMetricsSystem())
             .build();
     network = networkRunner.getNetwork();
