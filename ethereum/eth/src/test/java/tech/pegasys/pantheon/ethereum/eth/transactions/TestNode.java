@@ -133,6 +133,7 @@ public class TestNode implements Closeable {
                         .metricsSystem(new NoOpMetricsSystem())
                         .supportedCapabilities(capabilities)
                         .build())
+            .metricsSystem(new NoOpMetricsSystem())
             .build();
     network = networkRunner.getNetwork();
     network.subscribeDisconnect(
