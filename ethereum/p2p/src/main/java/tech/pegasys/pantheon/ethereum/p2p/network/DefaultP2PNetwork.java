@@ -70,6 +70,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -186,6 +187,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
   private final Optional<NodePermissioningController> nodePermissioningController;
   private final Optional<Blockchain> blockchain;
   private OptionalLong blockAddedObserverId = OptionalLong.empty();
+
+  private final AtomicBoolean started = new AtomicBoolean(false);
 
   /**
    * Creates a peer networking service for production purposes.
@@ -521,32 +524,36 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public void start() {
-    peerDiscoveryAgent.start(ourPeerInfo.getPort()).join();
-    peerBondedObserverId =
-        OptionalLong.of(peerDiscoveryAgent.observePeerBondedEvents(handlePeerBondedEvent()));
-    peerDroppedObserverId =
-        OptionalLong.of(peerDiscoveryAgent.observePeerDroppedEvents(handlePeerDroppedEvents()));
+    if (started.compareAndSet(false, true)) {
+      peerDiscoveryAgent.start(ourPeerInfo.getPort()).join();
+      peerBondedObserverId =
+          OptionalLong.of(peerDiscoveryAgent.observePeerBondedEvents(handlePeerBondedEvent()));
+      peerDroppedObserverId =
+          OptionalLong.of(peerDiscoveryAgent.observePeerDroppedEvents(handlePeerDroppedEvents()));
 
-    if (nodePermissioningController.isPresent()) {
-      if (blockchain.isPresent()) {
-        synchronized (this) {
-          if (!blockAddedObserverId.isPresent()) {
-            blockAddedObserverId =
-                OptionalLong.of(blockchain.get().observeBlockAdded(this::handleBlockAddedEvent));
+      if (nodePermissioningController.isPresent()) {
+        if (blockchain.isPresent()) {
+          synchronized (this) {
+            if (!blockAddedObserverId.isPresent()) {
+              blockAddedObserverId =
+                  OptionalLong.of(blockchain.get().observeBlockAdded(this::handleBlockAddedEvent));
+            }
           }
+        } else {
+          throw new IllegalStateException(
+              "Network permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
         }
-      } else {
-        throw new IllegalStateException(
-            "Network permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
       }
+
+      setLocalNode();
+
+      peerConnectionScheduler.scheduleWithFixedDelay(
+          this::checkMaintainedConnectionPeers, 2, 60, TimeUnit.SECONDS);
+      peerConnectionScheduler.scheduleWithFixedDelay(
+          this::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
+    } else {
+      LOG.warn("Attempted to start an already started P2PNetwork");
     }
-
-    setLocalNode();
-
-    peerConnectionScheduler.scheduleWithFixedDelay(
-        this::checkMaintainedConnectionPeers, 2, 60, TimeUnit.SECONDS);
-    peerConnectionScheduler.scheduleWithFixedDelay(
-        this::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
   }
 
   @VisibleForTesting
