@@ -17,7 +17,6 @@ import static org.assertj.core.api.Java6Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -110,7 +109,7 @@ public final class DefaultP2PNetworkTest {
     assertThat(network.addMaintainConnectionPeer(peer)).isTrue();
 
     assertThat(network.peerMaintainConnectionList).contains(peer);
-    verify(network, atLeast(1)).connect(peer);
+    verify(network, times(1)).connect(peer);
   }
 
   @Test
@@ -131,7 +130,7 @@ public final class DefaultP2PNetworkTest {
     network.peerMaintainConnectionList.add(peer);
 
     network.checkMaintainedConnectionPeers();
-    verify(network, atLeast(1)).connect(peer);
+    verify(network, times(1)).connect(peer);
   }
 
   @Test

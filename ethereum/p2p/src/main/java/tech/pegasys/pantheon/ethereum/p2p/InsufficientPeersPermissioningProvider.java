@@ -38,7 +38,8 @@ public class InsufficientPeersPermissioningProvider implements ContextualNodePer
    * Creates the provider observing the provided p2p network
    *
    * @param p2pNetwork the p2p network to observe
-   * @param selfEnode A supplier that provides a represention the locally running node, if available
+   * @param selfEnode A supplier that provides a representation of the locally running node, if
+   *     available
    * @param bootnodeEnodes the bootnodes that this node is configured to connection to
    */
   public InsufficientPeersPermissioningProvider(
