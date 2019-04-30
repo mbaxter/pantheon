@@ -521,36 +521,36 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public void start() {
-    if (started.compareAndSet(false, true)) {
-      peerDiscoveryAgent.start(ourPeerInfo.getPort()).join();
-      peerBondedObserverId =
-          OptionalLong.of(peerDiscoveryAgent.observePeerBondedEvents(handlePeerBondedEvent()));
-      peerDroppedObserverId =
-          OptionalLong.of(peerDiscoveryAgent.observePeerDroppedEvents(handlePeerDroppedEvents()));
-
-      if (nodePermissioningController.isPresent()) {
-        if (blockchain.isPresent()) {
-          synchronized (this) {
-            if (!blockAddedObserverId.isPresent()) {
-              blockAddedObserverId =
-                  OptionalLong.of(blockchain.get().observeBlockAdded(this::handleBlockAddedEvent));
-            }
-          }
-        } else {
-          throw new IllegalStateException(
-              "Network permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
-        }
-      }
-
-      setLocalEnode();
-
-      peerConnectionScheduler.scheduleWithFixedDelay(
-          this::checkMaintainedConnectionPeers, 2, 60, TimeUnit.SECONDS);
-      peerConnectionScheduler.scheduleWithFixedDelay(
-          this::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
-    } else {
-      LOG.warn("Attempted to start an already started P2PNetwork");
+    if (!started.compareAndSet(false, true)) {
+      LOG.warn("Attempted to start an already started " + getClass().getSimpleName());
     }
+
+    peerDiscoveryAgent.start(ourPeerInfo.getPort()).join();
+    peerBondedObserverId =
+        OptionalLong.of(peerDiscoveryAgent.observePeerBondedEvents(handlePeerBondedEvent()));
+    peerDroppedObserverId =
+        OptionalLong.of(peerDiscoveryAgent.observePeerDroppedEvents(handlePeerDroppedEvents()));
+
+    if (nodePermissioningController.isPresent()) {
+      if (blockchain.isPresent()) {
+        synchronized (this) {
+          if (!blockAddedObserverId.isPresent()) {
+            blockAddedObserverId =
+                OptionalLong.of(blockchain.get().observeBlockAdded(this::handleBlockAddedEvent));
+          }
+        }
+      } else {
+        throw new IllegalStateException(
+            "Network permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
+      }
+    }
+
+    createLocalEnode();
+
+    peerConnectionScheduler.scheduleWithFixedDelay(
+        this::checkMaintainedConnectionPeers, 2, 60, TimeUnit.SECONDS);
+    peerConnectionScheduler.scheduleWithFixedDelay(
+        this::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
   }
 
   @VisibleForTesting
@@ -691,7 +691,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
     return localEnode;
   }
 
-  private void setLocalEnode() {
+  private void createLocalEnode() {
     if (localEnode.isPresent()) {
       return;
     }
