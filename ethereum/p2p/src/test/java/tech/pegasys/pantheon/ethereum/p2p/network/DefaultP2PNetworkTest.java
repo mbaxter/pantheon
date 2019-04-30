@@ -135,6 +135,20 @@ public final class DefaultP2PNetworkTest {
   }
 
   @Test
+  public void checkMaintainedConnectionPeersDoesNotConnectToDisallowedPeer() {
+    final DefaultP2PNetwork network = mockNetwork();
+    network.start();
+
+    // Add peer that is not permitted
+    final Peer peer = mockPeer();
+    lenient().when(nodePermissioningController.isPermitted(any(), any())).thenReturn(false);
+    network.peerMaintainConnectionList.add(peer);
+
+    network.checkMaintainedConnectionPeers();
+    verify(network, never()).connect(peer);
+  }
+
+  @Test
   public void checkMaintainedConnectionPeersDoesntReconnectPendingPeers() {
     final DefaultP2PNetwork network = mockNetwork();
     final Peer peer = mockPeer();
