@@ -71,6 +71,7 @@ import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsService;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
+import tech.pegasys.pantheon.util.enode.MutableLocalNode;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -105,15 +106,6 @@ public class RunnerBuilder {
   private MetricsSystem metricsSystem;
   private Optional<PermissioningConfiguration> permissioningConfiguration = Optional.empty();
   private Collection<EnodeURL> staticNodes = Collections.emptyList();
-
-  private EnodeURL getSelfEnode() {
-    BytesValue nodeId = pantheonController.getLocalNodeKeyPair().getPublicKey().getEncodedBytes();
-    return EnodeURL.builder()
-        .nodeId(nodeId)
-        .ipAddress(p2pAdvertisedHost)
-        .listeningPort(p2pListenPort)
-        .build();
-  }
 
   public RunnerBuilder vertx(final Vertx vertx) {
     this.vertx = vertx;
@@ -257,8 +249,10 @@ public class RunnerBuilder {
         new TransactionSimulator(
             context.getBlockchain(), context.getWorldStateArchive(), protocolSchedule);
 
+    BytesValue localNodeId = keyPair.getPublicKey().getEncodedBytes();
     final Optional<NodePermissioningController> nodePermissioningController =
-        buildNodePermissioningController(bootnodesAsEnodeURLs, synchronizer, transactionSimulator);
+        buildNodePermissioningController(
+            bootnodesAsEnodeURLs, synchronizer, transactionSimulator, localNodeId);
 
     final Optional<NodeLocalConfigPermissioningController> nodeWhitelistController =
         nodePermissioningController
@@ -269,10 +263,12 @@ public class RunnerBuilder {
                         .findFirst())
             .map(n -> (NodeLocalConfigPermissioningController) n);
 
+    final MutableLocalNode localNode = MutableLocalNode.create();
     NetworkBuilder inactiveNetwork = (caps) -> new NoopP2PNetwork();
     NetworkBuilder activeNetwork =
         (caps) ->
             DefaultP2PNetwork.builder()
+                .localNode(localNode)
                 .vertx(vertx)
                 .keyPair(keyPair)
                 .nodeLocalConfigPermissioningController(nodeWhitelistController)
@@ -296,7 +292,7 @@ public class RunnerBuilder {
         n ->
             n.setInsufficientPeersPermissioningProvider(
                 new InsufficientPeersPermissioningProvider(
-                    networkRunner.getNetwork(), getSelfEnode(), bootnodesAsEnodeURLs)));
+                    networkRunner.getNetwork(), localNode, bootnodesAsEnodeURLs)));
 
     final TransactionPool transactionPool = pantheonController.getTransactionPool();
     final MiningCoordinator miningCoordinator = pantheonController.getMiningCoordinator();
@@ -409,12 +405,13 @@ public class RunnerBuilder {
   private Optional<NodePermissioningController> buildNodePermissioningController(
       final List<EnodeURL> bootnodesAsEnodeURLs,
       final Synchronizer synchronizer,
-      final TransactionSimulator transactionSimulator) {
+      final TransactionSimulator transactionSimulator,
+      final BytesValue localNodeId) {
     Collection<EnodeURL> fixedNodes = getFixedNodes(bootnodesAsEnodeURLs, staticNodes);
     return permissioningConfiguration.map(
         config ->
             new NodePermissioningControllerFactory()
-                .create(config, synchronizer, fixedNodes, getSelfEnode(), transactionSimulator));
+                .create(config, synchronizer, fixedNodes, localNodeId, transactionSimulator));
   }
 
   @VisibleForTesting

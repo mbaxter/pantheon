@@ -18,6 +18,12 @@ public interface LocalNode {
     return DefaultLocalNode.create();
   }
 
+  static LocalNode create(final EnodeURL enode) {
+    DefaultLocalNode localNode = DefaultLocalNode.create();
+    localNode.setEnode(enode);
+    return localNode;
+  }
+
   /**
    * While node is initializing, an empty value will be returned. Once this node is up and running,
    * a {@link EnodeURL} object corresponding to this node will be returned.
