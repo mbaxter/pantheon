@@ -22,11 +22,11 @@ import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
-import tech.pegasys.pantheon.util.enode.LocalNode;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.junit.Test;
@@ -62,7 +62,7 @@ public class InsufficientPeersPermissioningProviderTest {
 
     final InsufficientPeersPermissioningProvider provider =
         new InsufficientPeersPermissioningProvider(
-            p2pNetwork, LocalNode.create(SELF_ENODE), bootnodes);
+            p2pNetwork, () -> Optional.of(SELF_ENODE), bootnodes);
 
     assertThat(provider.isPermitted(SELF_ENODE, ENODE_2)).isEmpty();
   }
@@ -77,7 +77,7 @@ public class InsufficientPeersPermissioningProviderTest {
 
     final InsufficientPeersPermissioningProvider provider =
         new InsufficientPeersPermissioningProvider(
-            p2pNetwork, LocalNode.create(SELF_ENODE), bootnodes);
+            p2pNetwork, () -> Optional.of(SELF_ENODE), bootnodes);
 
     assertThat(provider.isPermitted(SELF_ENODE, ENODE_3)).isEmpty();
     assertThat(provider.isPermitted(SELF_ENODE, ENODE_2)).isEmpty();
@@ -91,7 +91,7 @@ public class InsufficientPeersPermissioningProviderTest {
 
     final InsufficientPeersPermissioningProvider provider =
         new InsufficientPeersPermissioningProvider(
-            p2pNetwork, LocalNode.create(SELF_ENODE), bootnodes);
+            p2pNetwork, () -> Optional.of(SELF_ENODE), bootnodes);
 
     assertThat(provider.isPermitted(SELF_ENODE, ENODE_2)).contains(true);
     assertThat(provider.isPermitted(SELF_ENODE, ENODE_3)).isEmpty();
@@ -104,7 +104,7 @@ public class InsufficientPeersPermissioningProviderTest {
     when(p2pNetwork.getPeers()).thenReturn(Collections.emptyList());
 
     final InsufficientPeersPermissioningProvider provider =
-        new InsufficientPeersPermissioningProvider(p2pNetwork, LocalNode.create(), bootnodes);
+        new InsufficientPeersPermissioningProvider(p2pNetwork, Optional::empty, bootnodes);
 
     assertThat(provider.isPermitted(SELF_ENODE, ENODE_2)).isEmpty();
     assertThat(provider.isPermitted(SELF_ENODE, ENODE_3)).isEmpty();
@@ -120,7 +120,7 @@ public class InsufficientPeersPermissioningProviderTest {
 
     final InsufficientPeersPermissioningProvider provider =
         new InsufficientPeersPermissioningProvider(
-            p2pNetwork, LocalNode.create(SELF_ENODE), bootnodes);
+            p2pNetwork, () -> Optional.of(SELF_ENODE), bootnodes);
 
     assertThat(provider.isPermitted(SELF_ENODE, ENODE_2)).contains(true);
     assertThat(provider.isPermitted(SELF_ENODE, ENODE_3)).isEmpty();
@@ -144,7 +144,7 @@ public class InsufficientPeersPermissioningProviderTest {
 
     final InsufficientPeersPermissioningProvider provider =
         new InsufficientPeersPermissioningProvider(
-            p2pNetwork, LocalNode.create(SELF_ENODE), bootnodes);
+            p2pNetwork, () -> Optional.of(SELF_ENODE), bootnodes);
 
     final ArgumentCaptor<DisconnectCallback> callbackCaptor =
         ArgumentCaptor.forClass(DisconnectCallback.class);
@@ -172,7 +172,7 @@ public class InsufficientPeersPermissioningProviderTest {
 
     final InsufficientPeersPermissioningProvider provider =
         new InsufficientPeersPermissioningProvider(
-            p2pNetwork, LocalNode.create(SELF_ENODE), bootnodes);
+            p2pNetwork, () -> Optional.of(SELF_ENODE), bootnodes);
 
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<Consumer<PeerConnection>> callbackCaptor =
@@ -206,7 +206,7 @@ public class InsufficientPeersPermissioningProviderTest {
 
     final InsufficientPeersPermissioningProvider provider =
         new InsufficientPeersPermissioningProvider(
-            p2pNetwork, LocalNode.create(SELF_ENODE), bootnodes);
+            p2pNetwork, () -> Optional.of(SELF_ENODE), bootnodes);
 
     @SuppressWarnings("unchecked")
     final ArgumentCaptor<Consumer<PeerConnection>> connectCallbackCaptor =

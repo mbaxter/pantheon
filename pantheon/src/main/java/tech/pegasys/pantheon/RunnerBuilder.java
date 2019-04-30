@@ -71,7 +71,6 @@ import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsService;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
-import tech.pegasys.pantheon.util.enode.MutableLocalNode;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -263,12 +262,10 @@ public class RunnerBuilder {
                         .findFirst())
             .map(n -> (NodeLocalConfigPermissioningController) n);
 
-    final MutableLocalNode localNode = MutableLocalNode.create();
     NetworkBuilder inactiveNetwork = (caps) -> new NoopP2PNetwork();
     NetworkBuilder activeNetwork =
         (caps) ->
             DefaultP2PNetwork.builder()
-                .localNode(localNode)
                 .vertx(vertx)
                 .keyPair(keyPair)
                 .nodeLocalConfigPermissioningController(nodeWhitelistController)
@@ -288,11 +285,12 @@ public class RunnerBuilder {
             .metricsSystem(metricsSystem)
             .build();
 
+    final P2PNetwork network = networkRunner.getNetwork();
     nodePermissioningController.ifPresent(
         n ->
             n.setInsufficientPeersPermissioningProvider(
                 new InsufficientPeersPermissioningProvider(
-                    networkRunner.getNetwork(), localNode, bootnodesAsEnodeURLs)));
+                    networkRunner.getNetwork(), network::getLocalEnode, bootnodesAsEnodeURLs)));
 
     final TransactionPool transactionPool = pantheonController.getTransactionPool();
     final MiningCoordinator miningCoordinator = pantheonController.getMiningCoordinator();

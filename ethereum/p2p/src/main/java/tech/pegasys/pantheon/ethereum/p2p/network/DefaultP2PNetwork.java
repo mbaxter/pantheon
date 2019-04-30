@@ -51,7 +51,6 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
-import tech.pegasys.pantheon.util.enode.MutableLocalNode;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -182,7 +181,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   private final String advertisedHost;
 
-  private final MutableLocalNode localNode;
+  private volatile Optional<EnodeURL> localEnode = Optional.empty();
 
   private final Optional<NodePermissioningController> nodePermissioningController;
   private final Optional<Blockchain> blockchain;
@@ -207,7 +206,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
    * @param blockchain The blockchain to subscribe to BlockAddedEvents.
    */
   DefaultP2PNetwork(
-      final MutableLocalNode localNode,
       final PeerDiscoveryAgent peerDiscoveryAgent,
       final SECP256K1.KeyPair keyPair,
       final NetworkingConfiguration config,
@@ -217,7 +215,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
       final Optional<NodePermissioningController> nodePermissioningController,
       final Blockchain blockchain) {
 
-    this.localNode = localNode;
     this.config = config;
     maxPeers = config.getRlpx().getMaxPeers();
     connections = new PeerConnectionRegistry(metricsSystem);
@@ -691,13 +688,14 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public Optional<EnodeURL> getLocalEnode() {
-    if (!localNode.isReady()) {
-      return Optional.empty();
-    }
-    return Optional.of(localNode.getEnode());
+    return localEnode;
   }
 
   private void setLocalNode() {
+    if (localEnode.isPresent()) {
+      return;
+    }
+
     final BytesValue nodeId = ourPeerInfo.getNodeId();
     final int listeningPort = ourPeerInfo.getPort();
     final OptionalInt discoveryPort =
@@ -716,7 +714,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
             .build();
 
     LOG.info("Enode URL {}", localEnode.toString());
-    localNode.setEnode(localEnode);
+    this.localEnode = Optional.of(localEnode);
   }
 
   private void onConnectionEstablished(final PeerConnection connection) {
@@ -726,7 +724,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   public static class Builder {
 
-    private MutableLocalNode localNode = MutableLocalNode.create();
     private PeerDiscoveryAgent peerDiscoveryAgent;
     private KeyPair keyPair;
     private NetworkingConfiguration config = NetworkingConfiguration.create();
@@ -748,7 +745,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
       peerDiscoveryAgent = peerDiscoveryAgent == null ? createDiscoveryAgent() : peerDiscoveryAgent;
 
       return new DefaultP2PNetwork(
-          localNode,
           peerDiscoveryAgent,
           keyPair,
           config,
@@ -760,7 +756,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
     }
 
     private void validate() {
-      checkState(localNode != null, "LocalNode must be set.");
       checkState(keyPair != null, "KeyPair must be set.");
       checkState(config != null, "NetworkingConfiguration must be set.");
       checkState(
@@ -787,12 +782,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
           nodeLocalConfigPermissioningController,
           nodePermissioningController,
           metricsSystem);
-    }
-
-    public Builder localNode(final MutableLocalNode localNode) {
-      checkNotNull(localNode);
-      this.localNode = localNode;
-      return this;
     }
 
     public Builder vertx(final Vertx vertx) {

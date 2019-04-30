@@ -18,17 +18,17 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.Discon
 import tech.pegasys.pantheon.ethereum.permissioning.node.ContextualNodePermissioningProvider;
 import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
-import tech.pegasys.pantheon.util.enode.LocalNode;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * A permissioning provider that only provides an answer when we have no peers outside of our
  * bootnodes
  */
 public class InsufficientPeersPermissioningProvider implements ContextualNodePermissioningProvider {
-  private final LocalNode localNode;
+  private final Supplier<Optional<EnodeURL>> selfEnode;
   private final P2PNetwork p2pNetwork;
   private final Collection<EnodeURL> bootnodeEnodes;
   private long nonBootnodePeerConnections;
@@ -38,14 +38,14 @@ public class InsufficientPeersPermissioningProvider implements ContextualNodePer
    * Creates the provider observing the provided p2p network
    *
    * @param p2pNetwork the p2p network to observe
-   * @param localNode An object representing the locally running node
+   * @param selfEnode A supplier that provides a represention the locally running node, if available
    * @param bootnodeEnodes the bootnodes that this node is configured to connection to
    */
   public InsufficientPeersPermissioningProvider(
       final P2PNetwork p2pNetwork,
-      final LocalNode localNode,
+      final Supplier<Optional<EnodeURL>> selfEnode,
       final Collection<EnodeURL> bootnodeEnodes) {
-    this.localNode = localNode;
+    this.selfEnode = selfEnode;
     this.p2pNetwork = p2pNetwork;
     this.bootnodeEnodes = bootnodeEnodes;
     this.nonBootnodePeerConnections = countP2PNetworkNonBootnodeConnections();
@@ -65,13 +65,14 @@ public class InsufficientPeersPermissioningProvider implements ContextualNodePer
   @Override
   public Optional<Boolean> isPermitted(
       final EnodeURL sourceEnode, final EnodeURL destinationEnode) {
+    Optional<EnodeURL> maybeSelfEnode = selfEnode.get();
     if (nonBootnodePeerConnections > 0) {
       return Optional.empty();
-    } else if (!localNode.isReady()) {
+    } else if (!maybeSelfEnode.isPresent()) {
       // The local node is not yet ready, so we can't validate enodes yet
       return Optional.empty();
-    } else if (checkEnode(localNode.getEnode(), sourceEnode)
-        && checkEnode(localNode.getEnode(), destinationEnode)) {
+    } else if (checkEnode(maybeSelfEnode.get(), sourceEnode)
+        && checkEnode(maybeSelfEnode.get(), destinationEnode)) {
       return Optional.of(true);
     } else {
       return Optional.empty();
