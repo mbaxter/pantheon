@@ -47,21 +47,6 @@ public class SubscribersTest {
   }
 
   @Test
-  public void shouldClearSubscriber() {
-    subscribers.subscribe(subscriber1);
-    subscribers.subscribe(subscriber2);
-    assertThat(subscribers.getSubscriberCount()).isEqualTo(2);
-
-    subscribers.clear();
-
-    assertThat(subscribers.getSubscriberCount()).isEqualTo(0);
-
-    subscribers.forEach(Runnable::run);
-    verifyZeroInteractions(subscriber1);
-    verifyZeroInteractions(subscriber2);
-  }
-
-  @Test
   public void shouldTrackMultipleSubscribers() {
     final Runnable subscriber3 = mock(Runnable.class);
     subscribers.subscribe(subscriber1);
