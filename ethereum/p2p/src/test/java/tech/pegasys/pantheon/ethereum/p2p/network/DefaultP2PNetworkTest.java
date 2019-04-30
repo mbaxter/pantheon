@@ -17,6 +17,7 @@ import static org.assertj.core.api.Java6Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -103,17 +104,19 @@ public final class DefaultP2PNetworkTest {
   @Test
   public void addingMaintainedNetworkPeerStartsConnection() {
     final DefaultP2PNetwork network = mockNetwork();
+    network.start();
     final Peer peer = mockPeer();
 
     assertThat(network.addMaintainConnectionPeer(peer)).isTrue();
 
     assertThat(network.peerMaintainConnectionList).contains(peer);
-    verify(network, times(1)).connect(peer);
+    verify(network, atLeast(1)).connect(peer);
   }
 
   @Test
   public void addingRepeatMaintainedPeersReturnsFalse() {
     final P2PNetwork network = network();
+    network.start();
     final Peer peer = mockPeer();
     assertThat(network.addMaintainConnectionPeer(peer)).isTrue();
     assertThat(network.addMaintainConnectionPeer(peer)).isFalse();
@@ -122,11 +125,13 @@ public final class DefaultP2PNetworkTest {
   @Test
   public void checkMaintainedConnectionPeersTriesToConnect() {
     final DefaultP2PNetwork network = mockNetwork();
+    network.start();
+
     final Peer peer = mockPeer();
     network.peerMaintainConnectionList.add(peer);
 
     network.checkMaintainedConnectionPeers();
-    verify(network, times(1)).connect(peer);
+    verify(network, atLeast(1)).connect(peer);
   }
 
   @Test
@@ -143,24 +148,21 @@ public final class DefaultP2PNetworkTest {
   @Test
   public void checkMaintainedConnectionPeersDoesntReconnectConnectedPeers() {
     final DefaultP2PNetwork network = spy(network());
+    network.start();
     final Peer peer = mockPeer();
+
+    // Connect to Peer
     verify(network, never()).connect(peer);
+    network.connect(peer);
+    verify(network, times(1)).connect(peer);
+
+    // Add peer to maintained list
     assertThat(network.addMaintainConnectionPeer(peer)).isTrue();
     verify(network, times(1)).connect(peer);
 
-    {
-      final CompletableFuture<PeerConnection> connection;
-      connection = network.pendingConnections.remove(peer);
-      assertThat(connection).isNotNull();
-      assertThat(connection.cancel(true)).isTrue();
-    }
-
-    {
-      final PeerConnection peerConnection = mockPeerConnection(peer.getId());
-      network.connections.registerConnection(peerConnection);
-      network.checkMaintainedConnectionPeers();
-      verify(network, times(1)).connect(peer);
-    }
+    // Check maintained connections
+    network.checkMaintainedConnectionPeers();
+    verify(network, times(1)).connect(peer);
   }
 
   @Test

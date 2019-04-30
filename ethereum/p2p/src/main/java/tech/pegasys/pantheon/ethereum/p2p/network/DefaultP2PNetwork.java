@@ -19,8 +19,6 @@ import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.chain.BlockAddedEvent;
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
-import tech.pegasys.pantheon.ethereum.p2p.ConnectingToLocalNodeException;
-import tech.pegasys.pantheon.ethereum.p2p.PeerNotPermittedException;
 import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.Message;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
@@ -365,21 +363,13 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public boolean addMaintainConnectionPeer(final Peer peer) {
-    if (!isPeerAllowed(peer)) {
-      throw new PeerNotPermittedException();
-    }
-
-    if (peer.getId().equals(ourPeerInfo.getNodeId())) {
-      throw new ConnectingToLocalNodeException();
-    }
-
     final boolean added = peerMaintainConnectionList.add(peer);
-    if (added) {
+    if (isPeerAllowed(peer) && !isConnectingOrConnected(peer)) {
+      // Connect immediately if appropriate
       connect(peer);
-      return true;
-    } else {
-      return false;
     }
+
+    return added;
   }
 
   @Override
@@ -397,12 +387,11 @@ public class DefaultP2PNetwork implements P2PNetwork {
     return removed;
   }
 
-  public void checkMaintainedConnectionPeers() {
-    for (final Peer peer : peerMaintainConnectionList) {
-      if (!(isConnecting(peer) || isConnected(peer))) {
-        connect(peer);
-      }
-    }
+  void checkMaintainedConnectionPeers() {
+    peerMaintainConnectionList.stream()
+        .filter(p -> !isConnectingOrConnected(p))
+        .filter(this::isPeerAllowed)
+        .forEach(this::connect);
   }
 
   @VisibleForTesting
@@ -555,7 +544,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
     setLocalNode();
 
     peerConnectionScheduler.scheduleWithFixedDelay(
-        this::checkMaintainedConnectionPeers, 60, 60, TimeUnit.SECONDS);
+        this::checkMaintainedConnectionPeers, 2, 60, TimeUnit.SECONDS);
     peerConnectionScheduler.scheduleWithFixedDelay(
         this::attemptPeerConnections, 30, 30, TimeUnit.SECONDS);
   }
@@ -615,13 +604,16 @@ public class DefaultP2PNetwork implements P2PNetwork {
     if (peerBlacklist.contains(enode.getNodeId())) {
       return false;
     }
+    if (enode.getNodeId().equals(ourPeerInfo.getNodeId())) {
+      // Peer matches our node id
+      return false;
+    }
 
     Optional<EnodeURL> maybeEnode = getLocalEnode();
     if (!maybeEnode.isPresent()) {
       // If local enode isn't yet available we can't evaluate permissions
       return false;
     }
-
     return nodePermissioningController
         .map(c -> c.isPermitted(maybeEnode.get(), enode))
         .orElse(true);
@@ -635,6 +627,10 @@ public class DefaultP2PNetwork implements P2PNetwork {
   @VisibleForTesting
   boolean isConnected(final Peer peer) {
     return connections.isAlreadyConnected(peer.getId());
+  }
+
+  private boolean isConnectingOrConnected(final Peer peer) {
+    return isConnected(peer) || isConnecting(peer);
   }
 
   @Override
