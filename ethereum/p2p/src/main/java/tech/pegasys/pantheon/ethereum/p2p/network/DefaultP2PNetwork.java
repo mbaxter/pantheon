@@ -542,7 +542,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
         }
       }
 
-      setLocalNode();
+      setLocalEnode();
 
       peerConnectionScheduler.scheduleWithFixedDelay(
           this::checkMaintainedConnectionPeers, 2, 60, TimeUnit.SECONDS);
@@ -691,7 +691,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
     return localEnode;
   }
 
-  private void setLocalNode() {
+  private void setLocalEnode() {
     if (localEnode.isPresent()) {
       return;
     }
