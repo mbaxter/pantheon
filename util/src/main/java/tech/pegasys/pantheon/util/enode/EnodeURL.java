@@ -31,7 +31,7 @@ public class EnodeURL {
 
   private static final int NODE_ID_SIZE = 64;
   private static final Pattern DISCPORT_QUERY_STRING_REGEX =
-      Pattern.compile("discport=([0-9]{1,5})");
+      Pattern.compile("^discport=([0-9]{1,5})$");
   private static final Pattern NODE_ID_PATTERN = Pattern.compile("^[0-9a-fA-F]{128}$");
 
   private final BytesValue nodeId;
@@ -50,10 +50,10 @@ public class EnodeURL {
         nodeId.size() == NODE_ID_SIZE, "Invalid node id.  Expected id of length: 64 bytes.");
     checkArgument(
         NetworkUtility.isValidPort(listeningPort),
-        "Invalid listening port.  Port should be between 0 - 65535.");
+        "Invalid listening port.  Port should be between 1 - 65535.");
     checkArgument(
         !discoveryPort.isPresent() || NetworkUtility.isValidPort(discoveryPort.getAsInt()),
-        "Invalid discovery port.  Port should be between 0 - 65535.");
+        "Invalid discovery port.  Port should be between 1 - 65535.");
 
     this.nodeId = nodeId;
     this.ip = address;
@@ -98,12 +98,14 @@ public class EnodeURL {
 
     // Parse discport if it exists
     OptionalInt discoveryPort = OptionalInt.empty();
-    String query = uri.getQuery() == null ? "" : uri.getQuery();
-    final Matcher discPortMatcher = DISCPORT_QUERY_STRING_REGEX.matcher(query);
-    if (discPortMatcher.matches()) {
-      Integer discPort = Ints.tryParse(discPortMatcher.group(1));
-      checkArgument(discPort != null, "Invalid discovery port: " + discPortMatcher.group(1) + ".");
-      discoveryPort = OptionalInt.of(discPort);
+    String query = uri.getQuery();
+    if (query != null) {
+      final Matcher discPortMatcher = DISCPORT_QUERY_STRING_REGEX.matcher(query);
+      if (discPortMatcher.matches()) {
+        Integer discPort = Ints.tryParse(discPortMatcher.group(1));
+        discoveryPort = discPort == null ? discoveryPort : OptionalInt.of(discPort);
+      }
+      checkArgument(discoveryPort.isPresent(), "Invalid discovery port: '" + query + "'.");
     }
 
     final BytesValue id = BytesValue.fromHexString(uri.getUserInfo());

@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.util.enode;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.net.URI;
@@ -205,7 +206,8 @@ public class EnodeURLTest {
 
   @Test
   public void fromString_withoutListeningPortAndWithDiscoveryPortShouldFail() {
-    final String enodeURLString = "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":?30301";
+    final String enodeURLString =
+        "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":?discport=30301";
     final Throwable thrown = catchThrowable(() -> EnodeURL.fromString(enodeURLString));
 
     assertThat(thrown)
@@ -232,6 +234,61 @@ public class EnodeURLTest {
     assertThat(thrown)
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Invalid discovery port.");
+  }
+
+  @Test
+  public void fromString_withMisspelledDiscoveryParam() {
+    final String query = "adiscport=1234";
+    final String enodeURLString =
+        "enode://" + VALID_NODE_ID + "@" + IPV6_FULL_ADDRESS + ":" + P2P_PORT + "?" + query;
+
+    assertThatThrownBy(() -> EnodeURL.fromString(enodeURLString))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid discovery port: '" + query + "'");
+  }
+
+  @Test
+  public void fromString_withAdditionalTrailingQueryParam() {
+    final String query = "discport=1234&other=y";
+    final String enodeURLString =
+        "enode://" + VALID_NODE_ID + "@" + IPV6_FULL_ADDRESS + ":" + P2P_PORT + "?" + query;
+
+    assertThatThrownBy(() -> EnodeURL.fromString(enodeURLString))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid discovery port: '" + query + "'");
+  }
+
+  @Test
+  public void fromString_withAdditionalLeadingQueryParam() {
+    final String query = "other=123&discport=1234";
+    final String enodeURLString =
+        "enode://" + VALID_NODE_ID + "@" + IPV6_FULL_ADDRESS + ":" + P2P_PORT + "?" + query;
+
+    assertThatThrownBy(() -> EnodeURL.fromString(enodeURLString))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid discovery port: '" + query + "'");
+  }
+
+  @Test
+  public void fromString_withAdditionalLeadingAndTrailingQueryParams() {
+    final String query = "other=123&discport=1234&other2=456";
+    final String enodeURLString =
+        "enode://" + VALID_NODE_ID + "@" + IPV6_FULL_ADDRESS + ":" + P2P_PORT + "?" + query;
+
+    assertThatThrownBy(() -> EnodeURL.fromString(enodeURLString))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid discovery port: '" + query + "'");
+  }
+
+  @Test
+  public void fromString_withMultipleDiscoveryParams() {
+    final String query = "discport=1234&discport=456";
+    final String enodeURLString =
+        "enode://" + VALID_NODE_ID + "@" + IPV6_FULL_ADDRESS + ":" + P2P_PORT + "?" + query;
+
+    assertThatThrownBy(() -> EnodeURL.fromString(enodeURLString))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid discovery port: '" + query + "'");
   }
 
   @Test
