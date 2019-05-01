@@ -41,7 +41,6 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.subscription.pending.Pen
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.subscription.pending.PendingTransactionSubscriptionService;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.subscription.syncing.SyncingSubscriptionService;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
-import tech.pegasys.pantheon.ethereum.p2p.ConnectingToLocalNodeException;
 import tech.pegasys.pantheon.ethereum.p2p.InsufficientPeersPermissioningProvider;
 import tech.pegasys.pantheon.ethereum.p2p.NetworkRunner;
 import tech.pegasys.pantheon.ethereum.p2p.NetworkRunner.NetworkBuilder;
@@ -54,7 +53,6 @@ import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.SubProtocolConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.network.DefaultP2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
@@ -310,14 +308,9 @@ public class RunnerBuilder {
 
     final P2PNetwork peerNetwork = networkRunner.getNetwork();
 
-    staticNodes.forEach(
-        enodeURL -> {
-          final Peer peer = DefaultPeer.fromEnodeURL(enodeURL);
-          try {
-            peerNetwork.addMaintainConnectionPeer(peer);
-          } catch (ConnectingToLocalNodeException ex) {
-          }
-        });
+    staticNodes.stream()
+        .map(DefaultPeer::fromEnodeURL)
+        .forEach(peerNetwork::addMaintainConnectionPeer);
 
     Optional<JsonRpcHttpService> jsonRpcHttpService = Optional.empty();
     if (jsonRpcConfiguration.isEnabled()) {
