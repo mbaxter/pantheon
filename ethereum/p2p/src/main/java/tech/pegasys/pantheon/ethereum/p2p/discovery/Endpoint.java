@@ -56,8 +56,7 @@ public class Endpoint {
         enode.getDiscoveryPort().isPresent()
             ? OptionalInt.of(enode.getListeningPort())
             : OptionalInt.empty();
-    return new Endpoint(
-        enode.getInetAddress().getHostAddress(), enode.getEffectiveDiscoveryPort(), tcpPort);
+    return new Endpoint(enode.getIp().getHostAddress(), enode.getEffectiveDiscoveryPort(), tcpPort);
   }
 
   public EnodeURL toEnode(final BytesValue nodeId) {

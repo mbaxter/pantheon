@@ -150,10 +150,6 @@ public class EnodeURL {
     return ip;
   }
 
-  public InetAddress getInetAddress() {
-    return ip;
-  }
-
   public int getListeningPort() {
     return listeningPort;
   }
