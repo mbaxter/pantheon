@@ -181,7 +181,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   private final String advertisedHost;
 
-  private volatile Optional<EnodeURL> ourEnodeURL = Optional.empty();
+  private volatile EnodeURL ourEnodeURL;
 
   private final Optional<NodePermissioningController> nodePermissioningController;
   private final Optional<Blockchain> blockchain;
@@ -548,8 +548,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
       }
     }
 
-    this.ourEnodeURL = Optional.of(buildSelfEnodeURL());
-    LOG.info("Enode URL {}", ourEnodeURL.get().toString());
+    this.ourEnodeURL = buildSelfEnodeURL();
+    LOG.info("Enode URL {}", ourEnodeURL.toString());
 
     peerConnectionScheduler.scheduleWithFixedDelay(
         this::checkMaintainedConnectionPeers, 60, 60, TimeUnit.SECONDS);
@@ -624,12 +624,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
       return false;
     }
 
-    if (!ourEnodeURL.isPresent()) {
-      return false;
-    }
-    EnodeURL ourEnode = ourEnodeURL.get();
     return nodePermissioningController
-        .map(c -> c.isPermitted(ourEnode, peer.getEnodeURL()))
+        .map(c -> c.isPermitted(ourEnodeURL, peer.getEnodeURL()))
         .orElse(true);
   }
 
@@ -694,7 +690,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public Optional<EnodeURL> getLocalEnode() {
-    return ourEnodeURL;
+    return Optional.ofNullable(ourEnodeURL);
   }
 
   private EnodeURL buildSelfEnodeURL() {
