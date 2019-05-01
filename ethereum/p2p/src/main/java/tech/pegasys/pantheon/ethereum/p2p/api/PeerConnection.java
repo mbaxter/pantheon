@@ -65,6 +65,7 @@ public interface PeerConnection {
     send(capability(protocol), message);
   }
 
+  /** @return A representation of the remote peer this node is connected to. */
   Peer getPeer();
 
   /**
