@@ -14,10 +14,13 @@ package tech.pegasys.pantheon.ethereum.eth.manager;
 
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
+import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
+import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -34,11 +37,17 @@ public class MockPeerConnection implements PeerConnection {
   private final Set<Capability> caps;
   private volatile boolean disconnected = false;
   private final Bytes32 nodeId;
+  private final Peer peer;
+  private final PeerInfo peerInfo;
 
   public MockPeerConnection(final Set<Capability> caps, final PeerSendHandler onSend) {
     this.caps = caps;
     this.onSend = onSend;
     this.nodeId = generateUsefulNodeId();
+    this.peer =
+        DefaultPeer.fromEnodeURL(
+            EnodeURL.builder().ipAddress("127.0.0.1").nodeId(nodeId).listeningPort(30303).build());
+    this.peerInfo = new PeerInfo(5, "Mock", new ArrayList<>(caps), 30303, nodeId);
   }
 
   private Bytes32 generateUsefulNodeId() {
@@ -65,8 +74,13 @@ public class MockPeerConnection implements PeerConnection {
   }
 
   @Override
+  public Peer getPeer() {
+    return peer;
+  }
+
+  @Override
   public PeerInfo getPeerInfo() {
-    return new PeerInfo(5, "Mock", new ArrayList<>(caps), 0, nodeId);
+    return peerInfo;
   }
 
   @Override
