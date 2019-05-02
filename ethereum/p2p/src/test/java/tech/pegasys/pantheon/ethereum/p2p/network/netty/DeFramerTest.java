@@ -201,7 +201,15 @@ public class DeFramerTest {
     PeerConnection peerConnection = connectFuture.get();
     assertThat(peerConnection.getPeerInfo()).isEqualTo(remotePeerInfo);
     assertThat(out).isEmpty();
-    assertThat(peerConnection.getPeer().getEnodeURL()).isEqualTo(peer.getEnodeURL());
+
+    final EnodeURL expectedEnode =
+        EnodeURL.builder()
+            .ipAddress(remoteAddress.getAddress())
+            .nodeId(peer.getId())
+            // Listening port should be replaced with default port
+            .listeningPort(EnodeURL.DEFAULT_LISTENING_PORT)
+            .build();
+    assertThat(peerConnection.getPeer().getEnodeURL()).isEqualTo(expectedEnode);
 
     // Next phase of pipeline should be setup
     verify(pipeline, times(1)).addLast(any());
