@@ -105,6 +105,7 @@ public class DefaultSynchronizer<C> implements Synchronizer {
   @Override
   public void start() {
     if (running.compareAndSet(false, true)) {
+      LOG.info("Starting synchronizer.");
       syncState.addSyncStatusListener(this::syncStatusCallback);
       blockPropagationManager.start();
       if (fastSyncDownloader.isPresent()) {
@@ -119,8 +120,8 @@ public class DefaultSynchronizer<C> implements Synchronizer {
 
   @Override
   public void stop() {
-    LOG.info("Stopping synchronizer");
     if (running.compareAndSet(true, false)) {
+      LOG.info("Stopping synchronizer");
       fastSyncDownloader.ifPresent(FastSyncDownloader::stop);
       fullSyncDownloader.stop();
     }
@@ -149,7 +150,6 @@ public class DefaultSynchronizer<C> implements Synchronizer {
   }
 
   private void startFullSync() {
-    LOG.info("Starting synchronizer.");
     fullSyncDownloader.start();
   }
 
