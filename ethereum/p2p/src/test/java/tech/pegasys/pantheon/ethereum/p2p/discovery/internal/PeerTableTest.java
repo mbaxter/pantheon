@@ -46,11 +46,7 @@ public class PeerTableTest {
   public void addSelf() {
     final DiscoveryPeer localPeer =
         DiscoveryPeer.fromEnode(
-            EnodeURL.builder()
-                .nodeId(Peer.randomId())
-                .ipAddress("127.0.0.1")
-                .listeningPort(12345)
-                .build());
+            EnodeURL.builder().nodeId(Peer.randomId()).ipAddress("127.0.0.1").ports(12345).build());
     final PeerTable table = new PeerTable(localPeer.getId(), 16);
     final PeerTable.AddResult result = table.tryAdd(localPeer);
 

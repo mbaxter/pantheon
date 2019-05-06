@@ -69,7 +69,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
@@ -529,7 +528,7 @@ public final class DefaultP2PNetworkTest {
             5,
             "test",
             Arrays.asList(Capability.create("eth", 63)),
-            remoteEnode.getListeningPort(),
+            remoteEnode.getListeningPortOrZero(),
             remoteEnode.getNodeId());
 
     final PeerConnection peerConnection = mock(PeerConnection.class);
@@ -612,32 +611,12 @@ public final class DefaultP2PNetworkTest {
     return EnodeURL.builder()
         .ipAddress(InetAddress.getLoopbackAddress().getHostAddress())
         .nodeId(nodeId)
-        .listeningPort(listenPort)
+        .ports(listenPort)
         .build();
   }
 
-  public static class EnodeURLMatcher implements ArgumentMatcher<EnodeURL> {
-
-    private final EnodeURL enodeURL;
-
-    EnodeURLMatcher(final EnodeURL enodeURL) {
-      this.enodeURL = enodeURL;
-    }
-
-    @Override
-    public boolean matches(final EnodeURL argument) {
-      if (argument == null) {
-        return false;
-      } else {
-        return enodeURL.getNodeId().equals(argument.getNodeId())
-            && enodeURL.getIp().equals(argument.getIp())
-            && enodeURL.getListeningPort() == argument.getListeningPort();
-      }
-    }
-  }
-
   private EnodeURL enodeEq(final EnodeURL enodeURL) {
-    return argThat(new EnodeURLMatcher(enodeURL));
+    return argThat((EnodeURL e) -> EnodeURL.sameListeningEndpoint(e, enodeURL));
   }
 
   private static SubProtocol subProtocol() {

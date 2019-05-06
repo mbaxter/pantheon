@@ -109,6 +109,23 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
     this.bootstrapPeers =
         config.getBootstrapPeers().stream()
             .map(Peer::getEnodeURL)
+            .map(
+                enode -> {
+                  if (!enode.isRunningDiscovery()) {
+                    final EnodeURL modifiedEnode =
+                        EnodeURL.builder()
+                            .configureFromEnode(enode)
+                            .discoveryPort(EnodeURL.DEFAULT_LISTENING_PORT)
+                            .build();
+                    LOG.warn(
+                        "Encountered bootnode with discovery disabled: {}.\nAssuming default discovery port: {}.\nModified bootnode: {}",
+                        enode.toString(),
+                        EnodeURL.DEFAULT_LISTENING_PORT,
+                        modifiedEnode.toString());
+                    return modifiedEnode;
+                  }
+                  return enode;
+                })
             .map(DiscoveryPeer::fromEnode)
             .collect(Collectors.toList());
 

@@ -447,11 +447,14 @@ public class DefaultP2PNetwork implements P2PNetwork {
       LOG.debug("Attempted to connect to peer with pending connection: {}", peer.getId());
       return existingPendingConnection;
     }
+    if (!enode.isListening()) {
+      LOG.warn("Attempt to connect to peer with no listening port: {}", enode.toString());
+    }
 
     new Bootstrap()
         .group(workers)
         .channel(NioSocketChannel.class)
-        .remoteAddress(new InetSocketAddress(enode.getIp(), enode.getListeningPort()))
+        .remoteAddress(new InetSocketAddress(enode.getIp(), enode.getListeningPort().getAsInt()))
         .option(ChannelOption.TCP_NODELAY, true)
         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, TIMEOUT_SECONDS * 1000)
         .handler(
@@ -710,8 +713,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
         peerDiscoveryAgent
             .getAdvertisedPeer()
             .map(Peer::getEnodeURL)
-            .map(EnodeURL::getEffectiveDiscoveryPort)
-            .map(OptionalInt::of)
+            .map(EnodeURL::getDiscoveryPort)
             .orElse(OptionalInt.empty());
 
     final EnodeURL localEnode =

@@ -53,11 +53,7 @@ public class NettyPeerConnectionTest {
     when(channel.eventLoop()).thenReturn(eventLoop);
     final Peer peer =
         DefaultPeer.fromEnodeURL(
-            EnodeURL.builder()
-                .ipAddress("127.0.0.1")
-                .listeningPort(12345)
-                .nodeId(Peer.randomId())
-                .build());
+            EnodeURL.builder().ipAddress("127.0.0.1").ports(12345).nodeId(Peer.randomId()).build());
     connection =
         new NettyPeerConnection(
             context,
