@@ -154,20 +154,12 @@ public class EnodeURL {
    * @return
    */
   private OptionalInt getDiscPortQueryParam() {
-    if (!discoveryPort.isPresent()) {
-      // If discovery is disabled, explicitly define a 0-valued port
-      return OptionalInt.of(0);
-    }
-    if (getListeningPortOrZero() == 0) {
-      // If listening port is empty, explicitly define the discovery port
-      return OptionalInt.of(getDiscoveryPortOrZero());
-    }
-    if (getListeningPortOrZero() == getDiscoveryPortOrZero()) {
-      // Listening and discovery ports are the same, so don't include the discport param
+    final int listeningPort = getListeningPortOrZero();
+    final int discoveryPort = getDiscoveryPortOrZero();
+    if (listeningPort == discoveryPort) {
       return OptionalInt.empty();
     }
-
-    return discoveryPort;
+    return OptionalInt.of(discoveryPort);
   }
 
   public static URI asURI(final String url) {
