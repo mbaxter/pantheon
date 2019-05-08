@@ -610,4 +610,104 @@ public class EnodeURLTest {
       .isInstanceOf(IllegalStateException.class)
       .hasMessageContaining("Ip address must be configured");
   }
+
+  @Test
+  public void sameListeningEndpoint_forMatchingEnodes() {
+    final EnodeURL enodeA =
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .listeningPort(P2P_PORT)
+            .discoveryPort(DISCOVERY_PORT)
+            .build();
+    final EnodeURL enodeB =
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .listeningPort(P2P_PORT)
+            .discoveryPort(DISCOVERY_PORT + 1)
+            .build();
+
+    assertThat(EnodeURL.sameListeningEndpoint(enodeA, enodeB)).isTrue();
+  }
+
+  @Test
+  public void sameListeningEndpoint_differentListeningPorts() {
+    final EnodeURL enodeA =
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .listeningPort(P2P_PORT)
+            .discoveryPort(DISCOVERY_PORT)
+            .build();
+    final EnodeURL enodeB =
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .listeningPort(P2P_PORT + 1)
+            .discoveryPort(DISCOVERY_PORT)
+            .build();
+
+    assertThat(EnodeURL.sameListeningEndpoint(enodeA, enodeB)).isFalse();
+  }
+
+  @Test
+  public void sameListeningEndpoint_differentIps() {
+    final EnodeURL enodeA =
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV6_COMPACT_ADDRESS)
+            .listeningPort(P2P_PORT)
+            .discoveryPort(DISCOVERY_PORT)
+            .build();
+    final EnodeURL enodeB =
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .listeningPort(P2P_PORT)
+            .discoveryPort(DISCOVERY_PORT)
+            .build();
+
+    assertThat(EnodeURL.sameListeningEndpoint(enodeA, enodeB)).isFalse();
+  }
+
+  @Test
+  public void sameListeningEndpoint_listeningDisabledForOne() {
+    final EnodeURL enodeA =
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .disableListening()
+            .discoveryPort(DISCOVERY_PORT)
+            .build();
+    final EnodeURL enodeB =
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .listeningPort(P2P_PORT)
+            .discoveryPort(DISCOVERY_PORT)
+            .build();
+
+    assertThat(EnodeURL.sameListeningEndpoint(enodeA, enodeB)).isFalse();
+  }
+
+  @Test
+  public void sameListeningEndpoint_listeningDisabledForBoth() {
+    final EnodeURL enodeA =
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .disableListening()
+            .discoveryPort(DISCOVERY_PORT)
+            .build();
+    final EnodeURL enodeB =
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .disableListening()
+            .discoveryPort(DISCOVERY_PORT)
+            .build();
+
+    assertThat(EnodeURL.sameListeningEndpoint(enodeA, enodeB)).isTrue();
+  }
 }
