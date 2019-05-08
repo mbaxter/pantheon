@@ -304,7 +304,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
           latch.countDown();
         });
 
-    // Ensure ourPeerInfo has been set prior to returning from the constructor.
+    // Ensure ourPeerInfo has been set prior to returning
     try {
       if (!latch.await(1, TimeUnit.MINUTES)) {
         throw new RuntimeException("Timed out while waiting for network startup");
