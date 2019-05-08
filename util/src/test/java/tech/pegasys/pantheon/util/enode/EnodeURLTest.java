@@ -141,7 +141,7 @@ public class EnodeURLTest {
   public void fromString_with0ValuedDiscoveryPort() {
     final String query = "discport=0";
     final String enodeURLString =
-      "enode://" + VALID_NODE_ID + "@" + IPV6_COMPACT_ADDRESS + ":" + P2P_PORT + "?" + query;
+        "enode://" + VALID_NODE_ID + "@" + IPV6_COMPACT_ADDRESS + ":" + P2P_PORT + "?" + query;
 
     EnodeURL enodeURL = EnodeURL.fromString(enodeURLString);
     assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
@@ -156,8 +156,7 @@ public class EnodeURLTest {
 
   @Test
   public void fromString_with0ValuedListeningPort() {
-    final String enodeURLString =
-      "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + 0;
+    final String enodeURLString = "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + 0;
 
     EnodeURL enodeURL = EnodeURL.fromString(enodeURLString);
     assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
@@ -174,7 +173,7 @@ public class EnodeURLTest {
   public void fromString_with0ValuedListeningPortAndExplicit0ValuedDiscPort() {
     final String query = "discport=0";
     final String enodeURLString =
-      "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + 0 + "?" + query;
+        "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + 0 + "?" + query;
 
     EnodeURL enodeURL = EnodeURL.fromString(enodeURLString);
     assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
@@ -364,6 +363,15 @@ public class EnodeURLTest {
   }
 
   @Test
+  public void fromStringInvalidNodeIdLengthHasDescriptiveMessage() {
+    String invalidEnodeURL =
+      String.format("enode://%s@%s:%d", VALID_NODE_ID.substring(1), IPV4_ADDRESS, P2P_PORT);
+    assertThatThrownBy(() -> EnodeURL.fromString(invalidEnodeURL))
+      .isInstanceOf(IllegalArgumentException.class)
+      .hasMessageContaining("node ID must have exactly 128 hexadecimal");
+  }
+
+  @Test
   public void toURI_WithDiscoveryPortCreateExpectedURI() {
     final String enodeURLString =
         "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + P2P_PORT + "?" + DISCOVERY_QUERY;
@@ -382,13 +390,224 @@ public class EnodeURLTest {
     assertThat(createdURI).isEqualTo(expectedURI);
   }
 
+  @Test
+  public void builder_setEachPortExplicitly() {
+    final EnodeURL enodeURL =
+      EnodeURL.builder()
+        .nodeId(VALID_NODE_ID)
+        .ipAddress(IPV4_ADDRESS)
+        .listeningPort(P2P_PORT)
+        .discoveryPort(DISCOVERY_PORT)
+        .build();
+
+    assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
+    assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
+    assertThat(enodeURL.getListeningPortOrZero()).isEqualTo(P2P_PORT);
+    assertThat(enodeURL.getDiscoveryPortOrZero()).isEqualTo(DISCOVERY_PORT);
+    assertThat(enodeURL.isListening()).isTrue();
+    assertThat(enodeURL.isRunningDiscovery()).isTrue();
+  }
 
   @Test
-  public void fromStringInvalidNodeIdLengthHasDescriptiveMessage() {
-    String invalidEnodeURL =
-      String.format("enode://%s@%s:%d", VALID_NODE_ID.substring(1), IPV4_ADDRESS, P2P_PORT);
-    assertThatThrownBy(() -> EnodeURL.fromString(invalidEnodeURL))
-      .isInstanceOf(IllegalArgumentException.class)
-      .hasMessageContaining("node ID must have exactly 128 hexadecimal");
+  public void builder_setPortsTogether() {
+    final EnodeURL enodeURL =
+      EnodeURL.builder().nodeId(VALID_NODE_ID).ipAddress(IPV4_ADDRESS).ports(P2P_PORT).build();
+
+    assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
+    assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
+    assertThat(enodeURL.getListeningPortOrZero()).isEqualTo(P2P_PORT);
+    assertThat(enodeURL.getDiscoveryPortOrZero()).isEqualTo(P2P_PORT);
+    assertThat(enodeURL.isListening()).isTrue();
+    assertThat(enodeURL.isRunningDiscovery()).isTrue();
+  }
+
+  @Test
+  public void builder_setDefaultPorts() {
+    final EnodeURL enodeURL =
+      EnodeURL.builder().nodeId(VALID_NODE_ID).ipAddress(IPV4_ADDRESS).useDefaultPorts().build();
+
+    assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
+    assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
+    assertThat(enodeURL.getListeningPortOrZero()).isEqualTo(EnodeURL.DEFAULT_LISTENING_PORT);
+    assertThat(enodeURL.getDiscoveryPortOrZero()).isEqualTo(EnodeURL.DEFAULT_LISTENING_PORT);
+    assertThat(enodeURL.isListening()).isTrue();
+    assertThat(enodeURL.isRunningDiscovery()).isTrue();
+  }
+
+  @Test
+  public void builder_discoveryDisabled() {
+    final EnodeURL enodeURL =
+      EnodeURL.builder()
+        .nodeId(VALID_NODE_ID)
+        .ipAddress(IPV4_ADDRESS)
+        .listeningPort(P2P_PORT)
+        .disableDiscovery()
+        .build();
+
+    assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
+    assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
+    assertThat(enodeURL.getListeningPortOrZero()).isEqualTo(P2P_PORT);
+    assertThat(enodeURL.getDiscoveryPortOrZero()).isEqualTo(0);
+    assertThat(enodeURL.isListening()).isTrue();
+    assertThat(enodeURL.isRunningDiscovery()).isFalse();
+  }
+
+  @Test
+  public void builder_listeningDisabled() {
+    final EnodeURL enodeURL =
+      EnodeURL.builder()
+        .nodeId(VALID_NODE_ID)
+        .ipAddress(IPV4_ADDRESS)
+        .discoveryPort(P2P_PORT)
+        .disableListening()
+        .build();
+
+    assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
+    assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
+    assertThat(enodeURL.getListeningPortOrZero()).isEqualTo(0);
+    assertThat(enodeURL.getDiscoveryPortOrZero()).isEqualTo(P2P_PORT);
+    assertThat(enodeURL.isListening()).isFalse();
+    assertThat(enodeURL.isRunningDiscovery()).isTrue();
+  }
+
+  @Test
+  public void builder_listeningAndDiscoveryDisabled() {
+    final EnodeURL enodeURL =
+      EnodeURL.builder()
+        .nodeId(VALID_NODE_ID)
+        .ipAddress(IPV4_ADDRESS)
+        .disableDiscovery()
+        .disableListening()
+        .build();
+
+    assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
+    assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
+    assertThat(enodeURL.getListeningPortOrZero()).isEqualTo(0);
+    assertThat(enodeURL.getDiscoveryPortOrZero()).isEqualTo(0);
+    assertThat(enodeURL.isListening()).isFalse();
+    assertThat(enodeURL.isRunningDiscovery()).isFalse();
+  }
+
+  @Test
+  public void builder_setPortsTo0() {
+    final EnodeURL enodeURL =
+      EnodeURL.builder().nodeId(VALID_NODE_ID).ipAddress(IPV4_ADDRESS).ports(0).build();
+
+    assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
+    assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
+    assertThat(enodeURL.getListeningPortOrZero()).isEqualTo(0);
+    assertThat(enodeURL.getDiscoveryPortOrZero()).isEqualTo(0);
+    assertThat(enodeURL.isListening()).isFalse();
+    assertThat(enodeURL.isRunningDiscovery()).isFalse();
+  }
+
+  @Test
+  public void builder_setDiscoveryPortTo0() {
+    final EnodeURL enodeURL =
+      EnodeURL.builder()
+        .nodeId(VALID_NODE_ID)
+        .ipAddress(IPV4_ADDRESS)
+        .discoveryPort(0)
+        .listeningPort(P2P_PORT)
+        .build();
+
+    assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
+    assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
+    assertThat(enodeURL.getListeningPortOrZero()).isEqualTo(P2P_PORT);
+    assertThat(enodeURL.getDiscoveryPortOrZero()).isEqualTo(0);
+    assertThat(enodeURL.isListening()).isTrue();
+    assertThat(enodeURL.isRunningDiscovery()).isFalse();
+  }
+
+  @Test
+  public void builder_setListeningPortTo0() {
+    final EnodeURL enodeURL =
+      EnodeURL.builder()
+        .nodeId(VALID_NODE_ID)
+        .ipAddress(IPV4_ADDRESS)
+        .discoveryPort(P2P_PORT)
+        .listeningPort(0)
+        .build();
+
+    assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
+    assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
+    assertThat(enodeURL.getListeningPortOrZero()).isEqualTo(0);
+    assertThat(enodeURL.getDiscoveryPortOrZero()).isEqualTo(P2P_PORT);
+    assertThat(enodeURL.isListening()).isFalse();
+    assertThat(enodeURL.isRunningDiscovery()).isTrue();
+  }
+
+  @Test
+  public void builder_setDiscoveryPortToEmptyValue() {
+    final EnodeURL enodeURL =
+      EnodeURL.builder()
+        .nodeId(VALID_NODE_ID)
+        .ipAddress(IPV4_ADDRESS)
+        .discoveryPort(OptionalInt.empty())
+        .listeningPort(P2P_PORT)
+        .build();
+
+    assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
+    assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
+    assertThat(enodeURL.getListeningPortOrZero()).isEqualTo(P2P_PORT);
+    assertThat(enodeURL.getDiscoveryPortOrZero()).isEqualTo(0);
+    assertThat(enodeURL.isListening()).isTrue();
+    assertThat(enodeURL.isRunningDiscovery()).isFalse();
+  }
+
+  @Test
+  public void builder_setListeningPortToEmptyValue() {
+    final EnodeURL enodeURL =
+      EnodeURL.builder()
+        .nodeId(VALID_NODE_ID)
+        .ipAddress(IPV4_ADDRESS)
+        .discoveryPort(P2P_PORT)
+        .listeningPort(OptionalInt.empty())
+        .build();
+
+    assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
+    assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
+    assertThat(enodeURL.getListeningPortOrZero()).isEqualTo(0);
+    assertThat(enodeURL.getDiscoveryPortOrZero()).isEqualTo(P2P_PORT);
+    assertThat(enodeURL.isListening()).isFalse();
+    assertThat(enodeURL.isRunningDiscovery()).isTrue();
+  }
+
+  @Test
+  public void builder_discoveryNotSpecified() {
+    final EnodeURL.Builder builder =
+      EnodeURL.builder().nodeId(VALID_NODE_ID).ipAddress(IPV4_ADDRESS).listeningPort(P2P_PORT);
+
+    assertThatThrownBy(builder::build)
+      .isInstanceOf(IllegalStateException.class)
+      .hasMessageContaining("Discovery port must be configured");
+  }
+
+  @Test
+  public void builder_listeningPortNotSpecified() {
+    final EnodeURL.Builder builder =
+      EnodeURL.builder().nodeId(VALID_NODE_ID).ipAddress(IPV4_ADDRESS).discoveryPort(P2P_PORT);
+
+    assertThatThrownBy(builder::build)
+      .isInstanceOf(IllegalStateException.class)
+      .hasMessageContaining("Listening port must be configured");
+  }
+
+  @Test
+  public void builder_nodeIdNotSpecified() {
+    final EnodeURL.Builder builder = EnodeURL.builder().ipAddress(IPV4_ADDRESS).ports(P2P_PORT);
+
+    assertThatThrownBy(builder::build)
+      .isInstanceOf(IllegalStateException.class)
+      .hasMessageContaining("Node id must be configured");
+  }
+
+  @Test
+  public void builder_ipNotSpecified() {
+    final EnodeURL.Builder builder = EnodeURL.builder().nodeId(VALID_NODE_ID).ports(P2P_PORT);
+
+    assertThatThrownBy(builder::build)
+      .isInstanceOf(IllegalStateException.class)
+      .hasMessageContaining("Ip address must be configured");
   }
 }
