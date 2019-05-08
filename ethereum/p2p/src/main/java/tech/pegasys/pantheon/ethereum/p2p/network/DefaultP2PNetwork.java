@@ -187,6 +187,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
   private OptionalLong blockAddedObserverId = OptionalLong.empty();
 
   private final AtomicBoolean started = new AtomicBoolean(false);
+  private final AtomicBoolean stopped = new AtomicBoolean(false);
 
   /**
    * Creates a peer networking service for production purposes.
@@ -642,18 +643,20 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public void stop() {
-    sendClientQuittingToPeers();
-    peerConnectionScheduler.shutdownNow();
-    peerDiscoveryAgent.stop().join();
-    peerBondedObserverId.ifPresent(peerDiscoveryAgent::removePeerBondedObserver);
-    peerBondedObserverId = OptionalLong.empty();
-    peerDroppedObserverId.ifPresent(peerDiscoveryAgent::removePeerDroppedObserver);
-    peerDroppedObserverId = OptionalLong.empty();
-    blockchain.ifPresent(b -> blockAddedObserverId.ifPresent(b::removeObserver));
-    blockAddedObserverId = OptionalLong.empty();
-    peerDiscoveryAgent.stop().join();
-    workers.shutdownGracefully();
-    boss.shutdownGracefully();
+    if (this.started.get() && stopped.compareAndSet(false, true)) {
+      sendClientQuittingToPeers();
+      peerConnectionScheduler.shutdownNow();
+      peerDiscoveryAgent.stop().join();
+      peerBondedObserverId.ifPresent(peerDiscoveryAgent::removePeerBondedObserver);
+      peerBondedObserverId = OptionalLong.empty();
+      peerDroppedObserverId.ifPresent(peerDiscoveryAgent::removePeerDroppedObserver);
+      peerDroppedObserverId = OptionalLong.empty();
+      blockchain.ifPresent(b -> blockAddedObserverId.ifPresent(b::removeObserver));
+      blockAddedObserverId = OptionalLong.empty();
+      peerDiscoveryAgent.stop().join();
+      workers.shutdownGracefully();
+      boss.shutdownGracefully();
+    }
   }
 
   private void sendClientQuittingToPeers() {
