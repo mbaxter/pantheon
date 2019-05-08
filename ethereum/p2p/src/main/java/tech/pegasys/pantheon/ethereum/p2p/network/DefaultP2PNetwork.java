@@ -448,7 +448,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
       return existingPendingConnection;
     }
     if (!enode.isListening()) {
-      final String errorMsg = "Attempt to connect to peer with no listening port: " + enode.toString();
+      final String errorMsg =
+          "Attempt to connect to peer with no listening port: " + enode.toString();
       LOG.warn(errorMsg);
       connectionFuture.completeExceptionally(new IllegalStateException(errorMsg));
       return connectionFuture;
