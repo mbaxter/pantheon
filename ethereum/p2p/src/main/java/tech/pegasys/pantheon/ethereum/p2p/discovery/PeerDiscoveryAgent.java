@@ -109,23 +109,6 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
     this.bootstrapPeers =
         config.getBootstrapPeers().stream()
             .map(Peer::getEnodeURL)
-            .map(
-                enode -> {
-                  if (!enode.isRunningDiscovery()) {
-                    final EnodeURL modifiedEnode =
-                        EnodeURL.builder()
-                            .configureFromEnode(enode)
-                            .discoveryPort(EnodeURL.DEFAULT_LISTENING_PORT)
-                            .build();
-                    LOG.warn(
-                        "Encountered bootnode with discovery disabled: {}.\nAssuming default discovery port: {}.\nModified bootnode: {}",
-                        enode.toString(),
-                        EnodeURL.DEFAULT_LISTENING_PORT,
-                        modifiedEnode.toString());
-                    return modifiedEnode;
-                  }
-                  return enode;
-                })
             .map(DiscoveryPeer::fromEnode)
             .collect(Collectors.toList());
 
@@ -339,6 +322,24 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
         "valid port number required");
     checkArgument(config.getBootstrapPeers() != null, "bootstrapPeers cannot be null");
     checkArgument(config.getBucketSize() > 0, "bucket size cannot be negative nor zero");
+
+    final List<EnodeURL> invalidEnodes =
+        config.getBootstrapPeers().stream()
+            .map(Peer::getEnodeURL)
+            .filter(e -> !e.isRunningDiscovery())
+            .collect(Collectors.toList());
+
+    if (invalidEnodes.size() > 0) {
+      String invalidBootnodes =
+          invalidEnodes.stream().map(EnodeURL::toString).collect(Collectors.joining(","));
+      String errorMsg =
+          "Invalid bootnodes supplied to "
+              + PeerDiscoveryAgent.class.getSimpleName()
+              + ".  Bootnodes must have discovery enabled.  Invalid bootnodes: "
+              + invalidBootnodes
+              + ".";
+      throw new IllegalArgumentException(errorMsg);
+    }
   }
 
   @Override

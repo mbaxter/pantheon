@@ -28,6 +28,7 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -179,7 +180,7 @@ public class PeerDiscoveryTestHelper {
     private List<URI> bootstrapPeers = Collections.emptyList();
     private boolean active = true;
 
-    public AgentBuilder(
+    private AgentBuilder(
         final Map<BytesValue, MockPeerDiscoveryAgent> agents,
         final AtomicInteger nextAvailablePort) {
       this.agents = agents;
@@ -193,6 +194,12 @@ public class PeerDiscoveryTestHelper {
 
     public AgentBuilder bootstrapPeers(final DiscoveryPeer... peers) {
       return bootstrapPeers(asList(peers));
+    }
+
+    public AgentBuilder bootnodes(final EnodeURL... bootnodes) {
+      this.bootstrapPeers =
+          Arrays.asList(bootnodes).stream().map(EnodeURL::toURI).collect(Collectors.toList());
+      return this;
     }
 
     private List<URI> asEnodes(final List<DiscoveryPeer> peers) {
