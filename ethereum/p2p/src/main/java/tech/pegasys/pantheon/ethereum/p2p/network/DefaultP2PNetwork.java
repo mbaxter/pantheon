@@ -609,22 +609,22 @@ public class DefaultP2PNetwork implements P2PNetwork {
   }
 
   private boolean isPeerAllowed(final EnodeURL enode) {
+    final Optional<EnodeURL> maybeEnode = getLocalEnode();
+    if (!maybeEnode.isPresent()) {
+      // If the network isn't ready yet, deny connections
+      return false;
+    }
+    final EnodeURL localEnode = maybeEnode.get();
+
     if (peerBlacklist.contains(enode.getNodeId())) {
       return false;
     }
-    if (enode.getNodeId().equals(ourPeerInfo.getNodeId())) {
+    if (enode.getNodeId().equals(localEnode.getNodeId())) {
       // Peer matches our node id
       return false;
     }
 
-    Optional<EnodeURL> maybeEnode = getLocalEnode();
-    if (!maybeEnode.isPresent()) {
-      // If local enode isn't yet available we can't evaluate permissions
-      return false;
-    }
-    return nodePermissioningController
-        .map(c -> c.isPermitted(maybeEnode.get(), enode))
-        .orElse(true);
+    return nodePermissioningController.map(c -> c.isPermitted(localEnode, enode)).orElse(true);
   }
 
   @VisibleForTesting
