@@ -113,6 +113,17 @@ public final class DefaultP2PNetworkTest {
   }
 
   @Test
+  public void addMaintainConnectionPeer_beforeStartingNetwork() {
+    final DefaultP2PNetwork network = mockNetwork();
+    final Peer peer = mockPeer();
+
+    assertThat(network.addMaintainConnectionPeer(peer)).isTrue();
+
+    assertThat(network.peerMaintainConnectionList).contains(peer);
+    verify(network, never()).connect(peer);
+  }
+
+  @Test
   public void addingRepeatMaintainedPeersReturnsFalse() {
     final P2PNetwork network = network();
     network.start();
