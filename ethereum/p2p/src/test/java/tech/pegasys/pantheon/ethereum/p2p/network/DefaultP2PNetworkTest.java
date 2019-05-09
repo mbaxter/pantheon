@@ -206,6 +206,7 @@ public final class DefaultP2PNetworkTest {
   @Test
   public void shouldntAttemptNewConnectionToPendingPeer() {
     final P2PNetwork network = network();
+    network.start();
     final Peer peer = mockPeer();
 
     final CompletableFuture<PeerConnection> connectingFuture = network.connect(peer);
