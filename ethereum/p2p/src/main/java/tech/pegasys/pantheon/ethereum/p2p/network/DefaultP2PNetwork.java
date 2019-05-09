@@ -620,7 +620,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
     if (peerBlacklist.contains(enode.getNodeId())) {
       return false;
     }
-    if (enode.getNodeId().equals(localEnode.getNodeId())) {
+    if (enode.getNodeId().equals(nodeId)) {
       // Peer matches our node id
       return false;
     }
