@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.ethereum.p2p.network;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Java6Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Java6Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -486,6 +487,18 @@ public final class DefaultP2PNetworkTest {
 
     network.attemptPeerConnections();
     verify(network, times(0)).connect(any());
+  }
+
+  @Test
+  public void connect_beforeStartingNetwork() {
+    final DefaultP2PNetwork network = network();
+    final Peer peer = mockPeer();
+
+    final CompletableFuture<PeerConnection> connectionResult = network.connect(peer);
+    assertThat(connectionResult).isCompletedExceptionally();
+    assertThatThrownBy(connectionResult::get)
+        .hasCauseInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Attempt to connect to peer before network is ready");
   }
 
   private DiscoveryPeer createDiscoveryPeer() {

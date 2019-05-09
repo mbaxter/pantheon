@@ -151,7 +151,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
   private final BytesValue nodeId;
   private volatile OptionalInt listeningPort = OptionalInt.empty();
   private volatile Optional<EnodeURL> localEnode = Optional.empty();
-  private volatile PeerInfo ourPeerInfo;
+  private volatile Optional<PeerInfo> ourPeerInfo = Optional.empty();
 
   private final PeerBlacklist peerBlacklist;
   private final Optional<NodePermissioningController> nodePermissioningController;
@@ -287,8 +287,13 @@ public class DefaultP2PNetwork implements P2PNetwork {
           checkState(socketAddress != null, message);
           listeningPort = OptionalInt.of(socketAddress.getPort());
           ourPeerInfo =
-              new PeerInfo(
-                  5, config.getClientId(), supportedCapabilities, listeningPort.getAsInt(), nodeId);
+              Optional.of(
+                  new PeerInfo(
+                      5,
+                      config.getClientId(),
+                      supportedCapabilities,
+                      listeningPort.getAsInt(),
+                      nodeId));
           LOG.info("P2PNetwork started and listening on {}", socketAddress);
           latch.countDown();
         });
@@ -322,7 +327,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
                 new HandshakeHandlerInbound(
                     keyPair,
                     subProtocols,
-                    ourPeerInfo,
+                    ourPeerInfo.get(),
                     connectionFuture,
                     callbacks,
                     connections,
@@ -427,8 +432,14 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public CompletableFuture<PeerConnection> connect(final Peer peer) {
-    LOG.trace("Initiating connection to peer: {}", peer.getId());
     final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
+    if (!localEnode.isPresent()) {
+      connectionFuture.completeExceptionally(
+          new IllegalStateException("Attempt to connect to peer before network is ready"));
+      return connectionFuture;
+    }
+
+    LOG.trace("Initiating connection to peer: {}", peer.getId());
     final EnodeURL enode = peer.getEnodeURL();
     final CompletableFuture<PeerConnection> existingPendingConnection =
         pendingConnections.putIfAbsent(peer, connectionFuture);
@@ -461,7 +472,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
                             keyPair,
                             peer,
                             subProtocols,
-                            ourPeerInfo,
+                            ourPeerInfo.get(),
                             connectionFuture,
                             callbacks,
                             connections,
