@@ -54,6 +54,7 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.JsonRpcConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApi;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApis;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketConfiguration;
+import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.peers.StaticNodesParser;
 import tech.pegasys.pantheon.ethereum.permissioning.LocalPermissioningConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
@@ -188,6 +189,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   void setBootnodes(final List<String> values) {
     try {
       bootNodes = values.stream().map(EnodeURL::fromString).collect(Collectors.toList());
+      DiscoveryConfiguration.assertValidBootnodes(bootNodes);
     } catch (final IllegalArgumentException e) {
       throw new ParameterException(commandLine, e.getMessage());
     }

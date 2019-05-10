@@ -941,6 +941,20 @@ public class PantheonCommandTest extends CommandTestAbstract {
     assertThat(commandErrorOutput.toString()).startsWith(expectedErrorOutputStart);
   }
 
+  @Test
+  public void callingWithBootnodeThatHasDiscoveryDisabledMustDisplayErrorAndUsage() {
+    final String validBootnode =
+        "enode://d2567893371ea5a6fa6371d483891ed0d129e79a8fc74d6df95a00a6545444cd4a6960bbffe0b4e2edcf35135271de57ee559c0909236bbc2074346ef2b5b47c@127.0.0.1:30304";
+    final String invalidBootnode =
+        "enode://02567893371ea5a6fa6371d483891ed0d129e79a8fc74d6df95a00a6545444cd4a6960bbffe0b4e2edcf35135271de57ee559c0909236bbc2074346ef2b5b47c@127.0.0.1:30303?discport=0";
+    final String bootnodesValue = validBootnode + "," + invalidBootnode;
+    parseCommand("--bootnodes", bootnodesValue);
+    assertThat(commandOutput.toString()).isEmpty();
+    final String expectedErrorOutputStart =
+        "Bootnodes must have discovery enabled. Invalid bootnodes: " + invalidBootnode + ".";
+    assertThat(commandErrorOutput.toString()).startsWith(expectedErrorOutputStart);
+  }
+
   // This test ensures non regression on https://pegasys1.atlassian.net/browse/PAN-2387
   @Test
   public void callingWithInvalidBootnodeAndEqualSignMustDisplayErrorAndUsage() {

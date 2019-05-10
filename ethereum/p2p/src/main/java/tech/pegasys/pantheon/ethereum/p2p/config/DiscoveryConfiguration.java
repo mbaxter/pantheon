@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class DiscoveryConfiguration {
@@ -74,6 +75,19 @@ public class DiscoveryConfiguration {
     return new DiscoveryConfiguration();
   }
 
+  public static void assertValidBootnodes(final List<EnodeURL> bootnodes) {
+    final List<EnodeURL> invalidEnodes =
+        bootnodes.stream().filter(e -> !e.isRunningDiscovery()).collect(Collectors.toList());
+
+    if (invalidEnodes.size() > 0) {
+      String invalidBootnodes =
+          invalidEnodes.stream().map(EnodeURL::toString).collect(Collectors.joining(","));
+      String errorMsg =
+          "Bootnodes must have discovery enabled. Invalid bootnodes: " + invalidBootnodes + ".";
+      throw new IllegalArgumentException(errorMsg);
+    }
+  }
+
   public String getBindHost() {
     return bindHost;
   }
@@ -105,8 +119,9 @@ public class DiscoveryConfiguration {
     return bootnodes;
   }
 
-  public DiscoveryConfiguration setBootnodes(final List<EnodeURL> bootstrapPeers) {
-    this.bootnodes = bootstrapPeers;
+  public DiscoveryConfiguration setBootnodes(final List<EnodeURL> bootnodes) {
+    assertValidBootnodes(bootnodes);
+    this.bootnodes = bootnodes;
     return this;
   }
 
@@ -165,7 +180,7 @@ public class DiscoveryConfiguration {
         + '\''
         + ", bucketSize="
         + bucketSize
-        + ", bootstrapPeers="
+        + ", bootnodes="
         + bootnodes
         + '}';
   }

@@ -318,23 +318,6 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
         "valid port number required");
     checkArgument(config.getBootnodes() != null, "bootstrapPeers cannot be null");
     checkArgument(config.getBucketSize() > 0, "bucket size cannot be negative nor zero");
-
-    final List<EnodeURL> invalidEnodes =
-        config.getBootnodes().stream()
-            .filter(e -> !e.isRunningDiscovery())
-            .collect(Collectors.toList());
-
-    if (invalidEnodes.size() > 0) {
-      String invalidBootnodes =
-          invalidEnodes.stream().map(EnodeURL::toString).collect(Collectors.joining(","));
-      String errorMsg =
-          "Invalid bootnodes supplied to "
-              + PeerDiscoveryAgent.class.getSimpleName()
-              + ".  Bootnodes must have discovery enabled.  Invalid bootnodes: "
-              + invalidBootnodes
-              + ".";
-      throw new IllegalArgumentException(errorMsg);
-    }
   }
 
   @Override
