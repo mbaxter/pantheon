@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.network;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -361,6 +362,9 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public boolean addMaintainConnectionPeer(final Peer peer) {
+    checkArgument(
+        peer.getEnodeURL().isListening(),
+        "Invalid enode url.  Enode url must contain a non-zero listening port.");
     final boolean added = peerMaintainConnectionList.add(peer);
     if (isPeerAllowed(peer) && !isConnectingOrConnected(peer)) {
       // Connect immediately if appropriate

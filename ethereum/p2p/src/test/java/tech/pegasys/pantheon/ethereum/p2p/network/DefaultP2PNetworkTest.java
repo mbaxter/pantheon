@@ -124,6 +124,26 @@ public final class DefaultP2PNetworkTest {
   }
 
   @Test
+  public void addMaintainConnectionPeer_withNonListeningEnode() {
+    final DefaultP2PNetwork network = mockNetwork();
+    network.start();
+    final Peer peer =
+        DefaultPeer.fromEnodeURL(
+            EnodeURL.builder()
+                .nodeId(Peer.randomId())
+                .ipAddress("127.0.0.1")
+                .useDefaultPorts()
+                .disableListening()
+                .build());
+
+    assertThatThrownBy(() -> network.addMaintainConnectionPeer(peer))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Enode url must contain a non-zero listening port");
+
+    verify(network, never()).connect(peer);
+  }
+
+  @Test
   public void addingRepeatMaintainedPeersReturnsFalse() {
     final P2PNetwork network = network();
     network.start();
