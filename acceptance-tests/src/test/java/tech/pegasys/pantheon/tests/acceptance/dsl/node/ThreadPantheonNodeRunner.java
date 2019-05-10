@@ -23,6 +23,7 @@ import tech.pegasys.pantheon.controller.PantheonControllerBuilder;
 import tech.pegasys.pantheon.ethereum.eth.EthereumWireProtocolConfiguration;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
 import tech.pegasys.pantheon.ethereum.eth.transactions.PendingTransactions;
+import tech.pegasys.pantheon.ethereum.graphqlrpc.GraphQLRpcConfiguration;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.services.kvstore.RocksDbConfiguration;
@@ -111,6 +112,7 @@ public class ThreadPantheonNodeRunner implements PantheonNodeRunner {
             .metricsSystem(noOpMetricsSystem)
             .metricsConfiguration(node.metricsConfiguration())
             .p2pEnabled(node.isP2pEnabled())
+            .graphQLRpcConfiguration(GraphQLRpcConfiguration.createDefault())
             .build();
 
     runner.start();
