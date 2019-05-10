@@ -501,6 +501,27 @@ public final class DefaultP2PNetworkTest {
         .hasMessageContaining("Attempt to connect to peer before network is ready");
   }
 
+  @Test
+  public void connect_toNonListeningPeer() {
+    final DefaultP2PNetwork network = network();
+    network.start();
+    final Peer peer =
+        DefaultPeer.fromEnodeURL(
+            EnodeURL.builder()
+                .ipAddress("127.0.0.1")
+                .nodeId(Peer.randomId())
+                .disableListening()
+                .discoveryPort(30303)
+                .build());
+
+    final CompletableFuture<PeerConnection> connectionResult = network.connect(peer);
+    assertThat(connectionResult).isCompletedExceptionally();
+    assertThatThrownBy(connectionResult::get)
+        .hasCauseInstanceOf(IllegalStateException.class)
+        .hasMessageContaining(
+            "Attempt to connect to peer with no listening port: " + peer.getEnodeURLString());
+  }
+
   private DiscoveryPeer createDiscoveryPeer() {
     return createDiscoveryPeer(Peer.randomId(), 999);
   }

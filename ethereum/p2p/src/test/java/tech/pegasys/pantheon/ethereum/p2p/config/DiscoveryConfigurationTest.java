@@ -44,17 +44,13 @@ public class DiscoveryConfigurationTest {
   @Test
   public void setBootnodes_withListeningDisabled() {
     final EnodeURL invalidBootnode =
-      EnodeURL.builder()
-        .nodeId(Peer.randomId())
-        .ipAddress("127.0.0.1")
-        .ports(0)
-        .build();
+        EnodeURL.builder().nodeId(Peer.randomId()).ipAddress("127.0.0.1").ports(0).build();
 
     DiscoveryConfiguration config = DiscoveryConfiguration.create();
 
     assertThatThrownBy(() -> config.setBootnodes(Collections.singletonList(invalidBootnode)))
-      .isInstanceOf(IllegalArgumentException.class)
-      .hasMessageContaining("Invalid bootnodes")
-      .hasMessageContaining("Bootnodes must have discovery enabled");
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Invalid bootnodes")
+        .hasMessageContaining("Bootnodes must have discovery enabled");
   }
 }

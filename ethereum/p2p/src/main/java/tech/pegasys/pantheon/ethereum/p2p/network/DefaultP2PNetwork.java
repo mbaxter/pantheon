@@ -440,13 +440,13 @@ public class DefaultP2PNetwork implements P2PNetwork {
     }
 
     LOG.trace("Initiating connection to peer: {}", peer.getId());
-    final EnodeURL enode = peer.getEnodeURL();
     final CompletableFuture<PeerConnection> existingPendingConnection =
         pendingConnections.putIfAbsent(peer, connectionFuture);
     if (existingPendingConnection != null) {
       LOG.debug("Attempted to connect to peer with pending connection: {}", peer.getId());
       return existingPendingConnection;
     }
+    final EnodeURL enode = peer.getEnodeURL();
     if (!enode.isListening()) {
       final String errorMsg =
           "Attempt to connect to peer with no listening port: " + enode.toString();
