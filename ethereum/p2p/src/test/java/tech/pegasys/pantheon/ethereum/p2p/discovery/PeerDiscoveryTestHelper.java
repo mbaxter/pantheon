@@ -27,7 +27,6 @@ import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningContro
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
-import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -177,7 +176,7 @@ public class PeerDiscoveryTestHelper {
 
     private PeerBlacklist blacklist = new PeerBlacklist();
     private Optional<NodePermissioningController> nodePermissioningController = Optional.empty();
-    private List<URI> bootstrapPeers = Collections.emptyList();
+    private List<EnodeURL> bootnodes = Collections.emptyList();
     private boolean active = true;
 
     private AgentBuilder(
@@ -188,7 +187,7 @@ public class PeerDiscoveryTestHelper {
     }
 
     public AgentBuilder bootstrapPeers(final List<DiscoveryPeer> peers) {
-      this.bootstrapPeers = asEnodes(peers);
+      this.bootnodes = asEnodes(peers);
       return this;
     }
 
@@ -197,16 +196,12 @@ public class PeerDiscoveryTestHelper {
     }
 
     public AgentBuilder bootnodes(final EnodeURL... bootnodes) {
-      this.bootstrapPeers =
-          Arrays.asList(bootnodes).stream().map(EnodeURL::toURI).collect(Collectors.toList());
+      this.bootnodes = Arrays.asList(bootnodes);
       return this;
     }
 
-    private List<URI> asEnodes(final List<DiscoveryPeer> peers) {
-      return peers.stream()
-          .map(Peer::getEnodeURLString)
-          .map(URI::create)
-          .collect(Collectors.toList());
+    private List<EnodeURL> asEnodes(final List<DiscoveryPeer> peers) {
+      return peers.stream().map(Peer::getEnodeURL).collect(Collectors.toList());
     }
 
     public AgentBuilder nodePermissioningController(final NodePermissioningController controller) {
@@ -226,7 +221,7 @@ public class PeerDiscoveryTestHelper {
 
     public MockPeerDiscoveryAgent build() {
       final DiscoveryConfiguration config = new DiscoveryConfiguration();
-      config.setBootstrapPeers(bootstrapPeers);
+      config.setBootnodes(bootnodes);
       config.setBindPort(nextAvailablePort.incrementAndGet());
       config.setActive(active);
 

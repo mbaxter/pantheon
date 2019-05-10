@@ -299,11 +299,11 @@ public class PantheonCommandTest extends CommandTestAbstract {
     verify(mockRunnerBuilder).metricsConfiguration(eq(metricsConfiguration));
     verify(mockRunnerBuilder).build();
 
-    final Collection<URI> nodes =
+    final List<EnodeURL> nodes =
         asList(
-            URI.create("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"),
-            URI.create("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"),
-            URI.create("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"));
+            EnodeURL.fromString("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"),
+            EnodeURL.fromString("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"),
+            EnodeURL.fromString("enode://" + VALID_NODE_ID + "@192.168.0.1:4567"));
     assertThat(ethNetworkConfigArgumentCaptor.getValue().getBootNodes()).isEqualTo(nodes);
 
     final EthNetworkConfig networkConfig =
