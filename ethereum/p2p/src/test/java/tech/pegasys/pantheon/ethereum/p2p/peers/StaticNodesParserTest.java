@@ -89,6 +89,17 @@ public class StaticNodesParserTest {
   }
 
   @Test
+  public void fromPath_withNonListeningNodesThrowsException() {
+    final URL resource =
+        StaticNodesParserTest.class.getResource("invalid_static_nodes_no_listening_port.json");
+    final File invalidFile = new File(resource.getFile());
+
+    assertThatThrownBy(() -> StaticNodesParser.fromPath(invalidFile.toPath()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Static node must be configured with a valid listening port");
+  }
+
+  @Test
   public void nonJsonFileThrowsAnException() throws IOException {
     final File tempFile = testFolder.newFile("file.txt");
     tempFile.deleteOnExit();
