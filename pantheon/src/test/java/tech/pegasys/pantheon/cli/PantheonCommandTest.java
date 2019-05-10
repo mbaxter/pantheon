@@ -983,7 +983,8 @@ public class PantheonCommandTest extends CommandTestAbstract {
     verify(mockRunnerBuilder).build();
 
     assertThat(ethNetworkConfigArgumentCaptor.getValue().getBootNodes())
-        .isEqualTo(Stream.of(validENodeStrings).map(URI::create).collect(Collectors.toList()));
+        .isEqualTo(
+            Stream.of(validENodeStrings).map(EnodeURL::fromString).collect(Collectors.toList()));
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -2202,7 +2203,8 @@ public class PantheonCommandTest extends CommandTestAbstract {
     verify(mockControllerBuilder).build();
 
     assertThat(networkArg.getValue().getBootNodes())
-        .isEqualTo(Stream.of(validENodeStrings).map(URI::create).collect(Collectors.toList()));
+        .isEqualTo(
+            Stream.of(validENodeStrings).map(EnodeURL::fromString).collect(Collectors.toList()));
     assertThat(networkArg.getValue().getNetworkId()).isEqualTo(1234567);
 
     assertThat(commandOutput.toString()).isEmpty();
