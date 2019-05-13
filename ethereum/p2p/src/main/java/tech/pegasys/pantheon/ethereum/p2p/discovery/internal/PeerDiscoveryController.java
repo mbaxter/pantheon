@@ -401,10 +401,10 @@ public class PeerDiscoveryController {
   private void refreshTableIfRequired() {
     final long now = System.currentTimeMillis();
     if (lastRefreshTime + tableRefreshIntervalMs <= now) {
-      LOG.trace("Peer table refresh triggered by timer expiry");
+      LOG.debug("Peer table refresh triggered by timer expiry");
       refreshTable();
     } else if (!peerRequirement.hasSufficientPeers()) {
-      LOG.trace("Peer table refresh triggered by insufficient peers");
+      LOG.debug("Peer table refresh triggered by insufficient peers");
       refreshTable();
     }
   }

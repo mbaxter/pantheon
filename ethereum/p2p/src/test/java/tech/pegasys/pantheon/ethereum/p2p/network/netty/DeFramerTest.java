@@ -350,7 +350,7 @@ public class DeFramerTest {
     return DefaultPeer.fromEnodeURL(
         EnodeURL.builder()
             .ipAddress(remoteAddress.getAddress())
-            .ports(remotePort)
+            .discoveryAndListeningPorts(remotePort)
             .nodeId(Peer.randomId())
             .build());
   }

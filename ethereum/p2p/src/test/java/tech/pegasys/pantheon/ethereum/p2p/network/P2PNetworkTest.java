@@ -328,7 +328,7 @@ public class P2PNetworkTest {
         EnodeURL.builder()
             .ipAddress(InetAddress.getLoopbackAddress().getHostAddress())
             .nodeId(nodeId)
-            .ports(listenPort)
+            .discoveryAndListeningPorts(listenPort)
             .build());
   }
 

@@ -69,7 +69,11 @@ public class PeerDiscoveryTestHelper {
     final BytesValue peerId = keyPair.getPublicKey().getEncodedBytes();
     final int port = nextAvailablePort.incrementAndGet();
     return DiscoveryPeer.fromEnode(
-        EnodeURL.builder().nodeId(peerId).ipAddress(LOOPBACK_IP_ADDR).ports(port).build());
+        EnodeURL.builder()
+            .nodeId(peerId)
+            .ipAddress(LOOPBACK_IP_ADDR)
+            .discoveryAndListeningPorts(port)
+            .build());
   }
 
   public Packet createPingPacket(

@@ -39,8 +39,6 @@ public class EnodeURL {
   private final BytesValue nodeId;
   private final InetAddress ip;
   private final OptionalInt listeningPort;
-  // DiscoveryPort will only be present if it differs from listening port, otherwise
-  // the discovery port is assumed to match the listening port
   private final OptionalInt discoveryPort;
 
   // Error messages
@@ -286,7 +284,7 @@ public class EnodeURL {
       return this;
     }
 
-    public Builder ports(final int listeningAndDiscoveryPorts) {
+    public Builder discoveryAndListeningPorts(final int listeningAndDiscoveryPorts) {
       listeningPort(listeningAndDiscoveryPorts);
       discoveryPort(listeningAndDiscoveryPorts);
       return this;
@@ -303,7 +301,7 @@ public class EnodeURL {
     }
 
     public Builder useDefaultPorts() {
-      ports(EnodeURL.DEFAULT_LISTENING_PORT);
+      discoveryAndListeningPorts(EnodeURL.DEFAULT_LISTENING_PORT);
       return this;
     }
 

@@ -79,7 +79,11 @@ public class EnodeURLTest {
   @Test
   public void fromString_withoutDiscoveryPortShouldBuildExpectedEnodeURLObject() {
     final EnodeURL expectedEnodeURL =
-        EnodeURL.builder().nodeId(VALID_NODE_ID).ipAddress(IPV4_ADDRESS).ports(P2P_PORT).build();
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .discoveryAndListeningPorts(P2P_PORT)
+            .build();
     final String enodeURLString = "enode://" + VALID_NODE_ID + "@" + IPV4_ADDRESS + ":" + P2P_PORT;
 
     final EnodeURL enodeURL = EnodeURL.fromString(enodeURLString);
@@ -411,7 +415,11 @@ public class EnodeURLTest {
   @Test
   public void builder_setPortsTogether() {
     final EnodeURL enodeURL =
-        EnodeURL.builder().nodeId(VALID_NODE_ID).ipAddress(IPV4_ADDRESS).ports(P2P_PORT).build();
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .discoveryAndListeningPorts(P2P_PORT)
+            .build();
 
     assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
     assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
@@ -491,7 +499,11 @@ public class EnodeURLTest {
   @Test
   public void builder_setPortsTo0() {
     final EnodeURL enodeURL =
-        EnodeURL.builder().nodeId(VALID_NODE_ID).ipAddress(IPV4_ADDRESS).ports(0).build();
+        EnodeURL.builder()
+            .nodeId(VALID_NODE_ID)
+            .ipAddress(IPV4_ADDRESS)
+            .discoveryAndListeningPorts(0)
+            .build();
 
     assertThat(enodeURL.getNodeId().toUnprefixedString()).isEqualTo(VALID_NODE_ID);
     assertThat(enodeURL.getIpAsString()).isEqualTo(IPV4_ADDRESS);
@@ -595,7 +607,8 @@ public class EnodeURLTest {
 
   @Test
   public void builder_nodeIdNotSpecified() {
-    final EnodeURL.Builder builder = EnodeURL.builder().ipAddress(IPV4_ADDRESS).ports(P2P_PORT);
+    final EnodeURL.Builder builder =
+        EnodeURL.builder().ipAddress(IPV4_ADDRESS).discoveryAndListeningPorts(P2P_PORT);
 
     assertThatThrownBy(builder::build)
         .isInstanceOf(IllegalStateException.class)
@@ -604,7 +617,8 @@ public class EnodeURLTest {
 
   @Test
   public void builder_ipNotSpecified() {
-    final EnodeURL.Builder builder = EnodeURL.builder().nodeId(VALID_NODE_ID).ports(P2P_PORT);
+    final EnodeURL.Builder builder =
+        EnodeURL.builder().nodeId(VALID_NODE_ID).discoveryAndListeningPorts(P2P_PORT);
 
     assertThatThrownBy(builder::build)
         .isInstanceOf(IllegalStateException.class)

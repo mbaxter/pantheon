@@ -123,7 +123,11 @@ public class AdminNodeInfoTest {
   @Test
   public void handlesLocalEnodeWithListeningAndDiscoveryDisabled() {
     final EnodeURL localEnode =
-        EnodeURL.builder().nodeId(nodeId).ipAddress("1.2.3.4").ports(0).build();
+        EnodeURL.builder()
+            .nodeId(nodeId)
+            .ipAddress("1.2.3.4")
+            .discoveryAndListeningPorts(0)
+            .build();
 
     when(p2pNetwork.isP2pEnabled()).thenReturn(true);
     when(p2pNetwork.getLocalEnode()).thenReturn(Optional.of(localEnode));
@@ -164,7 +168,12 @@ public class AdminNodeInfoTest {
   @Test
   public void handlesLocalEnodeWithListeningDisabled() {
     final EnodeURL localEnode =
-        EnodeURL.builder().nodeId(nodeId).ipAddress("1.2.3.4").ports(0).discoveryPort(7890).build();
+        EnodeURL.builder()
+            .nodeId(nodeId)
+            .ipAddress("1.2.3.4")
+            .discoveryAndListeningPorts(0)
+            .discoveryPort(7890)
+            .build();
 
     when(p2pNetwork.isP2pEnabled()).thenReturn(true);
     when(p2pNetwork.getLocalEnode()).thenReturn(Optional.of(localEnode));
@@ -205,7 +214,12 @@ public class AdminNodeInfoTest {
   @Test
   public void handlesLocalEnodeWithDiscoveryDisabled() {
     final EnodeURL localEnode =
-        EnodeURL.builder().nodeId(nodeId).ipAddress("1.2.3.4").ports(0).listeningPort(7890).build();
+        EnodeURL.builder()
+            .nodeId(nodeId)
+            .ipAddress("1.2.3.4")
+            .discoveryAndListeningPorts(0)
+            .listeningPort(7890)
+            .build();
 
     when(p2pNetwork.isP2pEnabled()).thenReturn(true);
     when(p2pNetwork.getLocalEnode()).thenReturn(Optional.of(localEnode));
