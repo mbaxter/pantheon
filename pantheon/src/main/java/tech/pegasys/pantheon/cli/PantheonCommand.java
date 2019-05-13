@@ -188,7 +188,11 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       arity = "0..*")
   void setBootnodes(final List<String> values) {
     try {
-      bootNodes = values.stream().map(EnodeURL::fromString).collect(Collectors.toList());
+      bootNodes =
+          values.stream()
+              .filter(value -> !value.isEmpty())
+              .map(EnodeURL::fromString)
+              .collect(Collectors.toList());
       DiscoveryConfiguration.assertValidBootnodes(bootNodes);
     } catch (final IllegalArgumentException e) {
       throw new ParameterException(commandLine, e.getMessage());
