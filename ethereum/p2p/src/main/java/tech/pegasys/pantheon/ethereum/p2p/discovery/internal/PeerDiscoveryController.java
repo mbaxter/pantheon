@@ -26,7 +26,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.EvictResult;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.EvictResult.EvictOutcome;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
@@ -118,7 +118,7 @@ public class PeerDiscoveryController {
   // The peer representation of this node
   private final DiscoveryPeer localPeer;
   private final OutboundMessageHandler outboundMessageHandler;
-  private final PeerBlacklist peerBlacklist;
+  private final PeerPermissions peerPermissions;
   private final Optional<NodePermissioningController> nodePermissioningController;
   private final DiscoveryProtocolLogger discoveryProtocolLogger;
   private final LabelledMetric<Counter> interactionCounter;
@@ -151,7 +151,7 @@ public class PeerDiscoveryController {
       final AsyncExecutor workerExecutor,
       final long tableRefreshIntervalMs,
       final PeerRequirement peerRequirement,
-      final PeerBlacklist peerBlacklist,
+      final PeerPermissions peerPermissions,
       final Optional<NodePermissioningController> nodePermissioningController,
       final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers,
       final Subscribers<Consumer<PeerDroppedEvent>> peerDroppedObservers,
@@ -164,7 +164,7 @@ public class PeerDiscoveryController {
     this.workerExecutor = workerExecutor;
     this.tableRefreshIntervalMs = tableRefreshIntervalMs;
     this.peerRequirement = peerRequirement;
-    this.peerBlacklist = peerBlacklist;
+    this.peerPermissions = peerPermissions;
     this.nodePermissioningController = nodePermissioningController;
     this.outboundMessageHandler = outboundMessageHandler;
     this.peerBondedObservers = peerBondedObservers;
@@ -205,7 +205,7 @@ public class PeerDiscoveryController {
 
     recursivePeerRefreshState =
         new RecursivePeerRefreshState(
-            peerBlacklist,
+            peerPermissions,
             nodePermissioningController,
             this::bond,
             this::findNodes,
@@ -286,11 +286,11 @@ public class PeerDiscoveryController {
     final Optional<DiscoveryPeer> maybeKnownPeer = peerTable.get(sender);
     final DiscoveryPeer peer = maybeKnownPeer.orElse(sender);
     final boolean peerKnown = maybeKnownPeer.isPresent();
-    final boolean peerBlacklisted = peerBlacklist.contains(peer);
+    final boolean peerPermitted = peerPermissions.isPermitted(peer);
 
     switch (packet.getType()) {
       case PING:
-        if (!peerBlacklisted && addToPeerTable(peer)) {
+        if (peerPermitted && addToPeerTable(peer)) {
           final PingPacketData ping = packet.getPacketData(PingPacketData.class).get();
           respondToPing(ping, packet.getHash(), peer);
         }
@@ -299,7 +299,7 @@ public class PeerDiscoveryController {
         matchInteraction(packet)
             .ifPresent(
                 interaction -> {
-                  if (peerBlacklisted) {
+                  if (!peerPermitted) {
                     return;
                   }
                   addToPeerTable(peer);
@@ -314,7 +314,7 @@ public class PeerDiscoveryController {
                         peer, getPeersFromNeighborsPacket(packet)));
         break;
       case FIND_NEIGHBORS:
-        if (!peerKnown || peerBlacklisted) {
+        if (!peerKnown || !peerPermitted) {
           break;
         }
         final FindNeighborsPacketData fn =

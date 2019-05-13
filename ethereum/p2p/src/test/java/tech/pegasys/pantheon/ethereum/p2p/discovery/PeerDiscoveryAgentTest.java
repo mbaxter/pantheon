@@ -27,7 +27,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.NeighborsPacketData
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.Packet;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PacketType;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -157,33 +157,6 @@ public class PeerDiscoveryAgentTest {
     assertThat(peerDiscoveryAgent2.streamDiscoveredPeers().collect(toList()).size()).isEqualTo(0);
   }
 
-  @Test
-  public void doesNotBlacklistPeerForNormalDisconnect() {
-    // Start an agent with no bootstrap peers.
-    final PeerBlacklist blacklist = new PeerBlacklist();
-    final MockPeerDiscoveryAgent agent =
-        helper.startDiscoveryAgent(Collections.emptyList(), blacklist);
-    // Setup peer
-    final MockPeerDiscoveryAgent otherNode = helper.startDiscoveryAgent();
-    final PeerConnection wirePeer = createAnonymousPeerConnection(otherNode.getId());
-
-    // Bond to peer
-    bondViaIncomingPing(agent, otherNode);
-    assertThat(agent.streamDiscoveredPeers()).hasSize(1);
-
-    // Disconnect with innocuous reason
-    blacklist.onDisconnect(wirePeer, DisconnectReason.TOO_MANY_PEERS, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.TOO_MANY_PEERS, false);
-    // Confirm peer was removed
-    assertThat(agent.streamDiscoveredPeers()).hasSize(0);
-
-    // Bond again
-    bondViaIncomingPing(agent, otherNode);
-
-    // Check peer was allowed to connect
-    assertThat(agent.streamDiscoveredPeers()).hasSize(1);
-  }
-
   protected void bondViaIncomingPing(
       final MockPeerDiscoveryAgent agent, final MockPeerDiscoveryAgent otherNode) {
     final Packet pingPacket = helper.createPingPacket(otherNode, agent);
@@ -191,107 +164,17 @@ public class PeerDiscoveryAgentTest {
   }
 
   @Test
-  public void blacklistPeerForBadBehavior() {
+  public void dontBondWithNonPermittedPeer() {
     // Start an agent with no bootstrap peers.
-    final PeerBlacklist blacklist = new PeerBlacklist();
+    final PeerPermissionsBlacklist blacklist = PeerPermissionsBlacklist.create();
     final MockPeerDiscoveryAgent agent =
         helper.startDiscoveryAgent(Collections.emptyList(), blacklist);
     // Setup peer
     final MockPeerDiscoveryAgent otherNode = helper.startDiscoveryAgent();
-    final PeerConnection wirePeer = createAnonymousPeerConnection(otherNode.getId());
 
-    // Bond to peer
-    bondViaIncomingPing(agent, otherNode);
-    assertThat(agent.streamDiscoveredPeers()).hasSize(1);
+    blacklist.add(otherNode.getId());
 
-    // Disconnect with problematic reason
-    blacklist.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, false);
-    // Confirm peer was removed
-    assertThat(agent.streamDiscoveredPeers()).hasSize(0);
-
-    // Bond again
-    bondViaIncomingPing(agent, otherNode);
-
-    // Check peer was not allowed to connect
-    assertThat(agent.streamDiscoveredPeers()).hasSize(0);
-  }
-
-  @Test
-  public void doesNotBlacklistPeerForOurBadBehavior() throws Exception {
-    // Start an agent with no bootstrap peers.
-    final PeerBlacklist blacklist = new PeerBlacklist();
-    final MockPeerDiscoveryAgent agent =
-        helper.startDiscoveryAgent(Collections.emptyList(), blacklist);
-    // Setup peer
-    final MockPeerDiscoveryAgent otherNode = helper.startDiscoveryAgent();
-    final PeerConnection wirePeer = createAnonymousPeerConnection(otherNode.getId());
-
-    // Bond to peer
-    bondViaIncomingPing(agent, otherNode);
-    assertThat(agent.streamDiscoveredPeers()).hasSize(1);
-
-    // Disconnect with problematic reason
-    blacklist.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, true);
-    agent.onDisconnect(wirePeer, DisconnectReason.BREACH_OF_PROTOCOL, true);
-    // Confirm peer was removed
-    assertThat(agent.streamDiscoveredPeers()).hasSize(0);
-
-    // Bond again
-    bondViaIncomingPing(agent, otherNode);
-
-    // Check peer was allowed to connect
-    assertThat(agent.streamDiscoveredPeers()).hasSize(1);
-  }
-
-  @Test
-  public void blacklistIncompatiblePeer() throws Exception {
-    // Start an agent with no bootstrap peers.
-    final PeerBlacklist blacklist = new PeerBlacklist();
-    final MockPeerDiscoveryAgent agent =
-        helper.startDiscoveryAgent(Collections.emptyList(), blacklist);
-    // Setup peer
-    final MockPeerDiscoveryAgent otherNode = helper.startDiscoveryAgent();
-    final PeerConnection wirePeer = createAnonymousPeerConnection(otherNode.getId());
-
-    // Bond to peer
-    bondViaIncomingPing(agent, otherNode);
-    assertThat(agent.streamDiscoveredPeers()).hasSize(1);
-
-    // Disconnect
-    blacklist.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, false);
-    agent.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, false);
-    // Confirm peer was removed
-    assertThat(agent.streamDiscoveredPeers()).hasSize(0);
-
-    // Bond again
-    bondViaIncomingPing(agent, otherNode);
-
-    // Check peer was not allowed to connect
-    assertThat(agent.streamDiscoveredPeers()).hasSize(0);
-  }
-
-  @Test
-  public void blacklistIncompatiblePeerWhoIssuesDisconnect() throws Exception {
-    // Start an agent with no bootstrap peers.
-    final PeerBlacklist blacklist = new PeerBlacklist();
-    final MockPeerDiscoveryAgent agent =
-        helper.startDiscoveryAgent(Collections.emptyList(), blacklist);
-    // Setup peer
-    final MockPeerDiscoveryAgent otherNode = helper.startDiscoveryAgent();
-    final PeerConnection wirePeer = createAnonymousPeerConnection(otherNode.getId());
-
-    // Bond to peer
-    bondViaIncomingPing(agent, otherNode);
-    assertThat(agent.streamDiscoveredPeers()).hasSize(1);
-
-    // Disconnect
-    blacklist.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, true);
-    agent.onDisconnect(wirePeer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, true);
-    // Confirm peer was removed
-    assertThat(agent.streamDiscoveredPeers()).hasSize(0);
-
-    // Bond again
+    // Bond
     bondViaIncomingPing(agent, otherNode);
 
     // Check peer was not allowed to connect

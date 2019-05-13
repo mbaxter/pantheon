@@ -40,7 +40,8 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryTestHelper;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.EvictResult;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsBlacklist;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.Subscribers;
@@ -57,9 +58,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -597,12 +596,12 @@ public class PeerDiscoveryControllerTest {
     final DiscoveryPeer otherPeer = peers.get(1);
     final DiscoveryPeer otherPeer2 = peers.get(2);
 
-    final PeerBlacklist blacklist = new PeerBlacklist();
+    final PeerPermissionsBlacklist blacklist = PeerPermissionsBlacklist.create();
     final OutboundMessageHandler outboundMessageHandler = mock(OutboundMessageHandler.class);
     controller =
         getControllerBuilder()
             .peers(discoPeer)
-            .blacklist(blacklist)
+            .peerPermissions(blacklist)
             .outboundMessageHandler(outboundMessageHandler)
             .build();
 
@@ -675,12 +674,12 @@ public class PeerDiscoveryControllerTest {
     final DiscoveryPeer otherPeer = peers.get(1);
     final DiscoveryPeer otherPeer2 = peers.get(2);
 
-    final PeerBlacklist blacklist = new PeerBlacklist();
+    final PeerPermissionsBlacklist blacklist = PeerPermissionsBlacklist.create();
     final OutboundMessageHandler outboundMessageHandler = mock(OutboundMessageHandler.class);
     controller =
         getControllerBuilder()
             .peers(discoPeer)
-            .blacklist(blacklist)
+            .peerPermissions(blacklist)
             .outboundMessageHandler(outboundMessageHandler)
             .build();
 
@@ -726,18 +725,15 @@ public class PeerDiscoveryControllerTest {
   }
 
   @Test
-  public void shouldRespondToNeighborsRequestFromKnownPeer()
-      throws InterruptedException, ExecutionException, TimeoutException {
+  public void shouldRespondToNeighborsRequestFromKnownPeer() {
     final List<DiscoveryPeer> peers = createPeersInLastBucket(localPeer, 1);
 
     final DiscoveryPeer discoPeer = peers.get(0);
 
-    final PeerBlacklist blacklist = new PeerBlacklist();
     final OutboundMessageHandler outboundMessageHandler = mock(OutboundMessageHandler.class);
     controller =
         getControllerBuilder()
             .peers(discoPeer)
-            .blacklist(blacklist)
             .outboundMessageHandler(outboundMessageHandler)
             .build();
 
@@ -768,19 +764,16 @@ public class PeerDiscoveryControllerTest {
   }
 
   @Test
-  public void shouldNotRespondToNeighborsRequestFromUnknownPeer()
-      throws InterruptedException, ExecutionException, TimeoutException {
+  public void shouldNotRespondToNeighborsRequestFromUnknownPeer() {
     final List<DiscoveryPeer> peers = createPeersInLastBucket(localPeer, 2);
 
     final DiscoveryPeer discoPeer = peers.get(0);
     final DiscoveryPeer otherPeer = peers.get(1);
 
-    final PeerBlacklist blacklist = new PeerBlacklist();
     final OutboundMessageHandler outboundMessageHandler = mock(OutboundMessageHandler.class);
     controller =
         getControllerBuilder()
             .peers(discoPeer)
-            .blacklist(blacklist)
             .outboundMessageHandler(outboundMessageHandler)
             .build();
 
@@ -816,12 +809,12 @@ public class PeerDiscoveryControllerTest {
 
     final DiscoveryPeer discoPeer = peers.get(0);
 
-    final PeerBlacklist blacklist = new PeerBlacklist();
+    final PeerPermissionsBlacklist blacklist = PeerPermissionsBlacklist.create();
     final OutboundMessageHandler outboundMessageHandler = mock(OutboundMessageHandler.class);
     controller =
         getControllerBuilder()
             .peers(discoPeer)
-            .blacklist(blacklist)
+            .peerPermissions(blacklist)
             .outboundMessageHandler(outboundMessageHandler)
             .build();
 
@@ -990,8 +983,6 @@ public class PeerDiscoveryControllerTest {
     final DiscoveryPeer notPermittedPeer = peers.get(1);
     final DiscoveryPeer permittedPeer = peers.get(2);
 
-    final PeerBlacklist blacklist = new PeerBlacklist();
-
     final NodePermissioningController nodePermissioningController =
         new NodePermissioningControllerTestHelper(localPeer)
             .withPermittedPeers(discoveryPeer, permittedPeer)
@@ -1002,7 +993,6 @@ public class PeerDiscoveryControllerTest {
     controller =
         getControllerBuilder()
             .peers(discoveryPeer)
-            .blacklist(blacklist)
             .nodePermissioningController(nodePermissioningController)
             .outboundMessageHandler(outboundMessageHandler)
             .build();
@@ -1147,7 +1137,6 @@ public class PeerDiscoveryControllerTest {
 
   static class ControllerBuilder {
     private Collection<DiscoveryPeer> discoPeers = Collections.emptyList();
-    private PeerBlacklist blacklist = new PeerBlacklist();
     private Optional<NodePermissioningController> nodePermissioningController = Optional.empty();
     private MockTimerUtil timerUtil = new MockTimerUtil();
     private KeyPair keypair;
@@ -1157,6 +1146,7 @@ public class PeerDiscoveryControllerTest {
     private static final PeerDiscoveryTestHelper helper = new PeerDiscoveryTestHelper();
     private Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
     private Subscribers<Consumer<PeerDroppedEvent>> peerDroppedObservers = new Subscribers<>();
+    private PeerPermissions peerPermissions = PeerPermissions.noop();
 
     public static ControllerBuilder create() {
       return new ControllerBuilder();
@@ -1172,8 +1162,8 @@ public class PeerDiscoveryControllerTest {
       return this;
     }
 
-    ControllerBuilder blacklist(final PeerBlacklist blacklist) {
-      this.blacklist = blacklist;
+    ControllerBuilder peerPermissions(final PeerPermissions peerPermissions) {
+      this.peerPermissions = peerPermissions;
       return this;
     }
 
@@ -1237,7 +1227,7 @@ public class PeerDiscoveryControllerTest {
               new BlockingAsyncExecutor(),
               TABLE_REFRESH_INTERVAL_MS,
               PEER_REQUIREMENT,
-              blacklist,
+              peerPermissions,
               nodePermissioningController,
               peerBondedObservers,
               peerDroppedObservers,

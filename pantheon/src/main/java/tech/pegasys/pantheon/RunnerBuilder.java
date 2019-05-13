@@ -58,7 +58,7 @@ import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.SubProtocolConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.network.DefaultP2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
 import tech.pegasys.pantheon.ethereum.permissioning.AccountLocalConfigPermissioningController;
@@ -105,7 +105,7 @@ public class RunnerBuilder {
   private GraphQLRpcConfiguration graphQLRpcConfiguration;
   private WebSocketConfiguration webSocketConfiguration;
   private Path dataDir;
-  private Collection<String> bannedNodeIds;
+  private Collection<String> bannedNodeIds = new ArrayList<>();
   private MetricsConfiguration metricsConfiguration;
   private MetricsSystem metricsSystem;
   private Optional<PermissioningConfiguration> permissioningConfiguration = Optional.empty();
@@ -179,7 +179,7 @@ public class RunnerBuilder {
   }
 
   public RunnerBuilder bannedNodeIds(final Collection<String> bannedNodeIds) {
-    this.bannedNodeIds = bannedNodeIds;
+    this.bannedNodeIds.addAll(bannedNodeIds);
     return this;
   }
 
@@ -241,9 +241,11 @@ public class RunnerBuilder {
             .setClientId(PantheonInfo.version())
             .setSupportedProtocols(subProtocols);
 
-    final PeerBlacklist peerBlacklist =
-        new PeerBlacklist(
-            bannedNodeIds.stream().map(BytesValue::fromHexString).collect(Collectors.toSet()));
+    final PeerPermissionsBlacklist bannedNodes = PeerPermissionsBlacklist.create();
+    // TODO - validate and parse banned node ids as BytesValue's in {@link PantheonCommand}
+    bannedNodeIds.stream()
+        .map(n -> BytesValue.fromHexString(n, EnodeURL.NODE_ID_SIZE))
+        .forEach(bannedNodes::add);
 
     final List<EnodeURL> bootnodes = discoveryConfiguration.getBootnodes();
 
@@ -268,7 +270,7 @@ public class RunnerBuilder {
                 .vertx(vertx)
                 .keyPair(keyPair)
                 .config(networkConfig)
-                .peerBlacklist(peerBlacklist)
+                .peerPermissions(bannedNodes)
                 .metricsSystem(metricsSystem)
                 .supportedCapabilities(caps)
                 .nodePermissioningController(nodePermissioningController)

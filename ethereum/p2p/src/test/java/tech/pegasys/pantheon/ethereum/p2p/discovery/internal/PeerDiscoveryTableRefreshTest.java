@@ -25,7 +25,7 @@ import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryTestHelper;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -64,7 +64,7 @@ public class PeerDiscoveryTableRefreshTest {
                 new BlockingAsyncExecutor(),
                 0,
                 () -> true,
-                new PeerBlacklist(),
+                PeerPermissions.noop(),
                 Optional.empty(),
                 new Subscribers<>(),
                 new Subscribers<>(),

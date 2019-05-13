@@ -28,7 +28,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.RecursivePeerRefreshState.BondingAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.RecursivePeerRefreshState.FindNeighbourDispatcher;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.permissioning.LocalPermissioningConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -40,11 +40,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.Before;
 import org.junit.Test;
 
 public class RecursivePeerRefreshStateTest {
   private static final BytesValue TARGET = createId(0);
-  private final PeerBlacklist peerBlacklist = mock(PeerBlacklist.class);
+  private final PeerPermissions peerPermissions = mock(PeerPermissions.class);
   private final BondingAgent bondingAgent = mock(BondingAgent.class);
   private final FindNeighbourDispatcher neighborFinder = mock(FindNeighbourDispatcher.class);
   private final MockTimerUtil timerUtil = new MockTimerUtil();
@@ -57,7 +58,7 @@ public class RecursivePeerRefreshStateTest {
 
   private RecursivePeerRefreshState recursivePeerRefreshState =
       new RecursivePeerRefreshState(
-          peerBlacklist,
+          peerPermissions,
           Optional.empty(),
           bondingAgent,
           neighborFinder,
@@ -66,6 +67,12 @@ public class RecursivePeerRefreshStateTest {
           new PeerTable(createId(999), 16),
           5,
           100);
+
+  @Before
+  public void setup() {
+    // Default peerPermissions to be permissive
+    when(peerPermissions.isPermitted(any())).thenReturn(true);
+  }
 
   @Test
   public void shouldBondWithInitialNodesWhenStarted() {
@@ -171,7 +178,7 @@ public class RecursivePeerRefreshStateTest {
   public void shouldStopWhenMaximumNumberOfRoundsReached() {
     recursivePeerRefreshState =
         new RecursivePeerRefreshState(
-            peerBlacklist,
+            peerPermissions,
             Optional.empty(),
             bondingAgent,
             neighborFinder,
@@ -431,16 +438,15 @@ public class RecursivePeerRefreshStateTest {
   }
 
   @Test
-  public void shouldNotBondWithNodesOnBlacklist() {
+  public void shouldNotBondWithNonPermittedNode() {
     final DiscoveryPeer peerA = createPeer(1, "127.0.0.1", 1, 1);
     final DiscoveryPeer peerB = createPeer(2, "127.0.0.2", 2, 2);
 
-    final PeerBlacklist blacklist = new PeerBlacklist();
-    blacklist.add(peerB);
+    when(peerPermissions.isPermitted(peerB)).thenReturn(false);
 
     recursivePeerRefreshState =
         new RecursivePeerRefreshState(
-            blacklist,
+            peerPermissions,
             Optional.empty(),
             bondingAgent,
             neighborFinder,
@@ -501,7 +507,7 @@ public class RecursivePeerRefreshStateTest {
 
     recursivePeerRefreshState =
         new RecursivePeerRefreshState(
-            peerBlacklist,
+            peerPermissions,
             Optional.of(nodeWhitelistController),
             bondingAgent,
             neighborFinder,

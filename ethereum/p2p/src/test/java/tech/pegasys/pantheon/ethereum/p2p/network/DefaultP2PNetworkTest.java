@@ -44,7 +44,6 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBonde
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
@@ -564,6 +563,7 @@ public final class DefaultP2PNetworkTest {
 
   private PeerConnection mockPeerConnection(final Peer remotePeer) {
     final EnodeURL remoteEnode = remotePeer.getEnodeURL();
+    final Peer peer = DefaultPeer.fromEnodeURL(remoteEnode);
     final PeerInfo peerInfo =
         new PeerInfo(
             5,
@@ -573,8 +573,9 @@ public final class DefaultP2PNetworkTest {
             remoteEnode.getNodeId());
 
     final PeerConnection peerConnection = mock(PeerConnection.class);
-    when(peerConnection.getRemoteEnode()).thenReturn(remoteEnode);
-    when(peerConnection.getPeerInfo()).thenReturn(peerInfo);
+    lenient().when(peerConnection.getRemoteEnode()).thenReturn(remoteEnode);
+    lenient().when(peerConnection.getPeerInfo()).thenReturn(peerInfo);
+    lenient().when(peerConnection.getPeer()).thenReturn(peer);
 
     return peerConnection;
   }
@@ -616,7 +617,6 @@ public final class DefaultP2PNetworkTest {
         .vertx(vertx)
         .config(config)
         .keyPair(KeyPair.generate())
-        .peerBlacklist(new PeerBlacklist())
         .metricsSystem(new NoOpMetricsSystem())
         .supportedCapabilities(Arrays.asList(Capability.create("eth", 63)));
   }

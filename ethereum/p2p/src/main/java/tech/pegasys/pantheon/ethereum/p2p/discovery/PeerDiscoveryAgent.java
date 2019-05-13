@@ -31,7 +31,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PingPacketData;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.TimerUtil;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeerId;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
@@ -71,7 +71,7 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
 
   protected final List<DiscoveryPeer> bootstrapPeers;
   private final List<PeerRequirement> peerRequirements = new CopyOnWriteArrayList<>();
-  private final PeerBlacklist peerBlacklist;
+  private final PeerPermissions peerPermissions;
   private final Optional<NodePermissioningController> nodePermissioningController;
   private final MetricsSystem metricsSystem;
   /* The peer controller, which takes care of the state machine of peers. */
@@ -94,7 +94,7 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
   public PeerDiscoveryAgent(
       final SECP256K1.KeyPair keyPair,
       final DiscoveryConfiguration config,
-      final PeerBlacklist peerBlacklist,
+      final PeerPermissions peerPermissions,
       final Optional<NodePermissioningController> nodePermissioningController,
       final MetricsSystem metricsSystem) {
     this.metricsSystem = metricsSystem;
@@ -103,7 +103,7 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
 
     validateConfiguration(config);
 
-    this.peerBlacklist = peerBlacklist;
+    this.peerPermissions = peerPermissions;
     this.nodePermissioningController = nodePermissioningController;
     this.bootstrapPeers =
         config.getBootnodes().stream().map(DiscoveryPeer::fromEnode).collect(Collectors.toList());
@@ -174,7 +174,7 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
         createWorkerExecutor(),
         PEER_REFRESH_INTERVAL_MS,
         PeerRequirement.combine(peerRequirements),
-        peerBlacklist,
+        peerPermissions,
         nodePermissioningController,
         peerBondedObservers,
         peerDroppedObservers,

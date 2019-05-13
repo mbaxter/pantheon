@@ -37,7 +37,8 @@ import tech.pegasys.pantheon.ethereum.p2p.network.netty.HandshakeHandlerOutbound
 import tech.pegasys.pantheon.ethereum.p2p.network.netty.PeerConnectionRegistry;
 import tech.pegasys.pantheon.ethereum.p2p.network.netty.TimeoutHandler;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerBlacklist;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
@@ -154,7 +155,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
   private volatile Optional<EnodeURL> localEnode = Optional.empty();
   private volatile Optional<PeerInfo> ourPeerInfo = Optional.empty();
 
-  private final PeerBlacklist peerBlacklist;
+  private final PeerPermissions peerPermissions;
   private final Optional<NodePermissioningController> nodePermissioningController;
   private final Optional<Blockchain> blockchain;
 
@@ -189,7 +190,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
    * @param keyPair This node's keypair.
    * @param config The network configuration to use.
    * @param supportedCapabilities The wire protocol capabilities to advertise to connected peers.
-   * @param peerBlacklist The peers with which this node will not connect
+   * @param peerPermissions An object that determines whether peers are allowed to connect
    * @param metricsSystem The metrics system to capture metrics with.
    * @param nodePermissioningController Controls node permissioning.
    * @param blockchain The blockchain to subscribe to BlockAddedEvents.
@@ -199,7 +200,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
       final SECP256K1.KeyPair keyPair,
       final NetworkingConfiguration config,
       final List<Capability> supportedCapabilities,
-      final PeerBlacklist peerBlacklist,
+      final PeerPermissions peerPermissions,
       final MetricsSystem metricsSystem,
       final Optional<NodePermissioningController> nodePermissioningController,
       final Blockchain blockchain) {
@@ -208,7 +209,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
     this.keyPair = keyPair;
     this.config = config;
     this.supportedCapabilities = supportedCapabilities;
-    this.peerBlacklist = peerBlacklist;
     this.nodePermissioningController = nodePermissioningController;
     this.blockchain = Optional.ofNullable(blockchain);
     this.peerMaintainConnectionList = new HashSet<>();
@@ -218,12 +218,17 @@ public class DefaultP2PNetwork implements P2PNetwork {
     this.subProtocols = config.getSupportedProtocols();
     this.maxPeers = config.getRlpx().getMaxPeers();
 
+    // Set up permissions
+    final PeerPermissionsBlacklist misbehavingPeers = PeerPermissionsBlacklist.create(500);
+    PeerReputationManager reputationManager = new PeerReputationManager(misbehavingPeers);
+    this.peerPermissions = PeerPermissions.combine(peerPermissions, misbehavingPeers);
+
     peerDiscoveryAgent.addPeerRequirement(() -> connections.size() >= maxPeers);
     this.nodePermissioningController.ifPresent(
         c -> c.subscribeToUpdates(this::checkCurrentConnections));
 
+    subscribeDisconnect(reputationManager);
     subscribeDisconnect(peerDiscoveryAgent);
-    subscribeDisconnect(peerBlacklist);
     subscribeDisconnect(connections);
 
     outboundMessagesCounter =
@@ -613,14 +618,10 @@ public class DefaultP2PNetwork implements P2PNetwork {
   }
 
   private boolean isPeerAllowed(final PeerConnection conn) {
-    return isPeerAllowed(conn.getRemoteEnode());
+    return isPeerAllowed(conn.getPeer());
   }
 
   private boolean isPeerAllowed(final Peer peer) {
-    return isPeerAllowed(peer.getEnodeURL());
-  }
-
-  private boolean isPeerAllowed(final EnodeURL enode) {
     final Optional<EnodeURL> maybeEnode = getLocalEnode();
     if (!maybeEnode.isPresent()) {
       // If the network isn't ready yet, deny connections
@@ -628,15 +629,17 @@ public class DefaultP2PNetwork implements P2PNetwork {
     }
     final EnodeURL localEnode = maybeEnode.get();
 
-    if (peerBlacklist.contains(enode.getNodeId())) {
-      return false;
-    }
-    if (enode.getNodeId().equals(nodeId)) {
+    if (peer.getId().equals(nodeId)) {
       // Peer matches our node id
       return false;
     }
+    if (!peerPermissions.isPermitted(peer)) {
+      return false;
+    }
 
-    return nodePermissioningController.map(c -> c.isPermitted(localEnode, enode)).orElse(true);
+    return nodePermissioningController
+        .map(c -> c.isPermitted(localEnode, peer.getEnodeURL()))
+        .orElse(true);
   }
 
   @VisibleForTesting
@@ -747,7 +750,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
     private KeyPair keyPair;
     private NetworkingConfiguration config = NetworkingConfiguration.create();
     private List<Capability> supportedCapabilities;
-    private PeerBlacklist peerBlacklist;
+    private PeerPermissions peerPermissions = PeerPermissions.noop();
     private MetricsSystem metricsSystem;
     private Optional<NodePermissioningController> nodePermissioningController = Optional.empty();
     private Blockchain blockchain = null;
@@ -766,7 +769,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
           keyPair,
           config,
           supportedCapabilities,
-          peerBlacklist,
+          peerPermissions,
           metricsSystem,
           nodePermissioningController,
           blockchain);
@@ -778,7 +781,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
       checkState(
           supportedCapabilities != null && supportedCapabilities.size() > 0,
           "Supported capabilities must be set and non-empty.");
-      checkState(peerBlacklist != null, "PeerBlacklist must be set.");
       checkState(metricsSystem != null, "MetricsSystem must be set.");
       checkState(
           !nodePermissioningController.isPresent() || blockchain != null,
@@ -792,7 +794,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
           vertx,
           keyPair,
           config.getDiscovery(),
-          peerBlacklist,
+          peerPermissions,
           nodePermissioningController,
           metricsSystem);
     }
@@ -826,9 +828,9 @@ public class DefaultP2PNetwork implements P2PNetwork {
       return this;
     }
 
-    public Builder peerBlacklist(final PeerBlacklist peerBlacklist) {
-      checkNotNull(peerBlacklist);
-      this.peerBlacklist = peerBlacklist;
+    public Builder peerPermissions(final PeerPermissions peerPermissions) {
+      checkNotNull(peerPermissions);
+      this.peerPermissions = peerPermissions;
       return this;
     }
 
