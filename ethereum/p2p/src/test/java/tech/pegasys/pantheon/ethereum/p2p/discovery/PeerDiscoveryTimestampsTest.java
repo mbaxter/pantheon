@@ -66,7 +66,6 @@ public class PeerDiscoveryTimestampsTest {
             PeerPermissions.noop(),
             Optional.empty(),
             new Subscribers<>(),
-            new Subscribers<>(),
             new NoOpMetricsSystem());
     controller.start();
 

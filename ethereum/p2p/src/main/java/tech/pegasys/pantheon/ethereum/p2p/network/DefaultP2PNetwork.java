@@ -27,7 +27,6 @@ import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.network.netty.Callbacks;
@@ -173,7 +172,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
   private final LabelledMetric<Counter> outboundMessagesCounter;
   private OptionalLong blockAddedObserverId = OptionalLong.empty();
   private OptionalLong peerBondedObserverId = OptionalLong.empty();
-  private OptionalLong peerDroppedObserverId = OptionalLong.empty();
 
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final AtomicBoolean stopped = new AtomicBoolean(false);
@@ -548,8 +546,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
     peerDiscoveryAgent.start(listeningPort).join();
     peerBondedObserverId =
         OptionalLong.of(peerDiscoveryAgent.observePeerBondedEvents(handlePeerBondedEvent()));
-    peerDroppedObserverId =
-        OptionalLong.of(peerDiscoveryAgent.observePeerDroppedEvents(handlePeerDroppedEvents()));
 
     if (nodePermissioningController.isPresent()) {
       if (blockchain.isPresent()) {
@@ -581,16 +577,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
       if (connectionCount() < maxPeers && !isConnecting(peer) && !isConnected(peer)) {
         connect(peer);
       }
-    };
-  }
-
-  private Consumer<PeerDroppedEvent> handlePeerDroppedEvents() {
-    return event -> {
-      final Peer peer = event.getPeer();
-      getPeers().stream()
-          .filter(p -> p.getPeerInfo().getNodeId().equals(peer.getId()))
-          .findFirst()
-          .ifPresent(p -> p.disconnect(DisconnectReason.REQUESTED));
     };
   }
 
@@ -656,8 +642,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
     peerDiscoveryAgent.stop().join();
     peerBondedObserverId.ifPresent(peerDiscoveryAgent::removePeerBondedObserver);
     peerBondedObserverId = OptionalLong.empty();
-    peerDroppedObserverId.ifPresent(peerDiscoveryAgent::removePeerDroppedObserver);
-    peerDroppedObserverId = OptionalLong.empty();
     blockchain.ifPresent(b -> blockAddedObserverId.ifPresent(b::removeObserver));
     blockAddedObserverId = OptionalLong.empty();
     peerDiscoveryAgent.stop().join();

@@ -26,7 +26,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
@@ -35,10 +34,8 @@ import tech.pegasys.pantheon.ethereum.p2p.NodePermissioningControllerTestHelper;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.Endpoint;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerDroppedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryTestHelper;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.EvictResult;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsBlacklist;
@@ -1055,27 +1052,6 @@ public class PeerDiscoveryControllerTest {
     assertThat(controller.streamDiscoveredPeers()).doesNotContain(peers.get(0));
   }
 
-  @Test
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  public void whenPeerIsNotEvictedDropFromTableShouldReturnFalseAndNotifyZeroObservers() {
-    final List<DiscoveryPeer> peers = createPeersInLastBucket(localPeer, 1);
-    final DiscoveryPeer peer = peers.get(0);
-    final PeerTable peerTableSpy = spy(peerTable);
-    final Consumer<PeerDroppedEvent> peerDroppedEventConsumer = mock(Consumer.class);
-    final Subscribers<Consumer<PeerDroppedEvent>> peerDroppedSubscribers = new Subscribers();
-    peerDroppedSubscribers.subscribe(peerDroppedEventConsumer);
-
-    doReturn(EvictResult.absent()).when(peerTableSpy).tryEvict(any());
-
-    controller = getControllerBuilder().peerDroppedObservers(peerDroppedSubscribers).build();
-
-    controller.start();
-    final boolean dropped = controller.dropFromPeerTable(peer);
-
-    assertThat(dropped).isFalse();
-    verifyZeroInteractions(peerDroppedEventConsumer);
-  }
-
   private static Packet mockPingPacket(final DiscoveryPeer from, final DiscoveryPeer to) {
     final Packet packet = mock(Packet.class);
 
@@ -1145,7 +1121,6 @@ public class PeerDiscoveryControllerTest {
     private OutboundMessageHandler outboundMessageHandler = OutboundMessageHandler.NOOP;
     private static final PeerDiscoveryTestHelper helper = new PeerDiscoveryTestHelper();
     private Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
-    private Subscribers<Consumer<PeerDroppedEvent>> peerDroppedObservers = new Subscribers<>();
     private PeerPermissions peerPermissions = PeerPermissions.noop();
 
     public static ControllerBuilder create() {
@@ -1202,12 +1177,6 @@ public class PeerDiscoveryControllerTest {
       return this;
     }
 
-    ControllerBuilder peerDroppedObservers(
-        final Subscribers<Consumer<PeerDroppedEvent>> observers) {
-      this.peerDroppedObservers = observers;
-      return this;
-    }
-
     PeerDiscoveryController build() {
       checkNotNull(keypair);
       if (localPeer == null) {
@@ -1230,7 +1199,6 @@ public class PeerDiscoveryControllerTest {
               peerPermissions,
               nodePermissioningController,
               peerBondedObservers,
-              peerDroppedObservers,
               new NoOpMetricsSystem()));
     }
   }

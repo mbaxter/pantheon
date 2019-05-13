@@ -67,7 +67,6 @@ public class PeerDiscoveryTableRefreshTest {
                 PeerPermissions.noop(),
                 Optional.empty(),
                 new Subscribers<>(),
-                new Subscribers<>(),
                 new NoOpMetricsSystem()));
     controller.start();
 
