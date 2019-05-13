@@ -18,7 +18,6 @@ import static com.google.common.base.Preconditions.checkState;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
-import tech.pegasys.pantheon.ethereum.chain.BlockAddedEvent;
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.Message;
@@ -557,7 +556,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
         synchronized (this) {
           if (!blockAddedObserverId.isPresent()) {
             blockAddedObserverId =
-                OptionalLong.of(blockchain.get().observeBlockAdded(this::handleBlockAddedEvent));
+                OptionalLong.of(
+                    blockchain.get().observeBlockAdded((evt, chain) -> checkCurrentConnections()));
           }
         }
       } else {
@@ -592,18 +592,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
           .findFirst()
           .ifPresent(p -> p.disconnect(DisconnectReason.REQUESTED));
     };
-  }
-
-  private synchronized void handleBlockAddedEvent(
-      final BlockAddedEvent event, final Blockchain blockchain) {
-    connections
-        .getPeerConnections()
-        .forEach(
-            peerConnection -> {
-              if (!isPeerAllowed(peerConnection)) {
-                peerConnection.disconnect(DisconnectReason.REQUESTED);
-              }
-            });
   }
 
   private synchronized void checkCurrentConnections() {
