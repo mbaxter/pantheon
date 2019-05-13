@@ -198,9 +198,7 @@ public class PeerDiscoveryController {
     }
 
     final List<DiscoveryPeer> initialDiscoveryPeers =
-        bootstrapNodes.stream()
-            .filter(p -> isPeerPermitted(localPeer, p))
-            .collect(Collectors.toList());
+        bootstrapNodes.stream().filter(this::isPeerPermitted).collect(Collectors.toList());
     initialDiscoveryPeers.stream().forEach(peerTable::tryAdd);
 
     recursivePeerRefreshState =
@@ -252,10 +250,11 @@ public class PeerDiscoveryController {
     return CompletableFuture.completedFuture(null);
   }
 
-  private boolean isPeerPermitted(final Peer sourcePeer, final Peer destinationPeer) {
-    return nodePermissioningController
-        .map(c -> c.isPermitted(sourcePeer.getEnodeURL(), destinationPeer.getEnodeURL()))
-        .orElse(true);
+  private boolean isPeerPermitted(final Peer remotePeer) {
+    return peerPermissions.isPermitted(remotePeer)
+        && nodePermissioningController
+            .map(c -> c.isPermitted(localPeer.getEnodeURL(), remotePeer.getEnodeURL()))
+            .orElse(true);
   }
 
   /**
@@ -277,8 +276,8 @@ public class PeerDiscoveryController {
       return;
     }
 
-    if (!isPeerPermitted(sender, localPeer)) {
-      LOG.trace("Dropping packet from peer not in the whitelist ({})", sender.getEnodeURLString());
+    if (!isPeerPermitted(sender)) {
+      LOG.trace("Dropping packet from disallowed peer ({})", sender.getEnodeURLString());
       return;
     }
 
@@ -286,11 +285,10 @@ public class PeerDiscoveryController {
     final Optional<DiscoveryPeer> maybeKnownPeer = peerTable.get(sender);
     final DiscoveryPeer peer = maybeKnownPeer.orElse(sender);
     final boolean peerKnown = maybeKnownPeer.isPresent();
-    final boolean peerPermitted = peerPermissions.isPermitted(peer);
 
     switch (packet.getType()) {
       case PING:
-        if (peerPermitted && addToPeerTable(peer)) {
+        if (addToPeerTable(peer)) {
           final PingPacketData ping = packet.getPacketData(PingPacketData.class).get();
           respondToPing(ping, packet.getHash(), peer);
         }
@@ -299,9 +297,6 @@ public class PeerDiscoveryController {
         matchInteraction(packet)
             .ifPresent(
                 interaction -> {
-                  if (!peerPermitted) {
-                    return;
-                  }
                   addToPeerTable(peer);
                   recursivePeerRefreshState.onBondingComplete(peer);
                 });
@@ -314,7 +309,7 @@ public class PeerDiscoveryController {
                         peer, getPeersFromNeighborsPacket(packet)));
         break;
       case FIND_NEIGHBORS:
-        if (!peerKnown || !peerPermitted) {
+        if (!peerKnown) {
           break;
         }
         final FindNeighborsPacketData fn =
