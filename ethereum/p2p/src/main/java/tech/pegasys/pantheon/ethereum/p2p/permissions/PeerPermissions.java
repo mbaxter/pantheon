@@ -17,6 +17,7 @@ import tech.pegasys.pantheon.util.Subscribers;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 public abstract class PeerPermissions {
   private final Subscribers<PermissionsUpdateCallback> updateSubscribers = new Subscribers<>();
@@ -49,8 +50,9 @@ public abstract class PeerPermissions {
     updateSubscribers.subscribe(callback);
   }
 
-  protected void dispatchUpdate(final boolean permissionsRestricted) {
-    updateSubscribers.forEach(s -> s.onUpdate(permissionsRestricted));
+  protected void dispatchUpdate(
+      final boolean permissionsRestricted, final Optional<List<Peer>> affectedPeers) {
+    updateSubscribers.forEach(s -> s.onUpdate(permissionsRestricted, affectedPeers));
   }
 
   private static class CombinedPeerPermissions extends PeerPermissions {

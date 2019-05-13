@@ -17,6 +17,8 @@ import tech.pegasys.pantheon.util.LimitedSet;
 import tech.pegasys.pantheon.util.LimitedSet.Mode;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.Collections;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 
@@ -54,22 +56,26 @@ public class PeerPermissionsBlacklist extends PeerPermissions {
   }
 
   public void add(final Peer peer) {
-    add(peer.getId());
+    if (blacklist.add(peer.getId())) {
+      dispatchUpdate(true, Optional.of(Collections.singletonList(peer)));
+    }
   }
 
   public void remove(final Peer peer) {
-    remove(peer.getId());
+    if (blacklist.remove(peer.getId())) {
+      dispatchUpdate(false, Optional.of(Collections.singletonList(peer)));
+    }
   }
 
   public void add(final BytesValue peerId) {
     if (blacklist.add(peerId)) {
-      dispatchUpdate(true);
+      dispatchUpdate(true, Optional.empty());
     }
   }
 
   public void remove(final BytesValue peerId) {
     if (blacklist.remove(peerId)) {
-      dispatchUpdate(false);
+      dispatchUpdate(false, Optional.empty());
     }
   }
 }

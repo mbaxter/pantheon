@@ -12,6 +12,11 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.permissions;
 
+import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+
+import java.util.List;
+import java.util.Optional;
+
 public interface PermissionsUpdateCallback {
 
   /**
@@ -19,6 +24,10 @@ public interface PermissionsUpdateCallback {
    *     previously permitted peers may no longer be permitted. False indicates that permissions
    *     were made less restrictive, meaning peers that were previously restricted may now be
    *     permitted.
+   * @param affectedPeers If non-empty, contains the entire set of peers affected by this
+   *     permissions update. If permissions were restricted, this is the list of peers that are no
+   *     longer permitted. If permissions were broadened, this is the list of peers that are now
+   *     permitted.
    */
-  void onUpdate(final boolean permissionsRestricted);
+  void onUpdate(final boolean permissionsRestricted, final Optional<List<Peer>> affectedPeers);
 }

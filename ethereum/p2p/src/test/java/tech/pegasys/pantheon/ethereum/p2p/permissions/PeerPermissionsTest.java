@@ -18,6 +18,7 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Test;
@@ -28,7 +29,8 @@ public class PeerPermissionsTest {
     TestPeerPermissions peerPermissions = new TestPeerPermissions(false);
     final AtomicInteger callbackCount = new AtomicInteger(0);
 
-    peerPermissions.subscribeUpdate((permissionsRestricted) -> callbackCount.incrementAndGet());
+    peerPermissions.subscribeUpdate(
+        (permissionsRestricted, affectedPeers) -> callbackCount.incrementAndGet());
 
     peerPermissions.allowPeers(true);
     assertThat(callbackCount).hasValue(1);
@@ -47,7 +49,7 @@ public class PeerPermissionsTest {
     final AtomicInteger restrictedCallbackCount = new AtomicInteger(0);
 
     combined.subscribeUpdate(
-        (permissionsRestricted) -> {
+        (permissionsRestricted, affectedPeers) -> {
           callbackCount.incrementAndGet();
           if (permissionsRestricted) {
             restrictedCallbackCount.incrementAndGet();
@@ -102,7 +104,7 @@ public class PeerPermissionsTest {
 
     public void allowPeers(final boolean doAllowPeers) {
       this.allowPeers = doAllowPeers;
-      dispatchUpdate(!doAllowPeers);
+      dispatchUpdate(!doAllowPeers, Optional.empty());
     }
 
     @Override

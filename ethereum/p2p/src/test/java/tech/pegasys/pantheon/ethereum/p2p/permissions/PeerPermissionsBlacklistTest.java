@@ -18,6 +18,7 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -26,6 +27,84 @@ import java.util.stream.Stream;
 import org.junit.Test;
 
 public class PeerPermissionsBlacklistTest {
+
+  @Test
+  public void add_peer() {
+    PeerPermissionsBlacklist blacklist = PeerPermissionsBlacklist.create();
+    Peer peer = createPeer();
+
+    final AtomicInteger callbackCount = new AtomicInteger(0);
+    blacklist.subscribeUpdate(
+        (restricted, affectedPeers) -> {
+          callbackCount.incrementAndGet();
+          assertThat(restricted).isTrue();
+          assertThat(affectedPeers).contains(Collections.singletonList(peer));
+        });
+
+    assertThat(callbackCount).hasValue(0);
+
+    blacklist.add(peer);
+    assertThat(callbackCount).hasValue(1);
+  }
+
+  @Test
+  public void remove_peer() {
+    PeerPermissionsBlacklist blacklist = PeerPermissionsBlacklist.create();
+    Peer peer = createPeer();
+    blacklist.add(peer);
+
+    final AtomicInteger callbackCount = new AtomicInteger(0);
+    blacklist.subscribeUpdate(
+        (restricted, affectedPeers) -> {
+          callbackCount.incrementAndGet();
+          assertThat(restricted).isFalse();
+          assertThat(affectedPeers).contains(Collections.singletonList(peer));
+        });
+
+    assertThat(callbackCount).hasValue(0);
+
+    blacklist.remove(peer);
+    assertThat(callbackCount).hasValue(1);
+  }
+
+  @Test
+  public void add_id() {
+    PeerPermissionsBlacklist blacklist = PeerPermissionsBlacklist.create();
+    Peer peer = createPeer();
+
+    final AtomicInteger callbackCount = new AtomicInteger(0);
+    blacklist.subscribeUpdate(
+        (restricted, affectedPeers) -> {
+          callbackCount.incrementAndGet();
+          assertThat(restricted).isTrue();
+          assertThat(affectedPeers).isEmpty();
+        });
+
+    assertThat(callbackCount).hasValue(0);
+
+    blacklist.add(peer.getId());
+    assertThat(callbackCount).hasValue(1);
+  }
+
+  @Test
+  public void remove_id() {
+    PeerPermissionsBlacklist blacklist = PeerPermissionsBlacklist.create();
+    Peer peer = createPeer();
+    blacklist.add(peer);
+
+    final AtomicInteger callbackCount = new AtomicInteger(0);
+    blacklist.subscribeUpdate(
+        (restricted, affectedPeers) -> {
+          callbackCount.incrementAndGet();
+          assertThat(restricted).isFalse();
+          assertThat(affectedPeers).isEmpty();
+        });
+
+    assertThat(callbackCount).hasValue(0);
+
+    blacklist.remove(peer.getId());
+    assertThat(callbackCount).hasValue(1);
+  }
 
   @Test
   public void trackedPeerIsNotPermitted() {
@@ -49,7 +128,7 @@ public class PeerPermissionsBlacklistTest {
     Peer peer = createPeer();
 
     blacklist.subscribeUpdate(
-        (permissionsRestricted) -> {
+        (permissionsRestricted, affectedPeers) -> {
           callbackCount.incrementAndGet();
           if (permissionsRestricted) {
             restrictedCallbackCount.incrementAndGet();
