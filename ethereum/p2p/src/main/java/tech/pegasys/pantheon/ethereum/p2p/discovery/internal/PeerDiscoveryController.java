@@ -12,6 +12,9 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.discovery.internal;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable.AddResult.AddOutcome;
@@ -32,6 +35,7 @@ import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -40,6 +44,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -137,7 +142,7 @@ public class PeerDiscoveryController {
 
   private RecursivePeerRefreshState recursivePeerRefreshState;
 
-  public PeerDiscoveryController(
+  private PeerDiscoveryController(
       final KeyPair keypair,
       final DiscoveryPeer localPeer,
       final PeerTable peerTable,
@@ -184,6 +189,10 @@ public class PeerDiscoveryController {
             "discovery_interaction_retry_count",
             "Total number of interaction retries performed",
             "type");
+  }
+
+  public static Builder builder() {
+    return new Builder();
   }
 
   public void start() {
@@ -613,5 +622,137 @@ public class PeerDiscoveryController {
 
   public interface AsyncExecutor {
     <T> CompletableFuture<T> execute(Supplier<T> action);
+  }
+
+  public static class Builder {
+    // Options with default values
+    private OutboundMessageHandler outboundMessageHandler = OutboundMessageHandler.NOOP;
+    private PeerRequirement peerRequirement = PeerRequirement.NOOP;
+    private PeerPermissions peerPermissions = PeerPermissions.noop();
+    private long tableRefreshIntervalMs = MILLISECONDS.convert(30, TimeUnit.MINUTES);
+    private List<DiscoveryPeer> bootstrapNodes = new ArrayList<>();
+    private Optional<NodePermissioningController> nodePermissioningController = Optional.empty();
+
+    // Required dependencies
+    private KeyPair keypair;
+    private DiscoveryPeer localPeer;
+    private PeerTable peerTable;
+    private TimerUtil timerUtil;
+    private AsyncExecutor workerExecutor;
+    private Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
+    private MetricsSystem metricsSystem;
+
+    private Builder() {}
+
+    public PeerDiscoveryController build() {
+      validate();
+      return new PeerDiscoveryController(
+          keypair,
+          localPeer,
+          peerTable,
+          bootstrapNodes,
+          outboundMessageHandler,
+          timerUtil,
+          workerExecutor,
+          tableRefreshIntervalMs,
+          peerRequirement,
+          peerPermissions,
+          nodePermissioningController,
+          peerBondedObservers,
+          metricsSystem);
+    }
+
+    private void validate() {
+      validateRequiredDependency(keypair, "KeyPair");
+      validateRequiredDependency(localPeer, "LocalPeer");
+      validateRequiredDependency(peerTable, "PeerTable");
+      validateRequiredDependency(timerUtil, "TimerUtil");
+      validateRequiredDependency(workerExecutor, "AsyncExecutor");
+      validateRequiredDependency(metricsSystem, "MetricsSystem");
+      validateRequiredDependency(peerBondedObservers, "PeerBondedObservers");
+    }
+
+    private void validateRequiredDependency(final Object object, final String name) {
+      checkState(object != null, name + " must be configured.");
+    }
+
+    public Builder keypair(final KeyPair keypair) {
+      checkNotNull(keypair);
+      this.keypair = keypair;
+      return this;
+    }
+
+    public Builder localPeer(final DiscoveryPeer localPeer) {
+      checkNotNull(localPeer);
+      this.localPeer = localPeer;
+      return this;
+    }
+
+    public Builder peerTable(final PeerTable peerTable) {
+      checkNotNull(peerTable);
+      this.peerTable = peerTable;
+      return this;
+    }
+
+    public Builder bootstrapNodes(final Collection<DiscoveryPeer> bootstrapNodes) {
+      this.bootstrapNodes.addAll(bootstrapNodes);
+      return this;
+    }
+
+    public Builder outboundMessageHandler(final OutboundMessageHandler outboundMessageHandler) {
+      checkNotNull(outboundMessageHandler);
+      this.outboundMessageHandler = outboundMessageHandler;
+      return this;
+    }
+
+    public Builder timerUtil(final TimerUtil timerUtil) {
+      checkNotNull(timerUtil);
+      this.timerUtil = timerUtil;
+      return this;
+    }
+
+    public Builder workerExecutor(final AsyncExecutor workerExecutor) {
+      checkNotNull(workerExecutor);
+      this.workerExecutor = workerExecutor;
+      return this;
+    }
+
+    public Builder tableRefreshIntervalMs(final long tableRefreshIntervalMs) {
+      checkArgument(tableRefreshIntervalMs >= 0);
+      this.tableRefreshIntervalMs = tableRefreshIntervalMs;
+      return this;
+    }
+
+    public Builder peerRequirement(final PeerRequirement peerRequirement) {
+      checkNotNull(peerRequirement);
+      this.peerRequirement = peerRequirement;
+      return this;
+    }
+
+    public Builder peerPermissions(final PeerPermissions peerPermissions) {
+      checkNotNull(peerPermissions);
+      this.peerPermissions = peerPermissions;
+      return this;
+    }
+
+    public Builder nodePermissioningController(
+        final Optional<NodePermissioningController> nodePermissioningController) {
+      checkNotNull(nodePermissioningController);
+      this.nodePermissioningController = nodePermissioningController;
+      return this;
+    }
+
+    public Builder peerBondedObservers(
+        final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers) {
+      checkNotNull(peerBondedObservers);
+      this.peerBondedObservers = peerBondedObservers;
+      return this;
+    }
+
+    public Builder metricsSystem(final MetricsSystem metricsSystem) {
+      checkNotNull(metricsSystem);
+      this.metricsSystem = metricsSystem;
+      return this;
+    }
   }
 }

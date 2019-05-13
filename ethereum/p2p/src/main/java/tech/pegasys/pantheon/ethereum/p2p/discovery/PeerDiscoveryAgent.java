@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.ethereum.p2p.discovery;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static tech.pegasys.pantheon.util.bytes.BytesValue.wrapBuffer;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
@@ -46,7 +45,6 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -66,7 +64,6 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
   // The devp2p specification says only accept packets up to 1280, but some
   // clients ignore that, so we add in a little extra padding.
   private static final int MAX_PACKET_SIZE_BYTES = 1600;
-  private static final long PEER_REFRESH_INTERVAL_MS = MILLISECONDS.convert(30, TimeUnit.MINUTES);
 
   protected final List<DiscoveryPeer> bootstrapPeers;
   private final List<PeerRequirement> peerRequirements = new CopyOnWriteArrayList<>();
@@ -162,20 +159,20 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
   }
 
   private PeerDiscoveryController createController() {
-    return new PeerDiscoveryController(
-        keyPair,
-        advertisedPeer,
-        peerTable,
-        bootstrapPeers,
-        this::handleOutgoingPacket,
-        createTimer(),
-        createWorkerExecutor(),
-        PEER_REFRESH_INTERVAL_MS,
-        PeerRequirement.combine(peerRequirements),
-        peerPermissions,
-        nodePermissioningController,
-        peerBondedObservers,
-        metricsSystem);
+    return PeerDiscoveryController.builder()
+        .keypair(keyPair)
+        .localPeer(advertisedPeer)
+        .peerTable(peerTable)
+        .bootstrapNodes(bootstrapPeers)
+        .outboundMessageHandler(this::handleOutgoingPacket)
+        .timerUtil(createTimer())
+        .workerExecutor(createWorkerExecutor())
+        .peerRequirement(PeerRequirement.combine(peerRequirements))
+        .peerPermissions(peerPermissions)
+        .nodePermissioningController(nodePermissioningController)
+        .peerBondedObservers(peerBondedObservers)
+        .metricsSystem(metricsSystem)
+        .build();
   }
 
   protected boolean validatePacketSize(final int packetSize) {

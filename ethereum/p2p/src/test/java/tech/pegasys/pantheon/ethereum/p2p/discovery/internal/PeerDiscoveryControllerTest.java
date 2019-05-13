@@ -1186,20 +1186,21 @@ public class PeerDiscoveryControllerTest {
         peerTable = new PeerTable(localPeer.getId());
       }
       return spy(
-          new PeerDiscoveryController(
-              keypair,
-              localPeer,
-              peerTable,
-              discoPeers,
-              outboundMessageHandler,
-              timerUtil,
-              new BlockingAsyncExecutor(),
-              TABLE_REFRESH_INTERVAL_MS,
-              PEER_REQUIREMENT,
-              peerPermissions,
-              nodePermissioningController,
-              peerBondedObservers,
-              new NoOpMetricsSystem()));
+          PeerDiscoveryController.builder()
+              .keypair(keypair)
+              .localPeer(localPeer)
+              .peerTable(peerTable)
+              .bootstrapNodes(discoPeers)
+              .outboundMessageHandler(outboundMessageHandler)
+              .timerUtil(timerUtil)
+              .workerExecutor(new BlockingAsyncExecutor())
+              .tableRefreshIntervalMs(TABLE_REFRESH_INTERVAL_MS)
+              .peerRequirement(PEER_REQUIREMENT)
+              .peerPermissions(peerPermissions)
+              .nodePermissioningController(nodePermissioningController)
+              .peerBondedObservers(peerBondedObservers)
+              .metricsSystem(new NoOpMetricsSystem())
+              .build());
     }
   }
 }
