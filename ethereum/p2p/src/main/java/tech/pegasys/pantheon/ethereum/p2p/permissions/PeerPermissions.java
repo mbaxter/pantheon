@@ -49,12 +49,8 @@ public abstract class PeerPermissions {
     updateSubscribers.subscribe(callback);
   }
 
-  protected void dispatchUpdate() {
-    updateSubscribers.forEach(PermissionsUpdateCallback::onUpdate);
-  }
-
-  public interface PermissionsUpdateCallback {
-    void onUpdate();
+  protected void dispatchUpdate(final boolean permissionsRestricted) {
+    updateSubscribers.forEach(s -> s.onUpdate(permissionsRestricted));
   }
 
   private static class CombinedPeerPermissions extends PeerPermissions {

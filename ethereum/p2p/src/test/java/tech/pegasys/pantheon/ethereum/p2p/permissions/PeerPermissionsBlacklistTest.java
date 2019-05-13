@@ -45,27 +45,40 @@ public class PeerPermissionsBlacklistTest {
   public void subscribeUpdate() {
     PeerPermissionsBlacklist blacklist = PeerPermissionsBlacklist.create();
     final AtomicInteger callbackCount = new AtomicInteger(0);
+    final AtomicInteger restrictedCallbackCount = new AtomicInteger(0);
     Peer peer = createPeer();
 
-    blacklist.subscribeUpdate(callbackCount::incrementAndGet);
+    blacklist.subscribeUpdate(
+        (permissionsRestricted) -> {
+          callbackCount.incrementAndGet();
+          if (permissionsRestricted) {
+            restrictedCallbackCount.incrementAndGet();
+          }
+        });
 
     assertThat(blacklist.isPermitted(peer)).isTrue();
     assertThat(callbackCount).hasValue(0);
+    assertThat(restrictedCallbackCount).hasValue(0);
 
     blacklist.add(peer);
     assertThat(callbackCount).hasValue(1);
+    assertThat(restrictedCallbackCount).hasValue(1);
 
     blacklist.add(peer);
     assertThat(callbackCount).hasValue(1);
+    assertThat(restrictedCallbackCount).hasValue(1);
 
     blacklist.remove(peer);
     assertThat(callbackCount).hasValue(2);
+    assertThat(restrictedCallbackCount).hasValue(1);
 
     blacklist.remove(peer);
     assertThat(callbackCount).hasValue(2);
+    assertThat(restrictedCallbackCount).hasValue(1);
 
     blacklist.add(peer);
     assertThat(callbackCount).hasValue(3);
+    assertThat(restrictedCallbackCount).hasValue(2);
   }
 
   @Test
@@ -120,7 +133,7 @@ public class PeerPermissionsBlacklistTest {
         EnodeURL.builder()
             .nodeId(Peer.randomId())
             .ipAddress("127.0.0.1")
-            .listeningPort(EnodeURL.DEFAULT_LISTENING_PORT)
+            .discoveryAndListeningPorts(EnodeURL.DEFAULT_LISTENING_PORT)
             .build());
   }
 }

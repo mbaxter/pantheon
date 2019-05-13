@@ -54,24 +54,22 @@ public class PeerPermissionsBlacklist extends PeerPermissions {
   }
 
   public void add(final Peer peer) {
-    if (blacklist.add(peer.getId())) {
-      dispatchUpdate();
-    }
+    add(peer.getId());
   }
 
   public void remove(final Peer peer) {
-    if (blacklist.remove(peer.getId())) {
-      dispatchUpdate();
-    }
+    remove(peer.getId());
   }
 
   public void add(final BytesValue peerId) {
-    blacklist.add(peerId);
-    dispatchUpdate();
+    if (blacklist.add(peerId)) {
+      dispatchUpdate(true);
+    }
   }
 
   public void remove(final BytesValue peerId) {
-    blacklist.remove(peerId);
-    dispatchUpdate();
+    if (blacklist.remove(peerId)) {
+      dispatchUpdate(false);
+    }
   }
 }

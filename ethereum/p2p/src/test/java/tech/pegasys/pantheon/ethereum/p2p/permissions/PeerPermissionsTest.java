@@ -28,7 +28,7 @@ public class PeerPermissionsTest {
     TestPeerPermissions peerPermissions = new TestPeerPermissions(false);
     final AtomicInteger callbackCount = new AtomicInteger(0);
 
-    peerPermissions.subscribeUpdate(callbackCount::incrementAndGet);
+    peerPermissions.subscribeUpdate((permissionsRestricted) -> callbackCount.incrementAndGet());
 
     peerPermissions.allowPeers(true);
     assertThat(callbackCount).hasValue(1);
@@ -44,14 +44,31 @@ public class PeerPermissionsTest {
     PeerPermissions combined = PeerPermissions.combine(peerPermissionsA, peerPermissionsB);
 
     final AtomicInteger callbackCount = new AtomicInteger(0);
+    final AtomicInteger restrictedCallbackCount = new AtomicInteger(0);
 
-    combined.subscribeUpdate(callbackCount::incrementAndGet);
+    combined.subscribeUpdate(
+        (permissionsRestricted) -> {
+          callbackCount.incrementAndGet();
+          if (permissionsRestricted) {
+            restrictedCallbackCount.incrementAndGet();
+          }
+        });
 
     peerPermissionsA.allowPeers(true);
     assertThat(callbackCount).hasValue(1);
+    assertThat(restrictedCallbackCount).hasValue(0);
 
     peerPermissionsB.allowPeers(true);
     assertThat(callbackCount).hasValue(2);
+    assertThat(restrictedCallbackCount).hasValue(0);
+
+    peerPermissionsA.allowPeers(false);
+    assertThat(callbackCount).hasValue(3);
+    assertThat(restrictedCallbackCount).hasValue(1);
+
+    peerPermissionsB.allowPeers(false);
+    assertThat(callbackCount).hasValue(4);
+    assertThat(restrictedCallbackCount).hasValue(2);
   }
 
   @Test
@@ -85,7 +102,7 @@ public class PeerPermissionsTest {
 
     public void allowPeers(final boolean doAllowPeers) {
       this.allowPeers = doAllowPeers;
-      dispatchUpdate();
+      dispatchUpdate(!doAllowPeers);
     }
 
     @Override
