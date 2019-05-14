@@ -473,6 +473,11 @@ public final class DefaultP2PNetworkTest {
                 })
             .collect(Collectors.toList());
 
+    final List<DiscoveryPeer> highestValuePeers = peers.subList(5, 8);
+    // Mark as high value by lowering the lastAttemptedConnection value
+    peers.forEach(p -> p.setLastAttemptedConnection(100));
+    highestValuePeers.forEach(p -> p.setLastAttemptedConnection(1));
+
     doReturn(peers.stream()).when(network).streamDiscoveredPeers();
     final ArgumentCaptor<DiscoveryPeer> peerCapture = ArgumentCaptor.forClass(DiscoveryPeer.class);
     doReturn(CompletableFuture.completedFuture(mock(PeerConnection.class)))
@@ -482,6 +487,7 @@ public final class DefaultP2PNetworkTest {
     network.attemptPeerConnections();
     verify(network, times(3)).connect(any());
     assertThat(peers.containsAll(peerCapture.getAllValues())).isTrue();
+    assertThat(peerCapture.getAllValues()).containsExactlyInAnyOrderElementsOf(highestValuePeers);
   }
 
   @Test
@@ -539,6 +545,19 @@ public final class DefaultP2PNetworkTest {
         .hasCauseInstanceOf(IllegalStateException.class)
         .hasMessageContaining(
             "Attempt to connect to peer with no listening port: " + peer.getEnodeURLString());
+  }
+
+  @Test
+  public void connect_toDiscoveryPeerUpdatesStats() {
+    final DefaultP2PNetwork network = network();
+    network.start();
+    final DiscoveryPeer peer = createDiscoveryPeer();
+
+    assertThat(peer.getLastAttemptedConnection()).isEqualTo(0);
+
+    final CompletableFuture<PeerConnection> result = network.connect(peer);
+    assertThat(result).isNotCompletedExceptionally();
+    assertThat(peer.getLastAttemptedConnection()).isGreaterThan(0);
   }
 
   private DiscoveryPeer createDiscoveryPeer() {

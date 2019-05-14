@@ -53,7 +53,7 @@ import tech.pegasys.pantheon.util.enode.EnodeURL;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -411,8 +411,9 @@ public class DefaultP2PNetwork implements P2PNetwork {
         streamDiscoveredPeers()
             .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED)
             .filter(peer -> !isConnected(peer) && !isConnecting(peer))
+            .sorted(Comparator.comparing(DiscoveryPeer::getLastAttemptedConnection))
             .collect(Collectors.toList());
-    Collections.shuffle(peers);
+
     if (peers.size() == 0) {
       return;
     }
@@ -463,6 +464,9 @@ public class DefaultP2PNetwork implements P2PNetwork {
       return connectionFuture;
     }
 
+    if (peer instanceof DiscoveryPeer) {
+      ((DiscoveryPeer) peer).setLastAttemptedConnection(System.currentTimeMillis());
+    }
     new Bootstrap()
         .group(workers)
         .channel(NioSocketChannel.class)
