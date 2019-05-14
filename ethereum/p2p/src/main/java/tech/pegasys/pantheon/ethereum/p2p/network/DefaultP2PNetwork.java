@@ -225,7 +225,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
         c -> c.subscribeToUpdates(this::checkCurrentConnections));
 
     subscribeDisconnect(reputationManager);
-    subscribeDisconnect(peerDiscoveryAgent);
     subscribeDisconnect(connections);
 
     outboundMessagesCounter =
@@ -350,6 +349,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
               if (!isPeerAllowed(connection)) {
                 connection.disconnect(DisconnectReason.UNKNOWN);
+                peerDiscoveryAgent.dropPeer(connection.getPeer());
                 return;
               }
 
@@ -387,6 +387,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
     final Optional<PeerConnection> peerConnection = connections.getConnectionForPeer(peer.getId());
     peerConnection.ifPresent(pc -> pc.disconnect(DisconnectReason.REQUESTED));
+
+    peerDiscoveryAgent.dropPeer(peer);
 
     return removed;
   }
@@ -587,6 +589,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
             peerConnection -> {
               if (!isPeerAllowed(peerConnection)) {
                 peerConnection.disconnect(DisconnectReason.REQUESTED);
+                peerDiscoveryAgent.dropPeer(peerConnection.getPeer());
               }
             });
   }

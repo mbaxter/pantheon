@@ -17,20 +17,16 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static tech.pegasys.pantheon.util.bytes.BytesValue.wrapBuffer;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
-import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
-import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.Packet;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerDiscoveryController;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerDiscoveryController.AsyncExecutor;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerRequirement;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PeerTable;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PingPacketData;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.TimerUtil;
-import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeerId;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerId;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.NetworkUtility;
@@ -58,7 +54,7 @@ import org.apache.logging.log4j.Logger;
  * The peer discovery agent is the network component that sends and receives peer discovery messages
  * via UDP.
  */
-public abstract class PeerDiscoveryAgent implements DisconnectCallback {
+public abstract class PeerDiscoveryAgent {
   protected static final Logger LOG = LogManager.getLogger();
 
   // The devp2p specification says only accept packets up to 1280, but some
@@ -76,7 +72,6 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
   /* The keypair used to sign messages. */
   protected final SECP256K1.KeyPair keyPair;
   private final BytesValue id;
-  private final PeerTable peerTable;
   protected final DiscoveryConfiguration config;
 
   /* This is the {@link tech.pegasys.pantheon.ethereum.p2p.Peer} object holding who we are. */
@@ -105,7 +100,6 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
 
     this.config = config;
     this.keyPair = keyPair;
-    this.peerTable = new PeerTable(keyPair.getPublicKey().getEncodedBytes(), 16);
 
     id = keyPair.getPublicKey().getEncodedBytes();
   }
@@ -162,7 +156,6 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
     return PeerDiscoveryController.builder()
         .keypair(keyPair)
         .localPeer(advertisedPeer)
-        .peerTable(peerTable)
         .bootstrapNodes(bootstrapPeers)
         .outboundMessageHandler(this::handleOutgoingPacket)
         .timerUtil(createTimer())
@@ -234,6 +227,10 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
     return controller.map(PeerDiscoveryController::streamDiscoveredPeers).orElse(Stream.empty());
   }
 
+  public void dropPeer(final PeerId peer) {
+    controller.ifPresent(c -> c.dropPeer(peer));
+  }
+
   public Optional<DiscoveryPeer> getAdvertisedPeer() {
     return Optional.ofNullable(advertisedPeer);
   }
@@ -289,15 +286,6 @@ public abstract class PeerDiscoveryAgent implements DisconnectCallback {
         "valid port number required");
     checkArgument(config.getBootnodes() != null, "bootstrapPeers cannot be null");
     checkArgument(config.getBucketSize() > 0, "bucket size cannot be negative nor zero");
-  }
-
-  @Override
-  public void onDisconnect(
-      final PeerConnection connection,
-      final DisconnectMessage.DisconnectReason reason,
-      final boolean initiatedByPeer) {
-    final BytesValue nodeId = connection.getPeerInfo().getNodeId();
-    peerTable.tryEvict(new DefaultPeerId(nodeId));
   }
 
   /**

@@ -15,10 +15,7 @@ package tech.pegasys.pantheon.ethereum.p2p.discovery;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryTestHelper.AgentBuilder;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.FindNeighborsPacketData;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.MockPeerDiscoveryAgent;
@@ -28,9 +25,6 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.Packet;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PacketType;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsBlacklist;
-import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
-import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.util.Collections;
@@ -141,18 +135,20 @@ public class PeerDiscoveryAgentTest {
   }
 
   @Test
-  public void shouldEvictPeerOnDisconnect() {
+  public void shouldEvictPeerWhenPermissionsRevoked() {
+    final PeerPermissionsBlacklist blacklist = PeerPermissionsBlacklist.create();
     final MockPeerDiscoveryAgent peerDiscoveryAgent1 = helper.startDiscoveryAgent();
     peerDiscoveryAgent1.start(BROADCAST_TCP_PORT).join();
     final DiscoveryPeer peer = peerDiscoveryAgent1.getAdvertisedPeer().get();
 
-    final MockPeerDiscoveryAgent peerDiscoveryAgent2 = helper.startDiscoveryAgent(peer);
+    final MockPeerDiscoveryAgent peerDiscoveryAgent2 =
+        helper.startDiscoveryAgent(
+            helper.agentBuilder().peerPermissions(blacklist).bootstrapPeers(peer));
     peerDiscoveryAgent2.start(BROADCAST_TCP_PORT).join();
 
     assertThat(peerDiscoveryAgent2.streamDiscoveredPeers().collect(toList()).size()).isEqualTo(1);
 
-    final PeerConnection peerConnection = createAnonymousPeerConnection(peer.getId());
-    peerDiscoveryAgent2.onDisconnect(peerConnection, DisconnectReason.REQUESTED, true);
+    blacklist.add(peer);
 
     assertThat(peerDiscoveryAgent2.streamDiscoveredPeers().collect(toList()).size()).isEqualTo(0);
   }
@@ -195,12 +191,5 @@ public class PeerDiscoveryAgentTest {
     final MockPeerDiscoveryAgent agent = helper.startDiscoveryAgent(agentBuilder);
 
     assertThat(agent.isActive()).isFalse();
-  }
-
-  private PeerConnection createAnonymousPeerConnection(final BytesValue id) {
-    final PeerConnection conn = mock(PeerConnection.class);
-    final PeerInfo peerInfo = new PeerInfo(0, null, null, 0, id);
-    when(conn.getPeerInfo()).thenReturn(peerInfo);
-    return conn;
   }
 }

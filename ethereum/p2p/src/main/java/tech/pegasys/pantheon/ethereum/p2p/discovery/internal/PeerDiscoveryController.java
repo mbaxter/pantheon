@@ -26,6 +26,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerId;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.Counter;
@@ -101,7 +102,6 @@ import org.apache.logging.log4j.Logger;
  * condition, the peer will be physically dropped (eliminated) from the table.
  */
 public class PeerDiscoveryController {
-
   private static final Logger LOG = LogManager.getLogger();
   private static final long REFRESH_CHECK_INTERVAL_MILLIS = MILLISECONDS.convert(30, SECONDS);
   private static final int PEER_REFRESH_ROUND_TIMEOUT_IN_SECONDS = 5;
@@ -216,6 +216,8 @@ public class PeerDiscoveryController {
             PEER_REFRESH_ROUND_TIMEOUT_IN_SECONDS,
             100);
 
+    peerPermissions.subscribeUpdate(this::handlePermissionsUpdate);
+
     if (nodePermissioningController.isPresent()) {
 
       // if smart contract permissioning is enabled, bond with bootnodes
@@ -258,6 +260,21 @@ public class PeerDiscoveryController {
         && nodePermissioningController
             .map(c -> c.isPermitted(localPeer.getEnodeURL(), remotePeer.getEnodeURL()))
             .orElse(true);
+  }
+
+  private void handlePermissionsUpdate(
+      final boolean addRestrictions, final Optional<List<Peer>> affectedPeers) {
+    if (!addRestrictions) {
+      // Nothing to do if permissions were relaxed
+      return;
+    }
+
+    // If we have an explicit list of peers, drop each peer from our discovery table
+    affectedPeers.ifPresent(peers -> peers.forEach(this::dropPeer));
+  }
+
+  public void dropPeer(final PeerId peer) {
+    peerTable.tryEvict(peer);
   }
 
   /**
@@ -632,20 +649,25 @@ public class PeerDiscoveryController {
     private long tableRefreshIntervalMs = MILLISECONDS.convert(30, TimeUnit.MINUTES);
     private List<DiscoveryPeer> bootstrapNodes = new ArrayList<>();
     private Optional<NodePermissioningController> nodePermissioningController = Optional.empty();
+    private PeerTable peerTable;
+    private Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
 
     // Required dependencies
     private KeyPair keypair;
     private DiscoveryPeer localPeer;
-    private PeerTable peerTable;
     private TimerUtil timerUtil;
     private AsyncExecutor workerExecutor;
-    private Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
     private MetricsSystem metricsSystem;
 
     private Builder() {}
 
     public PeerDiscoveryController build() {
       validate();
+
+      if (peerTable == null) {
+        peerTable = new PeerTable(this.keypair.getPublicKey().getEncodedBytes(), 16);
+      }
+
       return new PeerDiscoveryController(
           keypair,
           localPeer,
@@ -665,7 +687,6 @@ public class PeerDiscoveryController {
     private void validate() {
       validateRequiredDependency(keypair, "KeyPair");
       validateRequiredDependency(localPeer, "LocalPeer");
-      validateRequiredDependency(peerTable, "PeerTable");
       validateRequiredDependency(timerUtil, "TimerUtil");
       validateRequiredDependency(workerExecutor, "AsyncExecutor");
       validateRequiredDependency(metricsSystem, "MetricsSystem");
