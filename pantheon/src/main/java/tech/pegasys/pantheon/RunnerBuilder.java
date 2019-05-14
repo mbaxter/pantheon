@@ -105,7 +105,7 @@ public class RunnerBuilder {
   private GraphQLRpcConfiguration graphQLRpcConfiguration;
   private WebSocketConfiguration webSocketConfiguration;
   private Path dataDir;
-  private Collection<String> bannedNodeIds = new ArrayList<>();
+  private Collection<BytesValue> bannedNodeIds = new ArrayList<>();
   private MetricsConfiguration metricsConfiguration;
   private MetricsSystem metricsSystem;
   private Optional<PermissioningConfiguration> permissioningConfiguration = Optional.empty();
@@ -178,7 +178,7 @@ public class RunnerBuilder {
     return this;
   }
 
-  public RunnerBuilder bannedNodeIds(final Collection<String> bannedNodeIds) {
+  public RunnerBuilder bannedNodeIds(final Collection<BytesValue> bannedNodeIds) {
     this.bannedNodeIds.addAll(bannedNodeIds);
     return this;
   }
@@ -242,10 +242,7 @@ public class RunnerBuilder {
             .setSupportedProtocols(subProtocols);
 
     final PeerPermissionsBlacklist bannedNodes = PeerPermissionsBlacklist.create();
-    // TODO - validate and parse banned node ids as BytesValue's in {@link PantheonCommand}
-    bannedNodeIds.stream()
-        .map(n -> BytesValue.fromHexString(n, EnodeURL.NODE_ID_SIZE))
-        .forEach(bannedNodes::add);
+    bannedNodeIds.forEach(bannedNodes::add);
 
     final List<EnodeURL> bootnodes = discoveryConfiguration.getBootnodes();
 

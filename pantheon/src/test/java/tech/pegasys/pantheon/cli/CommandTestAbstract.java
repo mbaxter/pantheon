@@ -34,6 +34,7 @@ import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.services.kvstore.RocksDbConfiguration;
 import tech.pegasys.pantheon.util.BlockImporter;
+import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -85,6 +86,7 @@ public abstract class CommandTestAbstract {
   @Mock BlockImporter mockBlockImporter;
   @Mock Logger mockLogger;
 
+  @Captor ArgumentCaptor<Collection<BytesValue>> bytesValueCollectionCollector;
   @Captor ArgumentCaptor<Collection<String>> stringListArgumentCaptor;
   @Captor ArgumentCaptor<Path> pathArgumentCaptor;
   @Captor ArgumentCaptor<File> fileArgumentCaptor;
