@@ -16,7 +16,6 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -28,24 +27,19 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.RecursivePeerRefreshState.BondingAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.RecursivePeerRefreshState.FindNeighbourDispatcher;
-import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
-import tech.pegasys.pantheon.ethereum.permissioning.LocalPermissioningConfiguration;
-import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.RecursivePeerRefreshState.OutgoingPeerPermissions;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.Before;
 import org.junit.Test;
 
 public class RecursivePeerRefreshStateTest {
   private static final BytesValue TARGET = createId(0);
-  private final PeerPermissions peerPermissions = mock(PeerPermissions.class);
+  private final OutgoingPeerPermissions peerPermissions = mock(OutgoingPeerPermissions.class);
   private final BondingAgent bondingAgent = mock(BondingAgent.class);
   private final FindNeighbourDispatcher neighborFinder = mock(FindNeighbourDispatcher.class);
   private final MockTimerUtil timerUtil = new MockTimerUtil();
@@ -58,13 +52,12 @@ public class RecursivePeerRefreshStateTest {
 
   private RecursivePeerRefreshState recursivePeerRefreshState =
       new RecursivePeerRefreshState(
-          peerPermissions,
-          Optional.empty(),
           bondingAgent,
           neighborFinder,
           timerUtil,
           localPeer,
           new PeerTable(createId(999), 16),
+          peerPermissions,
           5,
           100);
 
@@ -178,13 +171,12 @@ public class RecursivePeerRefreshStateTest {
   public void shouldStopWhenMaximumNumberOfRoundsReached() {
     recursivePeerRefreshState =
         new RecursivePeerRefreshState(
-            peerPermissions,
-            Optional.empty(),
             bondingAgent,
             neighborFinder,
             timerUtil,
             localPeer,
             new PeerTable(createId(999), 16),
+            peerPermissions,
             5,
             1);
 
@@ -446,13 +438,12 @@ public class RecursivePeerRefreshStateTest {
 
     recursivePeerRefreshState =
         new RecursivePeerRefreshState(
-            peerPermissions,
-            Optional.empty(),
             bondingAgent,
             neighborFinder,
             timerUtil,
             localPeer,
             new PeerTable(createId(999), 16),
+            peerPermissions,
             5,
             100);
     recursivePeerRefreshState.start(singletonList(peerA), TARGET);
@@ -485,48 +476,6 @@ public class RecursivePeerRefreshStateTest {
 
     verify(bondingAgent).performBonding(peerB);
     verify(bondingAgent, never()).performBonding(localPeer);
-  }
-
-  @Test
-  public void shouldNotBondWithNodesNotPermitted() throws Exception {
-    final DiscoveryPeer localPeer = createPeer(999, "127.0.0.9", 9, 9);
-    final DiscoveryPeer peerA = createPeer(1, "127.0.0.1", 1, 1);
-    final DiscoveryPeer peerB = createPeer(2, "127.0.0.2", 2, 2);
-
-    final Path tempFile = Files.createTempFile("test", "test");
-    tempFile.toFile().deleteOnExit();
-    final LocalPermissioningConfiguration permissioningConfiguration =
-        LocalPermissioningConfiguration.createDefault();
-    permissioningConfiguration.setNodePermissioningConfigFilePath(
-        tempFile.toAbsolutePath().toString());
-
-    final NodePermissioningController nodeWhitelistController =
-        mock(NodePermissioningController.class);
-    when(nodeWhitelistController.isPermitted(any(), eq(peerA.getEnodeURL()))).thenReturn(true);
-    when(nodeWhitelistController.isPermitted(any(), eq(peerB.getEnodeURL()))).thenReturn(false);
-
-    recursivePeerRefreshState =
-        new RecursivePeerRefreshState(
-            peerPermissions,
-            Optional.of(nodeWhitelistController),
-            bondingAgent,
-            neighborFinder,
-            timerUtil,
-            localPeer,
-            new PeerTable(createId(999), 16),
-            5,
-            100);
-    recursivePeerRefreshState.start(singletonList(peerA), TARGET);
-
-    verify(bondingAgent).performBonding(peerA);
-
-    completeBonding(peerA);
-
-    verify(neighborFinder).findNeighbours(peerA, TARGET);
-
-    recursivePeerRefreshState.onNeighboursReceived(peerA, Collections.singletonList(peerB));
-
-    verify(bondingAgent, never()).performBonding(peerB);
   }
 
   private static BytesValue createId(final int id) {

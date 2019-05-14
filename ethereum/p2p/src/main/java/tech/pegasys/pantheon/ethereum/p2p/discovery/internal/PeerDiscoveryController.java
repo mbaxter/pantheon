@@ -201,18 +201,19 @@ public class PeerDiscoveryController {
     }
 
     final List<DiscoveryPeer> initialDiscoveryPeers =
-        bootstrapNodes.stream().filter(this::isPeerPermitted).collect(Collectors.toList());
+        bootstrapNodes.stream()
+            .filter(this::isPeerPermittedToReceiveMessages)
+            .collect(Collectors.toList());
     initialDiscoveryPeers.stream().forEach(peerTable::tryAdd);
 
     recursivePeerRefreshState =
         new RecursivePeerRefreshState(
-            peerPermissions,
-            nodePermissioningController,
             this::bond,
             this::findNodes,
             timerUtil,
             localPeer,
             peerTable,
+            this::isPeerPermittedToReceiveMessages,
             PEER_REFRESH_ROUND_TIMEOUT_IN_SECONDS,
             100);
 
@@ -255,10 +256,17 @@ public class PeerDiscoveryController {
     return CompletableFuture.completedFuture(null);
   }
 
-  private boolean isPeerPermitted(final Peer remotePeer) {
+  private boolean isPeerPermittedToReceiveMessages(final Peer remotePeer) {
     return peerPermissions.isPermitted(remotePeer)
         && nodePermissioningController
             .map(c -> c.isPermitted(localPeer.getEnodeURL(), remotePeer.getEnodeURL()))
+            .orElse(true);
+  }
+
+  private boolean isPeerPermittedToSendMessages(final Peer remotePeer) {
+    return peerPermissions.isPermitted(remotePeer)
+        && nodePermissioningController
+            .map(c -> c.isPermitted(remotePeer.getEnodeURL(), localPeer.getEnodeURL()))
             .orElse(true);
   }
 
@@ -296,7 +304,7 @@ public class PeerDiscoveryController {
       return;
     }
 
-    if (!isPeerPermitted(sender)) {
+    if (!isPeerPermittedToSendMessages(sender)) {
       LOG.trace("Dropping packet from disallowed peer ({})", sender.getEnodeURLString());
       return;
     }
