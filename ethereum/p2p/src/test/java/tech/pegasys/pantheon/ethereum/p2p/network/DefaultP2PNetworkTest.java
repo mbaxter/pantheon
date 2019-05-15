@@ -389,6 +389,7 @@ public final class DefaultP2PNetworkTest {
     final int maxPeers = 5;
     final DefaultP2PNetwork network =
         mockNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
+    network.start();
 
     doReturn(2).when(network).connectionCount();
     DiscoveryPeer peer = createDiscoveryPeer();
@@ -410,6 +411,7 @@ public final class DefaultP2PNetworkTest {
     final int maxPeers = 5;
     final DefaultP2PNetwork network =
         mockNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
+    network.start();
 
     doReturn(2).when(network).connectionCount();
     DiscoveryPeer peer = createDiscoveryPeer();
@@ -426,6 +428,7 @@ public final class DefaultP2PNetworkTest {
     final int maxPeers = 5;
     final DefaultP2PNetwork network =
         mockNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
+    network.start();
 
     doReturn(2).when(network).connectionCount();
     DiscoveryPeer peer = createDiscoveryPeer();
@@ -443,6 +446,7 @@ public final class DefaultP2PNetworkTest {
     final int maxPeers = 5;
     final DefaultP2PNetwork network =
         mockNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
+    network.start();
 
     doReturn(2).when(network).connectionCount();
     DiscoveryPeer peer = createDiscoveryPeer();
@@ -460,6 +464,7 @@ public final class DefaultP2PNetworkTest {
     final int maxPeers = 5;
     final DefaultP2PNetwork network =
         mockNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
+    network.start();
 
     doReturn(2).when(network).connectionCount();
     final List<DiscoveryPeer> peers =
@@ -491,10 +496,54 @@ public final class DefaultP2PNetworkTest {
   }
 
   @Test
+  public void attemptPeerConnections_withNonPermittedPeers() {
+    final int maxPeers = 5;
+    final DefaultP2PNetwork network =
+        mockNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
+    network.start();
+
+    doReturn(2).when(network).connectionCount();
+    final List<DiscoveryPeer> peers =
+        Stream.iterate(1, n -> n + 1)
+            .limit(10)
+            .map(
+                (seed) -> {
+                  DiscoveryPeer peer = createDiscoveryPeer();
+                  peer.setStatus(PeerDiscoveryStatus.BONDED);
+                  return peer;
+                })
+            .collect(Collectors.toList());
+
+    // Prioritize peers
+    final List<DiscoveryPeer> highestValuePeers = peers.subList(5, 8);
+    peers.forEach(p -> p.setLastAttemptedConnection(100));
+    highestValuePeers.forEach(p -> p.setLastAttemptedConnection(2));
+    // Set up the highest value peer to lack permissions
+    DiscoveryPeer highestValueNonPermittedPeer = peers.get(0);
+    highestValueNonPermittedPeer.setLastAttemptedConnection(1);
+    when(nodePermissioningController.isPermitted(any(), any())).thenReturn(true);
+    when(nodePermissioningController.isPermitted(
+            any(), eq(highestValueNonPermittedPeer.getEnodeURL())))
+        .thenReturn(false);
+
+    doReturn(peers.stream()).when(network).streamDiscoveredPeers();
+    final ArgumentCaptor<DiscoveryPeer> peerCapture = ArgumentCaptor.forClass(DiscoveryPeer.class);
+    doReturn(CompletableFuture.completedFuture(mock(PeerConnection.class)))
+        .when(network)
+        .connect(peerCapture.capture());
+
+    network.attemptPeerConnections();
+    verify(network, times(3)).connect(any());
+    assertThat(peers.containsAll(peerCapture.getAllValues())).isTrue();
+    assertThat(peerCapture.getAllValues()).containsExactlyInAnyOrderElementsOf(highestValuePeers);
+  }
+
+  @Test
   public void attemptPeerConnections_withNoSlotsAvailable() {
     final int maxPeers = 5;
     final DefaultP2PNetwork network =
         mockNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
+    network.start();
 
     doReturn(maxPeers).when(network).connectionCount();
     final List<DiscoveryPeer> peers =

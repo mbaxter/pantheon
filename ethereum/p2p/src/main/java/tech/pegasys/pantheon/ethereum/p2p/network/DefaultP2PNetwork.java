@@ -410,6 +410,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
     final List<DiscoveryPeer> peers =
         streamDiscoveredPeers()
             .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED)
+            .filter(this::isPeerAllowed)
             .filter(peer -> !isConnected(peer) && !isConnecting(peer))
             .sorted(Comparator.comparing(DiscoveryPeer::getLastAttemptedConnection))
             .collect(Collectors.toList());
