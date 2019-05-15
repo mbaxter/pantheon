@@ -27,7 +27,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.RecursivePeerRefreshState.BondingAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.RecursivePeerRefreshState.FindNeighbourDispatcher;
-import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.RecursivePeerRefreshState.OutgoingPeerPermissions;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.RecursivePeerRefreshState.OutboundDiscoveryMessagingPermissions;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
@@ -39,7 +39,8 @@ import org.junit.Test;
 
 public class RecursivePeerRefreshStateTest {
   private static final BytesValue TARGET = createId(0);
-  private final OutgoingPeerPermissions peerPermissions = mock(OutgoingPeerPermissions.class);
+  private final OutboundDiscoveryMessagingPermissions peerPermissions =
+      mock(OutboundDiscoveryMessagingPermissions.class);
   private final BondingAgent bondingAgent = mock(BondingAgent.class);
   private final FindNeighbourDispatcher neighborFinder = mock(FindNeighbourDispatcher.class);
   private final MockTimerUtil timerUtil = new MockTimerUtil();

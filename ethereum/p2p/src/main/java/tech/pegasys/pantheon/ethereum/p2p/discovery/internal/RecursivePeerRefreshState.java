@@ -37,7 +37,7 @@ public class RecursivePeerRefreshState {
   private static final Logger LOG = LogManager.getLogger();
   private static final int MAX_CONCURRENT_REQUESTS = 3;
   private BytesValue target;
-  private final OutgoingPeerPermissions peerPermissions;
+  private final OutboundDiscoveryMessagingPermissions peerPermissions;
   private final PeerTable peerTable;
   private final DiscoveryPeer localPeer;
 
@@ -61,7 +61,7 @@ public class RecursivePeerRefreshState {
       final TimerUtil timerUtil,
       final DiscoveryPeer localPeer,
       final PeerTable peerTable,
-      final OutgoingPeerPermissions peerPermissions,
+      final OutboundDiscoveryMessagingPermissions peerPermissions,
       final int timeoutPeriodInSeconds,
       final int maxRounds) {
     this.bondingAgent = bondingAgent;
@@ -381,7 +381,7 @@ public class RecursivePeerRefreshState {
   }
 
   @FunctionalInterface
-  public interface OutgoingPeerPermissions {
+  public interface OutboundDiscoveryMessagingPermissions {
     boolean isPermitted(Peer remotePeer);
   }
 }
