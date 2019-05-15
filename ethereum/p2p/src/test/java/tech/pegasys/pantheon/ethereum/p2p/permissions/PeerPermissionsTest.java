@@ -77,6 +77,9 @@ public class PeerPermissionsTest {
   public void isPermitted_forCombinedPermissions() {
     final PeerPermissions allowPeers = new TestPeerPermissions(true);
     final PeerPermissions disallowPeers = new TestPeerPermissions(false);
+    final PeerPermissions noop = PeerPermissions.NOOP;
+    final PeerPermissions combinedPermissive = PeerPermissions.combine(noop, allowPeers);
+    final PeerPermissions combinedRestrictive = PeerPermissions.combine(disallowPeers, allowPeers);
 
     Peer peer =
         DefaultPeer.fromEnodeURL(
@@ -92,6 +95,19 @@ public class PeerPermissionsTest {
     assertThat(PeerPermissions.combine(disallowPeers, disallowPeers).isPermitted(peer)).isFalse();
     assertThat(PeerPermissions.combine(allowPeers, disallowPeers).isPermitted(peer)).isFalse();
     assertThat(PeerPermissions.combine(allowPeers, allowPeers).isPermitted(peer)).isTrue();
+
+    assertThat(PeerPermissions.combine(combinedPermissive, allowPeers).isPermitted(peer)).isTrue();
+    assertThat(PeerPermissions.combine(combinedPermissive, disallowPeers).isPermitted(peer))
+        .isFalse();
+    assertThat(PeerPermissions.combine(combinedRestrictive, allowPeers).isPermitted(peer))
+        .isFalse();
+    assertThat(PeerPermissions.combine(combinedRestrictive, disallowPeers).isPermitted(peer))
+        .isFalse();
+    assertThat(PeerPermissions.combine(combinedRestrictive).isPermitted(peer)).isFalse();
+    assertThat(PeerPermissions.combine(combinedPermissive).isPermitted(peer)).isTrue();
+
+    assertThat(PeerPermissions.combine(noop).isPermitted(peer)).isTrue();
+    assertThat(PeerPermissions.combine().isPermitted(peer)).isTrue();
   }
 
   private static class TestPeerPermissions extends PeerPermissions {

@@ -18,26 +18,24 @@ import tech.pegasys.pantheon.util.Subscribers;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public abstract class PeerPermissions {
   private final Subscribers<PermissionsUpdateCallback> updateSubscribers = new Subscribers<>();
 
-  public static PeerPermissions noop() {
-    return new PeerPermissions() {
+  public static final PeerPermissions NOOP = new NoopPeerPermissions();
 
-      @Override
-      public boolean isPermitted(final Peer peer) {
-        return true;
-      }
-    };
+  public static PeerPermissions noop() {
+    return NOOP;
   }
 
   public static PeerPermissions combine(final PeerPermissions... permissions) {
-    return new CombinedPeerPermissions(Arrays.asList(permissions));
+    return combine(Arrays.asList(permissions));
   }
 
   public static PeerPermissions combine(final List<PeerPermissions> permissions) {
-    return new CombinedPeerPermissions(permissions);
+    return CombinedPeerPermissions.create(permissions);
   }
 
   /**
@@ -55,11 +53,41 @@ public abstract class PeerPermissions {
     updateSubscribers.forEach(s -> s.onUpdate(permissionsRestricted, affectedPeers));
   }
 
+  private static class NoopPeerPermissions extends PeerPermissions {
+    @Override
+    public boolean isPermitted(final Peer peer) {
+      return true;
+    }
+  }
+
   private static class CombinedPeerPermissions extends PeerPermissions {
     private final List<PeerPermissions> permissions;
 
     private CombinedPeerPermissions(final List<PeerPermissions> permissions) {
       this.permissions = permissions;
+    }
+
+    public static PeerPermissions create(final List<PeerPermissions> permissions) {
+      final List<PeerPermissions> filteredPermissions =
+          permissions.stream()
+              .flatMap(
+                  p -> {
+                    if (p instanceof CombinedPeerPermissions) {
+                      return ((CombinedPeerPermissions) p).permissions.stream();
+                    } else {
+                      return Stream.of(p);
+                    }
+                  })
+              .filter(p -> !(p instanceof NoopPeerPermissions))
+              .collect(Collectors.toList());
+
+      if (filteredPermissions.size() == 0) {
+        return PeerPermissions.NOOP;
+      } else if (filteredPermissions.size() == 1) {
+        return filteredPermissions.get(0);
+      } else {
+        return new CombinedPeerPermissions(filteredPermissions);
+      }
     }
 
     @Override
