@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 ConsenSys AG.
+ * Copyright 2019 ConsenSys AG.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -10,19 +10,13 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.tests.acceptance.dsl.transaction.net;
+package tech.pegasys.pantheon.plugins;
 
-public class NetTransactions {
+public interface PantheonPlugin {
 
-  public NetVersionTransaction netVersion() {
-    return new NetVersionTransaction();
-  }
+  void register(PantheonContext context);
 
-  public NetServicesTransaction netServices() {
-    return new NetServicesTransaction();
-  }
+  void start();
 
-  public NetPeerCountTransaction peerCount() {
-    return new NetPeerCountTransaction();
-  }
+  void stop();
 }
