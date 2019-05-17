@@ -12,7 +12,6 @@
  */
 package tech.pegasys.pantheon.cli;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
@@ -220,26 +219,12 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       bannedNodeIds =
           values.stream()
               .filter(value -> !value.isEmpty())
-              .map(
-                  v -> {
-                    validateNodeIdString(v);
-                    return BytesValue.fromHexString(v, EnodeURL.NODE_ID_SIZE);
-                  })
+              .map(EnodeURL::parseNodeId)
               .collect(Collectors.toList());
     } catch (final IllegalArgumentException e) {
       throw new ParameterException(
           commandLine, "Invalid ids supplied to '--banned-node-ids'. " + e.getMessage());
     }
-  }
-
-  private static void validateNodeIdString(final String nodeId) {
-    int expectedSize = EnodeURL.NODE_ID_SIZE * 2;
-    if (nodeId.toLowerCase().startsWith("0x")) {
-      expectedSize += 2;
-    }
-    checkArgument(
-        nodeId.length() == expectedSize,
-        "Expected " + EnodeURL.NODE_ID_SIZE + " bytes in " + nodeId);
   }
 
   private Collection<BytesValue> bannedNodeIds = new ArrayList<>();
