@@ -27,7 +27,6 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.PingPacketData;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.internal.TimerUtil;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerId;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
-import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.NetworkUtility;
 import tech.pegasys.pantheon.util.Subscribers;
@@ -64,7 +63,6 @@ public abstract class PeerDiscoveryAgent {
   protected final List<DiscoveryPeer> bootstrapPeers;
   private final List<PeerRequirement> peerRequirements = new CopyOnWriteArrayList<>();
   private final PeerPermissions peerPermissions;
-  private final Optional<NodePermissioningController> nodePermissioningController;
   private final MetricsSystem metricsSystem;
   /* The peer controller, which takes care of the state machine of peers. */
   protected Optional<PeerDiscoveryController> controller = Optional.empty();
@@ -87,7 +85,6 @@ public abstract class PeerDiscoveryAgent {
       final SECP256K1.KeyPair keyPair,
       final DiscoveryConfiguration config,
       final PeerPermissions peerPermissions,
-      final Optional<NodePermissioningController> nodePermissioningController,
       final MetricsSystem metricsSystem) {
     this.metricsSystem = metricsSystem;
     checkArgument(keyPair != null, "keypair cannot be null");
@@ -96,7 +93,6 @@ public abstract class PeerDiscoveryAgent {
     validateConfiguration(config);
 
     this.peerPermissions = peerPermissions;
-    this.nodePermissioningController = nodePermissioningController;
     this.bootstrapPeers =
         config.getBootnodes().stream().map(DiscoveryPeer::fromEnode).collect(Collectors.toList());
 
@@ -165,7 +161,6 @@ public abstract class PeerDiscoveryAgent {
         .workerExecutor(createWorkerExecutor())
         .peerRequirement(PeerRequirement.combine(peerRequirements))
         .peerPermissions(peerPermissions)
-        .nodePermissioningController(nodePermissioningController)
         .peerBondedObservers(peerBondedObservers)
         .metricsSystem(metricsSystem)
         .build();

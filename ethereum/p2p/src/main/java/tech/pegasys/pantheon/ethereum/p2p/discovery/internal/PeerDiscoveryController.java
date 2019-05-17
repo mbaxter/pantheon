@@ -28,7 +28,6 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerId;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
-import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
 import tech.pegasys.pantheon.metrics.MetricCategory;
@@ -121,8 +120,6 @@ public class PeerDiscoveryController {
   private final DiscoveryPeer localPeer;
   private final OutboundMessageHandler outboundMessageHandler;
   private final PeerDiscoveryPermissions peerPermissions;
-  // TODO - integrate nodePermissionsingController into peerPermissions
-  private final Optional<NodePermissioningController> nodePermissioningController;
   private final DiscoveryProtocolLogger discoveryProtocolLogger;
   private final LabelledMetric<Counter> interactionCounter;
   private final LabelledMetric<Counter> interactionRetryCounter;
@@ -157,7 +154,6 @@ public class PeerDiscoveryController {
       final long cleanPeerTableIntervalMs,
       final PeerRequirement peerRequirement,
       final PeerPermissions peerPermissions,
-      final Optional<NodePermissioningController> nodePermissioningController,
       final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers,
       final MetricsSystem metricsSystem) {
     this.timerUtil = timerUtil;
@@ -169,7 +165,6 @@ public class PeerDiscoveryController {
     this.tableRefreshIntervalMs = tableRefreshIntervalMs;
     this.cleanPeerTableIntervalMs = cleanPeerTableIntervalMs;
     this.peerRequirement = peerRequirement;
-    this.nodePermissioningController = nodePermissioningController;
     this.outboundMessageHandler = outboundMessageHandler;
     this.peerBondedObservers = peerBondedObservers;
     this.discoveryProtocolLogger = new DiscoveryProtocolLogger(metricsSystem);
@@ -225,23 +220,7 @@ public class PeerDiscoveryController {
 
     peerPermissions.subscribeUpdate(this::handlePermissionsUpdate);
 
-    if (nodePermissioningController.isPresent()) {
-
-      // if smart contract permissioning is enabled, bond with bootnodes
-      if (nodePermissioningController.get().getSyncStatusNodePermissioningProvider().isPresent()) {
-        for (final DiscoveryPeer p : initialDiscoveryPeers) {
-          bond(p);
-        }
-      }
-
-      nodePermissioningController
-          .get()
-          .startPeerDiscoveryCallback(
-              () -> recursivePeerRefreshState.start(initialDiscoveryPeers, localPeer.getId()));
-
-    } else {
-      recursivePeerRefreshState.start(initialDiscoveryPeers, localPeer.getId());
-    }
+    recursivePeerRefreshState.start(initialDiscoveryPeers, localPeer.getId());
 
     final long refreshTimerId =
         timerUtil.setPeriodic(
@@ -267,21 +246,6 @@ public class PeerDiscoveryController {
     inflightInteractions.clear();
     return CompletableFuture.completedFuture(null);
   }
-
-  // TODO: Integrate nodePermissioningController into peerPermissions
-  //  private boolean isPeerPermittedToReceiveMessages(final Peer remotePeer) {
-  //    return peerPermissions.isPermitted(remotePeer)
-  //        && nodePermissioningController
-  //            .map(c -> c.isPermitted(localPeer.getEnodeURL(), remotePeer.getEnodeURL()))
-  //            .orElse(true);
-  //  }
-  //
-  //  private boolean isPeerPermittedToSendMessages(final Peer remotePeer) {
-  //    return peerPermissions.isPermitted(remotePeer)
-  //        && nodePermissioningController
-  //            .map(c -> c.isPermitted(remotePeer.getEnodeURL(), localPeer.getEnodeURL()))
-  //            .orElse(true);
-  //  }
 
   private void handlePermissionsUpdate(
       final boolean addRestrictions, final Optional<List<Peer>> affectedPeers) {
@@ -689,7 +653,6 @@ public class PeerDiscoveryController {
     private long tableRefreshIntervalMs = MILLISECONDS.convert(30, TimeUnit.MINUTES);
     private long cleanPeerTableIntervalMs = MILLISECONDS.convert(1, TimeUnit.MINUTES);
     private List<DiscoveryPeer> bootstrapNodes = new ArrayList<>();
-    private Optional<NodePermissioningController> nodePermissioningController = Optional.empty();
     private PeerTable peerTable;
     private Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
 
@@ -721,7 +684,6 @@ public class PeerDiscoveryController {
           cleanPeerTableIntervalMs,
           peerRequirement,
           peerPermissions,
-          nodePermissioningController,
           peerBondedObservers,
           metricsSystem);
     }
@@ -801,13 +763,6 @@ public class PeerDiscoveryController {
     public Builder peerPermissions(final PeerPermissions peerPermissions) {
       checkNotNull(peerPermissions);
       this.peerPermissions = peerPermissions;
-      return this;
-    }
-
-    public Builder nodePermissioningController(
-        final Optional<NodePermissioningController> nodePermissioningController) {
-      checkNotNull(nodePermissioningController);
-      this.nodePermissioningController = nodePermissioningController;
       return this;
     }
 

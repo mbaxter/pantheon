@@ -15,6 +15,7 @@ package tech.pegasys.pantheon.ethereum.p2p.rlpx;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions.Action;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PermissionsUpdateCallback;
 
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -53,6 +54,10 @@ public class PeerRlpxPermissions {
       return false;
     }
     return peerPermissions.isPermitted(localNode.get(), peer, Action.RLPX_ALLOW_ONGOING_CONNECTION);
+  }
+
+  public void subscribeUpdate(final PermissionsUpdateCallback callback) {
+    peerPermissions.subscribeUpdate(callback);
   }
 
   // TODO: Store origination information in peer connection
