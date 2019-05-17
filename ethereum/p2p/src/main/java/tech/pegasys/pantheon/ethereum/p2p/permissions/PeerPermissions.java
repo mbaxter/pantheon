@@ -39,11 +39,36 @@ public abstract class PeerPermissions {
     return CombinedPeerPermissions.create(permissions);
   }
 
+  // Defines what actions can be queried for permissions checks
+  public enum Action {
+    DISCOVERY_ALLOW_IN_PEER_TABLE,
+    DISCOVERY_ACCEPT_INBOUND_BONDING,
+    DISCOVERY_ALLOW_OUTBOUND_BONDING,
+    DISCOVERY_SERVE_INBOUND_NEIGHBORS_REQUEST,
+    DISCOVERY_ALLOW_OUTBOUND_NEIGHBORS_REQUEST,
+    RLPX_ALLOW_NEW_INBOUND_CONNECTION,
+    RLPX_ALLOW_NEW_OUTBOUND_CONNECTION,
+    RLPX_ALLOW_ONGOING_CONNECTION,
+    // TODO: Make ongoing connection permissions more granular
+    //    RLPX_ALLOW_ONGOING_CONNECTION_REMOTELY_INITIATED,
+    //    RLPX_ALLOW_ONGOING_CONNECTION_LOCALLY_INITIATED
+  }
+
   /**
    * @param peer The {@link Peer} object representing the remote node
    * @return True if we are allowed to communicate with this peer.
    */
-  public abstract boolean isPermitted(final Peer peer);
+
+  /**
+   * Checks whether the local node is permitted to engage in some action with the given remote peer.
+   *
+   * @param localNode The local node that is querying for permissions.
+   * @param remotePeer The remote peer that the local node is checking for permissions
+   * @param action The action for which the local node is checking permissions
+   * @return {@code true} If the given action is allowed with the given peer
+   */
+  public abstract boolean isPermitted(
+      final Peer localNode, final Peer remotePeer, final Action action);
 
   public void subscribeUpdate(final PermissionsUpdateCallback callback) {
     updateSubscribers.subscribe(callback);
@@ -56,7 +81,7 @@ public abstract class PeerPermissions {
 
   private static class NoopPeerPermissions extends PeerPermissions {
     @Override
-    public boolean isPermitted(final Peer peer) {
+    public boolean isPermitted(final Peer localNode, final Peer remotePeer, final Action action) {
       return true;
     }
   }
@@ -99,9 +124,9 @@ public abstract class PeerPermissions {
     }
 
     @Override
-    public boolean isPermitted(final Peer peer) {
+    public boolean isPermitted(final Peer localNode, final Peer remotePeer, final Action action) {
       for (PeerPermissions permission : permissions) {
-        if (!permission.isPermitted(peer)) {
+        if (!permission.isPermitted(localNode, remotePeer, action)) {
           return false;
         }
       }

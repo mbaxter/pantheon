@@ -74,8 +74,10 @@ public abstract class PeerDiscoveryAgent {
   private final BytesValue id;
   protected final DiscoveryConfiguration config;
 
-  /* This is the {@link tech.pegasys.pantheon.ethereum.p2p.Peer} object holding who we are. */
-  private DiscoveryPeer advertisedPeer;
+  /* This is the {@link tech.pegasys.pantheon.ethereum.p2p.Peer} object representing our local node.
+   * This value is empty on construction, and is set after the discovery agent is started.
+   */
+  private Optional<DiscoveryPeer> localNode = Optional.empty();
 
   /* Is discovery enabled? */
   private boolean isActive = false;
@@ -125,7 +127,7 @@ public abstract class PeerDiscoveryAgent {
           .thenAccept(
               (InetSocketAddress localAddress) -> {
                 // Once listener is set up, finish initializing
-                advertisedPeer =
+                final DiscoveryPeer ourNode =
                     DiscoveryPeer.fromEnode(
                         EnodeURL.builder()
                             .nodeId(id)
@@ -133,8 +135,9 @@ public abstract class PeerDiscoveryAgent {
                             .listeningPort(tcpPort)
                             .discoveryPort(localAddress.getPort())
                             .build());
+                this.localNode = Optional.of(ourNode);
                 isActive = true;
-                startController();
+                startController(ourNode);
               });
     } else {
       this.isActive = false;
@@ -146,16 +149,16 @@ public abstract class PeerDiscoveryAgent {
     this.peerRequirements.add(peerRequirement);
   }
 
-  private void startController() {
-    final PeerDiscoveryController controller = createController();
+  private void startController(final DiscoveryPeer localNode) {
+    final PeerDiscoveryController controller = createController(localNode);
     this.controller = Optional.of(controller);
     controller.start();
   }
 
-  private PeerDiscoveryController createController() {
+  private PeerDiscoveryController createController(final DiscoveryPeer localNode) {
     return PeerDiscoveryController.builder()
         .keypair(keyPair)
-        .localPeer(advertisedPeer)
+        .localPeer(localNode)
         .bootstrapNodes(bootstrapPeers)
         .outboundMessageHandler(this::handleOutgoingPacket)
         .timerUtil(createTimer())
@@ -232,7 +235,7 @@ public abstract class PeerDiscoveryAgent {
   }
 
   public Optional<DiscoveryPeer> getAdvertisedPeer() {
-    return Optional.ofNullable(advertisedPeer);
+    return localNode;
   }
 
   public BytesValue getId() {

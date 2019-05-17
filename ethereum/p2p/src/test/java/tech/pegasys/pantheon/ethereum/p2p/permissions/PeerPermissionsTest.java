@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions.Action;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.util.Optional;
@@ -24,6 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 
 public class PeerPermissionsTest {
+  final Peer localPeer = createPeer();
+
   @Test
   public void subscribeUpdate() {
     TestPeerPermissions peerPermissions = new TestPeerPermissions(false);
@@ -75,57 +78,88 @@ public class PeerPermissionsTest {
 
   @Test
   public void isPermitted_forCombinedPermissions() {
-    final PeerPermissions allowPeers = new TestPeerPermissions(true);
-    final PeerPermissions disallowPeers = new TestPeerPermissions(false);
+    final PeerPermissions allowAll = new TestPeerPermissions(true);
+    final PeerPermissions disallowAll = new TestPeerPermissions(false);
     final PeerPermissions noop = PeerPermissions.NOOP;
-    final PeerPermissions combinedPermissive = PeerPermissions.combine(noop, allowPeers);
-    final PeerPermissions combinedRestrictive = PeerPermissions.combine(disallowPeers, allowPeers);
+    final PeerPermissions combinedPermissive = PeerPermissions.combine(noop, allowAll);
+    final PeerPermissions combinedRestrictive = PeerPermissions.combine(disallowAll, allowAll);
 
-    Peer peer =
-        DefaultPeer.fromEnodeURL(
-            EnodeURL.builder()
-                .listeningPort(30303)
-                .discoveryPort(30303)
-                .nodeId(Peer.randomId())
-                .ipAddress("127.0.0.1")
-                .build());
+    Peer remotePeer = createPeer();
+    Action action = Action.RLPX_ALLOW_NEW_OUTBOUND_CONNECTION;
 
-    assertThat(PeerPermissions.combine(allowPeers, disallowPeers).isPermitted(peer)).isFalse();
-    assertThat(PeerPermissions.combine(disallowPeers, disallowPeers).isPermitted(peer)).isFalse();
-    assertThat(PeerPermissions.combine(disallowPeers, disallowPeers).isPermitted(peer)).isFalse();
-    assertThat(PeerPermissions.combine(allowPeers, disallowPeers).isPermitted(peer)).isFalse();
-    assertThat(PeerPermissions.combine(allowPeers, allowPeers).isPermitted(peer)).isTrue();
-
-    assertThat(PeerPermissions.combine(combinedPermissive, allowPeers).isPermitted(peer)).isTrue();
-    assertThat(PeerPermissions.combine(combinedPermissive, disallowPeers).isPermitted(peer))
+    assertThat(
+            PeerPermissions.combine(allowAll, disallowAll)
+                .isPermitted(localPeer, remotePeer, action))
         .isFalse();
-    assertThat(PeerPermissions.combine(combinedRestrictive, allowPeers).isPermitted(peer))
+    assertThat(
+            PeerPermissions.combine(disallowAll, disallowAll)
+                .isPermitted(localPeer, remotePeer, action))
         .isFalse();
-    assertThat(PeerPermissions.combine(combinedRestrictive, disallowPeers).isPermitted(peer))
+    assertThat(
+            PeerPermissions.combine(disallowAll, disallowAll)
+                .isPermitted(localPeer, remotePeer, action))
         .isFalse();
-    assertThat(PeerPermissions.combine(combinedRestrictive).isPermitted(peer)).isFalse();
-    assertThat(PeerPermissions.combine(combinedPermissive).isPermitted(peer)).isTrue();
+    assertThat(
+            PeerPermissions.combine(allowAll, disallowAll)
+                .isPermitted(localPeer, remotePeer, action))
+        .isFalse();
+    assertThat(
+            PeerPermissions.combine(allowAll, allowAll).isPermitted(localPeer, remotePeer, action))
+        .isTrue();
 
-    assertThat(PeerPermissions.combine(noop).isPermitted(peer)).isTrue();
-    assertThat(PeerPermissions.combine().isPermitted(peer)).isTrue();
+    assertThat(
+            PeerPermissions.combine(combinedPermissive, allowAll)
+                .isPermitted(localPeer, remotePeer, action))
+        .isTrue();
+    assertThat(
+            PeerPermissions.combine(combinedPermissive, disallowAll)
+                .isPermitted(localPeer, remotePeer, action))
+        .isFalse();
+    assertThat(
+            PeerPermissions.combine(combinedRestrictive, allowAll)
+                .isPermitted(localPeer, remotePeer, action))
+        .isFalse();
+    assertThat(
+            PeerPermissions.combine(combinedRestrictive, disallowAll)
+                .isPermitted(localPeer, remotePeer, action))
+        .isFalse();
+    assertThat(
+            PeerPermissions.combine(combinedRestrictive).isPermitted(localPeer, remotePeer, action))
+        .isFalse();
+    assertThat(
+            PeerPermissions.combine(combinedPermissive).isPermitted(localPeer, remotePeer, action))
+        .isTrue();
+
+    assertThat(PeerPermissions.combine(noop).isPermitted(localPeer, remotePeer, action)).isTrue();
+    assertThat(PeerPermissions.combine().isPermitted(localPeer, remotePeer, action)).isTrue();
+  }
+
+  private Peer createPeer() {
+    return DefaultPeer.fromEnodeURL(
+        EnodeURL.builder()
+            .listeningPort(30303)
+            .discoveryPort(30303)
+            .nodeId(Peer.randomId())
+            .ipAddress("127.0.0.1")
+            .build());
   }
 
   private static class TestPeerPermissions extends PeerPermissions {
 
-    private boolean allowPeers;
+    private boolean allowAll;
 
-    public TestPeerPermissions(final boolean allowPeers) {
-      this.allowPeers = allowPeers;
+    public TestPeerPermissions(final boolean allowAll) {
+      this.allowAll = allowAll;
     }
 
     public void allowPeers(final boolean doAllowPeers) {
-      this.allowPeers = doAllowPeers;
+      this.allowAll = doAllowPeers;
       dispatchUpdate(!doAllowPeers, Optional.empty());
     }
 
     @Override
-    public boolean isPermitted(final Peer peer) {
-      return allowPeers;
+    public boolean isPermitted(final Peer localNode, final Peer remotePeer, final Action action) {
+      return allowAll;
     }
   }
 }

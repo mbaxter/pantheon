@@ -51,8 +51,8 @@ public class PeerPermissionsBlacklist extends PeerPermissions {
   }
 
   @Override
-  public boolean isPermitted(final Peer peer) {
-    return !blacklist.contains(peer.getId());
+  public boolean isPermitted(final Peer localNode, final Peer remotePeer, final Action action) {
+    return !blacklist.contains(remotePeer.getId());
   }
 
   public void add(final Peer peer) {
