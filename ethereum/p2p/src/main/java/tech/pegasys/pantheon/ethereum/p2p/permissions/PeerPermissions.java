@@ -18,8 +18,9 @@ import tech.pegasys.pantheon.util.Subscribers;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import com.google.common.collect.ImmutableList;
 
 public abstract class PeerPermissions {
   private final Subscribers<PermissionsUpdateCallback> updateSubscribers = new Subscribers<>();
@@ -61,14 +62,14 @@ public abstract class PeerPermissions {
   }
 
   private static class CombinedPeerPermissions extends PeerPermissions {
-    private final List<PeerPermissions> permissions;
+    private final ImmutableList<PeerPermissions> permissions;
 
-    private CombinedPeerPermissions(final List<PeerPermissions> permissions) {
+    private CombinedPeerPermissions(final ImmutableList<PeerPermissions> permissions) {
       this.permissions = permissions;
     }
 
     public static PeerPermissions create(final List<PeerPermissions> permissions) {
-      final List<PeerPermissions> filteredPermissions =
+      final ImmutableList<PeerPermissions> filteredPermissions =
           permissions.stream()
               .flatMap(
                   p -> {
@@ -79,7 +80,7 @@ public abstract class PeerPermissions {
                     }
                   })
               .filter(p -> !(p instanceof NoopPeerPermissions))
-              .collect(Collectors.toList());
+              .collect(ImmutableList.toImmutableList());
 
       if (filteredPermissions.size() == 0) {
         return PeerPermissions.NOOP;
