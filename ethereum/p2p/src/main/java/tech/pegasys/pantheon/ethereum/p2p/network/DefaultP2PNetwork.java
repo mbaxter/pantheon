@@ -447,9 +447,15 @@ public class DefaultP2PNetwork implements P2PNetwork {
   @Override
   public CompletableFuture<PeerConnection> connect(final Peer peer) {
     final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
-    if (!localNode.isPresent()) {
+    if (!localNode.isPresent() || !rlpxPermissions.isPresent()) {
       connectionFuture.completeExceptionally(
           new IllegalStateException("Attempt to connect to peer before network is ready"));
+      return connectionFuture;
+    }
+    if (!rlpxPermissions.get().allowNewOutboundConnectionTo(peer)) {
+      // Peer not allowed
+      connectionFuture.completeExceptionally(
+          new IllegalStateException("Unable to connect to disallowed peer: " + peer));
       return connectionFuture;
     }
 

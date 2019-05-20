@@ -44,6 +44,8 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBonde
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions.Action;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
@@ -76,6 +78,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 public final class DefaultP2PNetworkTest {
 
   @Mock private NodePermissioningController nodePermissioningController;
+  @Mock private PeerPermissions peerPermissions;
 
   @Mock private Blockchain blockchain;
 
@@ -92,6 +95,9 @@ public final class DefaultP2PNetworkTest {
   @Before
   public void before() {
     when(blockchain.observeBlockAdded(observerCaptor.capture())).thenReturn(1L);
+    // Make permissions lenient by default
+    lenient().when(nodePermissioningController.isPermitted(any(), any())).thenReturn(true);
+    lenient().when(peerPermissions.isPermitted(any(), any(), any())).thenReturn(true);
   }
 
   @After
@@ -100,7 +106,7 @@ public final class DefaultP2PNetworkTest {
   }
 
   @Test
-  public void addingMaintainedNetworkPeerStartsConnection() {
+  public void addingMaintainedConnectionPeer_startsConnection() {
     final DefaultP2PNetwork network = mockNetwork();
     network.start();
     final Peer peer = mockPeer();
@@ -109,6 +115,24 @@ public final class DefaultP2PNetworkTest {
 
     assertThat(network.peerMaintainConnectionList).contains(peer);
     verify(network, times(1)).connect(peer);
+  }
+
+  @Test
+  public void addingMaintainedConnectionPeer_forDisallowedPeer() {
+    final DefaultP2PNetwork network = mockNetwork();
+    network.start();
+
+    final Peer localNode = DefaultPeer.fromEnodeURL(network.getLocalEnode().get());
+    final Peer peer = mockPeer();
+    when(peerPermissions.isPermitted(
+            eq(localNode), eq(peer), eq(Action.RLPX_ALLOW_NEW_OUTBOUND_CONNECTION)))
+        .thenReturn(false);
+
+    assertThat(network.addMaintainConnectionPeer(peer)).isTrue();
+
+    // Add peer but do not connect
+    assertThat(network.peerMaintainConnectionList).contains(peer);
+    verify(network, times(0)).connect(peer);
   }
 
   @Test
@@ -143,7 +167,7 @@ public final class DefaultP2PNetworkTest {
   }
 
   @Test
-  public void addingRepeatMaintainedPeersReturnsFalse() {
+  public void addingMaintainedConnectionPeer_repeatInvocationReturnsFalse() {
     final P2PNetwork network = network();
     network.start();
     final Peer peer = mockPeer();
@@ -164,15 +188,19 @@ public final class DefaultP2PNetworkTest {
   }
 
   @Test
-  public void checkMaintainedConnectionPeersDoesNotConnectToDisallowedPeer() {
+  public void checkMaintainedConnectionPeers_doesNotConnectToDisallowedPeer() {
     final DefaultP2PNetwork network = mockNetwork();
+
     network.start();
 
     // Add peer that is not permitted
+    final Peer localNode = DefaultPeer.fromEnodeURL(network.getLocalEnode().get());
     final Peer peer = mockPeer();
-    lenient().when(nodePermissioningController.isPermitted(any(), any())).thenReturn(false);
-    network.peerMaintainConnectionList.add(peer);
+    when(peerPermissions.isPermitted(
+            eq(localNode), eq(peer), eq(Action.RLPX_ALLOW_NEW_OUTBOUND_CONNECTION)))
+        .thenReturn(false);
 
+    assertThat(network.peerMaintainConnectionList.add(peer)).isTrue();
     network.checkMaintainedConnectionPeers();
     verify(network, never()).connect(peer);
   }
@@ -263,11 +291,14 @@ public final class DefaultP2PNetworkTest {
     network.start();
     network.connect(remotePeer1).complete(peerConnection1);
     network.connect(remotePeer2).complete(peerConnection2);
+    // Permissions are check on connection
+    verify(nodePermissioningController, times(2)).isPermitted(any(), any());
 
     final BlockAddedObserver blockAddedObserver = observerCaptor.getValue();
     blockAddedObserver.onBlockAdded(blockAddedEvent, blockchain);
 
-    verify(nodePermissioningController, times(2)).isPermitted(any(), any());
+    // Permissions should be checked against after block is added
+    verify(nodePermissioningController, times(4)).isPermitted(any(), any());
   }
 
   @Test
@@ -305,7 +336,7 @@ public final class DefaultP2PNetworkTest {
   }
 
   @Test
-  public void removePeerReturnsTrueIfNodeWasInMaintaineConnectionsAndDisconnectsIfInPending() {
+  public void removePeerReturnsTrueIfNodeWasInMaintainedConnectionsAndDisconnectsIfInPending() {
     final DefaultP2PNetwork network = network();
     network.start();
 
@@ -492,6 +523,8 @@ public final class DefaultP2PNetworkTest {
         mockNetwork(() -> RlpxConfiguration.create().setMaxPeers(maxPeers));
     network.start();
 
+    final Peer localNode = DefaultPeer.fromEnodeURL(network.getLocalEnode().get());
+
     doReturn(2).when(network).connectionCount();
     final List<DiscoveryPeer> peers =
         Stream.iterate(1, n -> n + 1)
@@ -511,9 +544,10 @@ public final class DefaultP2PNetworkTest {
     // Set up the highest value peer to lack permissions
     DiscoveryPeer highestValueNonPermittedPeer = peers.get(0);
     highestValueNonPermittedPeer.setLastAttemptedConnection(1);
-    when(nodePermissioningController.isPermitted(any(), any())).thenReturn(true);
-    when(nodePermissioningController.isPermitted(
-            any(), eq(highestValueNonPermittedPeer.getEnodeURL())))
+    when(peerPermissions.isPermitted(
+            eq(localNode),
+            eq(highestValueNonPermittedPeer),
+            eq(Action.RLPX_ALLOW_NEW_OUTBOUND_CONNECTION)))
         .thenReturn(false);
 
     doReturn(peers.stream()).when(network).streamDiscoveredPeers();
@@ -599,6 +633,29 @@ public final class DefaultP2PNetworkTest {
     assertThat(peer.getLastAttemptedConnection()).isGreaterThan(0);
   }
 
+  @Test
+  public void connect_toDisallowedPeer() {
+    final DefaultP2PNetwork network = network();
+    network.start();
+    final Peer localNode = DefaultPeer.fromEnodeURL(network.getLocalEnode().get());
+    final DiscoveryPeer peer = createDiscoveryPeer();
+
+    // Setup permissions to deny peer
+    when(peerPermissions.isPermitted(
+            eq(localNode), eq(peer), eq(Action.RLPX_ALLOW_NEW_OUTBOUND_CONNECTION)))
+        .thenReturn(false);
+
+    assertThat(peer.getLastAttemptedConnection()).isEqualTo(0);
+
+    final CompletableFuture<PeerConnection> result = network.connect(peer);
+    assertThat(result).isCompletedExceptionally();
+    assertThatThrownBy(result::get)
+        .hasCauseInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("Unable to connect to disallowed peer");
+    // Last contacted should not be updated.
+    assertThat(peer.getLastAttemptedConnection()).isEqualTo(0);
+  }
+
   private DiscoveryPeer createDiscoveryPeer() {
     return createDiscoveryPeer(Peer.randomId(), 999);
   }
@@ -653,6 +710,10 @@ public final class DefaultP2PNetworkTest {
   }
 
   private DefaultP2PNetwork network(final Supplier<RlpxConfiguration> rlpxConfig) {
+    return (DefaultP2PNetwork) builder(rlpxConfig).build();
+  }
+
+  private DefaultP2PNetwork.Builder builder(final Supplier<RlpxConfiguration> rlpxConfig) {
     final DiscoveryConfiguration noDiscovery = DiscoveryConfiguration.create().setActive(false);
     final NetworkingConfiguration networkingConfiguration =
         NetworkingConfiguration.create()
@@ -660,23 +721,16 @@ public final class DefaultP2PNetworkTest {
             .setSupportedProtocols(subProtocol())
             .setRlpx(rlpxConfig.get().setBindPort(0));
 
-    lenient().when(nodePermissioningController.isPermitted(any(), any())).thenReturn(true);
-
-    return (DefaultP2PNetwork)
-        builder()
-            .config(networkingConfiguration)
-            .nodePermissioningController(nodePermissioningController)
-            .blockchain(blockchain)
-            .build();
-  }
-
-  private DefaultP2PNetwork.Builder builder() {
     return DefaultP2PNetwork.builder()
         .vertx(vertx)
         .config(config)
         .keyPair(KeyPair.generate())
         .metricsSystem(new NoOpMetricsSystem())
-        .supportedCapabilities(Arrays.asList(Capability.create("eth", 63)));
+        .supportedCapabilities(Arrays.asList(Capability.create("eth", 63)))
+        .config(networkingConfiguration)
+        .nodePermissioningController(nodePermissioningController)
+        .peerPermissions(peerPermissions)
+        .blockchain(blockchain);
   }
 
   private Peer mockPeer() {
