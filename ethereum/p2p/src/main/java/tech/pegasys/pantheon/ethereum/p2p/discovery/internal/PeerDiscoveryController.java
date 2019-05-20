@@ -407,8 +407,8 @@ public class PeerDiscoveryController {
   }
 
   private void cleanPeerTableIfRequired() {
-    if (!peerTableIsDirty.compareAndSet(true, false)) {
-      streamDiscoveredPeers().forEach(this::dropPeerIfDisallowed);
+    if (peerTableIsDirty.compareAndSet(true, false)) {
+      peerTable.streamAllPeers().forEach(this::dropPeerIfDisallowed);
     }
   }
 
