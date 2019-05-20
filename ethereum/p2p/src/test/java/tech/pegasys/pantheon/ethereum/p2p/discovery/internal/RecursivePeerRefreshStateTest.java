@@ -270,17 +270,36 @@ public class RecursivePeerRefreshStateTest {
     completeBonding(peer1);
     completeBonding(peer2);
 
-    verify(neighborFinder).findNeighbours(peer1, TARGET);
-    verify(neighborFinder).findNeighbours(peer2, TARGET);
+    verify(neighborFinder, times(1)).findNeighbours(peer1, TARGET);
+    verify(neighborFinder, times(1)).findNeighbours(peer2, TARGET);
 
     recursivePeerRefreshState.onNeighboursReceived(peer1, singletonList(peer2));
     recursivePeerRefreshState.onNeighboursReceived(peer2, emptyList());
 
     verify(bondingAgent, times(1)).performBonding(peer1);
     verify(bondingAgent, times(1)).performBonding(peer2);
-    verify(neighborFinder).findNeighbours(peer1, TARGET);
-    verify(neighborFinder).findNeighbours(peer2, TARGET);
+    verify(neighborFinder, times(1)).findNeighbours(peer1, TARGET);
+    verify(neighborFinder, times(1)).findNeighbours(peer2, TARGET);
     verifyNoMoreInteractions(bondingAgent, neighborFinder);
+  }
+
+  @Test
+  public void shouldNotQueryNodeMissingPermissions() {
+    peer1.setStatus(PeerDiscoveryStatus.KNOWN);
+    peer2.setStatus(PeerDiscoveryStatus.KNOWN);
+
+    when(peerPermissions.allowOutboundNeighborsRequest(peer1)).thenReturn(false);
+
+    recursivePeerRefreshState.start(asList(peer1, peer2), TARGET);
+
+    verify(bondingAgent).performBonding(peer2);
+    verify(bondingAgent).performBonding(peer2);
+
+    completeBonding(peer1);
+    completeBonding(peer2);
+
+    verify(neighborFinder, times(0)).findNeighbours(peer1, TARGET);
+    verify(neighborFinder, times(1)).findNeighbours(peer2, TARGET);
   }
 
   @Test
