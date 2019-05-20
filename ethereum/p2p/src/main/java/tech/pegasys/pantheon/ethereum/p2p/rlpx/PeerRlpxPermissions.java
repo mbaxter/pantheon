@@ -17,58 +17,28 @@ import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions.Action;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PermissionsUpdateCallback;
 
-import java.util.Optional;
-import java.util.function.Supplier;
-
 public class PeerRlpxPermissions {
-  private final Supplier<Optional<Peer>> localNodeSupplier;
+  private final Peer localNode;
   private final PeerPermissions peerPermissions;
 
-  public PeerRlpxPermissions(
-      final Supplier<Optional<Peer>> localNodeSupplier, final PeerPermissions peerPermissions) {
-    this.localNodeSupplier = localNodeSupplier;
+  public PeerRlpxPermissions(final Peer localNode, final PeerPermissions peerPermissions) {
+    this.localNode = localNode;
     this.peerPermissions = peerPermissions;
   }
 
   public boolean allowNewOutboundConnectionTo(final Peer peer) {
-    Optional<Peer> localNode = localNodeSupplier.get();
-    if (!localNode.isPresent()) {
-      return false;
-    }
-    return peerPermissions.isPermitted(
-        localNode.get(), peer, Action.RLPX_ALLOW_NEW_OUTBOUND_CONNECTION);
+    return peerPermissions.isPermitted(localNode, peer, Action.RLPX_ALLOW_NEW_OUTBOUND_CONNECTION);
   }
 
   public boolean allowNewInboundConnectionFrom(final Peer peer) {
-    Optional<Peer> localNode = localNodeSupplier.get();
-    if (!localNode.isPresent()) {
-      return false;
-    }
-    return peerPermissions.isPermitted(
-        localNode.get(), peer, Action.RLPX_ALLOW_NEW_INBOUND_CONNECTION);
+    return peerPermissions.isPermitted(localNode, peer, Action.RLPX_ALLOW_NEW_INBOUND_CONNECTION);
   }
 
   public boolean allowOngoingConnection(final Peer peer) {
-    Optional<Peer> localNode = localNodeSupplier.get();
-    if (!localNode.isPresent()) {
-      return false;
-    }
-    return peerPermissions.isPermitted(localNode.get(), peer, Action.RLPX_ALLOW_ONGOING_CONNECTION);
+    return peerPermissions.isPermitted(localNode, peer, Action.RLPX_ALLOW_ONGOING_CONNECTION);
   }
 
   public void subscribeUpdate(final PermissionsUpdateCallback callback) {
     peerPermissions.subscribeUpdate(callback);
   }
-
-  // TODO: Store origination information in peer connection
-  //  public boolean allowOngoingConnectionInitiatedLocally(Peer peer) {
-  //    return peerPermissions.isPermitted(localNode, peer,
-  // Action.RLPX_ALLOW_ONGOING_CONNECTION_LOCALLY_INITIATED);
-  //  }
-  //
-  //  public boolean allowOngoingConnectionInitiatedRemotely(final Peer peer) {
-  //    return peerPermissions.isPermitted(localNode, peer,
-  // Action.RLPX_ALLOW_ONGOING_CONNECTION_LOCALLY_INITIATED);
-  //  }
-
 }

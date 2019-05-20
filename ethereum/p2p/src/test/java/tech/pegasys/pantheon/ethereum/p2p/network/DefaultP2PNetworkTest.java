@@ -251,16 +251,6 @@ public final class DefaultP2PNetworkTest {
   }
 
   @Test
-  public void whenStoppingNetworkWithNodePermissioningShouldUnsubscribeBlockAddedEvents() {
-    final P2PNetwork network = network();
-
-    network.start();
-    network.stop();
-
-    verify(blockchain).removeObserver(eq(1L));
-  }
-
-  @Test
   public void onBlockAddedShouldCheckPermissionsForAllPeers() {
     final BlockAddedEvent blockAddedEvent = blockAddedEvent();
     final P2PNetwork network = network();
