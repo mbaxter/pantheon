@@ -152,7 +152,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
   private final SECP256K1.KeyPair keyPair;
   private final BytesValue nodeId;
   private volatile OptionalInt listeningPort = OptionalInt.empty();
-  private volatile Optional<Peer> localPeer = Optional.empty();
+  private volatile Optional<Peer> localNode = Optional.empty();
   private volatile Optional<PeerInfo> ourPeerInfo = Optional.empty();
 
   private final PeerPermissions peerPermissions;
@@ -396,7 +396,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
     final PeerRlpxPermissions permissions = rlpxPermissions.get();
     peerMaintainConnectionList.stream()
         .filter(p -> !isConnectingOrConnected(p))
-        .filter(peer -> permissions.allowNewOutboundConnectionTo(peer))
+        .filter(permissions::allowNewOutboundConnectionTo)
         .forEach(this::connect);
   }
 
@@ -447,7 +447,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
   @Override
   public CompletableFuture<PeerConnection> connect(final Peer peer) {
     final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
-    if (!localPeer.isPresent()) {
+    if (!localNode.isPresent()) {
       connectionFuture.completeExceptionally(
           new IllegalStateException("Attempt to connect to peer before network is ready"));
       return connectionFuture;
@@ -681,12 +681,12 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public Optional<EnodeURL> getLocalEnode() {
-    return localPeer.map(Peer::getEnodeURL);
+    return localNode.map(Peer::getEnodeURL);
   }
 
   private Peer createLocalNode() {
-    if (localPeer.isPresent() || !listeningPort.isPresent()) {
-      return localPeer.orElse(null);
+    if (localNode.isPresent() || !listeningPort.isPresent()) {
+      return localNode.orElse(null);
     }
 
     final OptionalInt discoveryPort =
@@ -706,7 +706,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
     LOG.info("Enode URL {}", localEnode.toString());
     final Peer ourNode = DefaultPeer.fromEnodeURL(localEnode);
-    this.localPeer = Optional.of(ourNode);
+    this.localNode = Optional.of(ourNode);
     return ourNode;
   }
 
