@@ -43,12 +43,10 @@ public class PeerReputationManagerTest {
     final PeerConnection peer = generatePeerConnection();
 
     checkPermissions(blacklist, peer.getPeer(), true);
-    ;
 
     peerReputationManager.onDisconnect(peer, DisconnectReason.TOO_MANY_PEERS, false);
 
     checkPermissions(blacklist, peer.getPeer(), true);
-    ;
   }
 
   @Test
@@ -56,10 +54,8 @@ public class PeerReputationManagerTest {
     final PeerConnection peer = generatePeerConnection();
 
     checkPermissions(blacklist, peer.getPeer(), true);
-    ;
     peerReputationManager.onDisconnect(peer, DisconnectReason.BREACH_OF_PROTOCOL, false);
     checkPermissions(blacklist, peer.getPeer(), false);
-    ;
   }
 
   @Test
@@ -67,10 +63,8 @@ public class PeerReputationManagerTest {
     final PeerConnection peer = generatePeerConnection();
 
     checkPermissions(blacklist, peer.getPeer(), true);
-    ;
     peerReputationManager.onDisconnect(peer, DisconnectReason.BREACH_OF_PROTOCOL, true);
     checkPermissions(blacklist, peer.getPeer(), true);
-    ;
   }
 
   @Test
@@ -78,11 +72,9 @@ public class PeerReputationManagerTest {
     final PeerConnection peer = generatePeerConnection();
 
     checkPermissions(blacklist, peer.getPeer(), true);
-    ;
     peerReputationManager.onDisconnect(
         peer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, false);
     checkPermissions(blacklist, peer.getPeer(), false);
-    ;
   }
 
   @Test
@@ -90,11 +82,9 @@ public class PeerReputationManagerTest {
     final PeerConnection peer = generatePeerConnection();
 
     checkPermissions(blacklist, peer.getPeer(), true);
-    ;
     peerReputationManager.onDisconnect(
         peer, DisconnectReason.INCOMPATIBLE_P2P_PROTOCOL_VERSION, true);
     checkPermissions(blacklist, peer.getPeer(), false);
-    ;
   }
 
   private void checkPermissions(

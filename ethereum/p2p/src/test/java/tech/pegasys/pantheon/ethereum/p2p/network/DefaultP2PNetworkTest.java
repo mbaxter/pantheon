@@ -292,7 +292,7 @@ public final class DefaultP2PNetworkTest {
     network.start();
     network.connect(remotePeer1).complete(peerConnection1);
     network.connect(remotePeer2).complete(peerConnection2);
-    // Permissions are check on connection
+    // Permissions are checked on connection
     verify(nodePermissioningController, times(2)).isPermitted(any(), any());
 
     final BlockAddedObserver blockAddedObserver = observerCaptor.getValue();
