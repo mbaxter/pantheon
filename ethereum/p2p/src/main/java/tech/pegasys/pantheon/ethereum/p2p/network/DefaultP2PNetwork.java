@@ -156,7 +156,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
   private volatile Optional<PeerInfo> ourPeerInfo = Optional.empty();
 
   private final PeerPermissions peerPermissions;
-  private Optional<PeerRlpxPermissions> rlpxPermissions = Optional.empty();
+  private volatile Optional<PeerRlpxPermissions> rlpxPermissions = Optional.empty();
 
   @VisibleForTesting final Collection<Peer> peerMaintainConnectionList;
   @VisibleForTesting final PeerConnectionRegistry connections;
