@@ -252,21 +252,6 @@ public final class DefaultP2PNetworkTest {
   }
 
   @Test
-  public void stop_removesListeners() {
-    final P2PNetwork network = network();
-
-    network.start();
-    verify(blockchain, never()).removeObserver(anyLong());
-    verify(nodePermissioningController, never()).unsubscribeFromUpdates(anyLong());
-
-    network.stop();
-    network.awaitStop();
-
-    verify(blockchain, times(1)).removeObserver(anyLong());
-    verify(nodePermissioningController, times(1)).unsubscribeFromUpdates(anyLong());
-  }
-
-  @Test
   public void shouldntAttemptNewConnectionToPendingPeer() {
     final P2PNetwork network = network();
     network.start();
@@ -293,6 +278,21 @@ public final class DefaultP2PNetworkTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessage(
             "Network permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
+  }
+
+  @Test
+  public void stop_removesListeners() {
+    final P2PNetwork network = network();
+
+    network.start();
+    verify(blockchain, never()).removeObserver(anyLong());
+    verify(nodePermissioningController, never()).unsubscribeFromUpdates(anyLong());
+
+    network.stop();
+    network.awaitStop();
+
+    verify(blockchain, times(1)).removeObserver(anyLong());
+    verify(nodePermissioningController, times(1)).unsubscribeFromUpdates(anyLong());
   }
 
   @Test
