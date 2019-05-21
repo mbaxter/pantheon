@@ -32,6 +32,9 @@ class NodePermissioningAdapter extends PeerPermissions {
 
   private final NodePermissioningController nodePermissioningController;
   private final List<EnodeURL> bootnodes;
+  private final Blockchain blockchain;
+  private final long blockchainListenId;
+  private final long nodePermissioningListenId;
 
   public NodePermissioningAdapter(
       final NodePermissioningController nodePermissioningController,
@@ -43,11 +46,14 @@ class NodePermissioningAdapter extends PeerPermissions {
 
     this.nodePermissioningController = nodePermissioningController;
     this.bootnodes = bootnodes;
+    this.blockchain = blockchain;
 
     // TODO: These events should be more targeted
-    blockchain.observeBlockAdded((evt, chain) -> dispatchUpdate(true, Optional.empty()));
-    this.nodePermissioningController.subscribeToUpdates(
-        () -> dispatchUpdate(true, Optional.empty()));
+    blockchainListenId =
+        blockchain.observeBlockAdded((evt, chain) -> dispatchUpdate(true, Optional.empty()));
+    nodePermissioningListenId =
+        this.nodePermissioningController.subscribeToUpdates(
+            () -> dispatchUpdate(true, Optional.empty()));
   }
 
   @Override
@@ -114,5 +120,11 @@ class NodePermissioningAdapter extends PeerPermissions {
   private boolean inboundIsPermitted(final Peer localNode, final Peer remotePeer) {
     return nodePermissioningController.isPermitted(
         remotePeer.getEnodeURL(), localNode.getEnodeURL());
+  }
+
+  @Override
+  public void close() {
+    blockchain.removeObserver(blockchainListenId);
+    nodePermissioningController.unsubscribeFromUpdates(nodePermissioningListenId);
   }
 }

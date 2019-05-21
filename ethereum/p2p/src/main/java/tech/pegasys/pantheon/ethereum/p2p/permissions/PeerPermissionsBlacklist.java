@@ -78,4 +78,9 @@ public class PeerPermissionsBlacklist extends PeerPermissions {
       dispatchUpdate(false, Optional.empty());
     }
   }
+
+  @Override
+  public void close() {
+    blacklist.clear();
+  }
 }

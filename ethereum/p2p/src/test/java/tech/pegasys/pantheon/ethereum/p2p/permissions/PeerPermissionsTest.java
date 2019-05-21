@@ -13,6 +13,10 @@
 package tech.pegasys.pantheon.ethereum.p2p.permissions;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
@@ -132,6 +136,21 @@ public class PeerPermissionsTest {
 
     assertThat(PeerPermissions.combine(noop).isPermitted(localPeer, remotePeer, action)).isTrue();
     assertThat(PeerPermissions.combine().isPermitted(localPeer, remotePeer, action)).isTrue();
+  }
+
+  @Test
+  public void close_forCombinedPermissions() {
+    TestPeerPermissions peerPermissionsA = spy(new TestPeerPermissions(false));
+    TestPeerPermissions peerPermissionsB = spy(new TestPeerPermissions(false));
+    PeerPermissions combined = PeerPermissions.combine(peerPermissionsA, peerPermissionsB);
+
+    verify(peerPermissionsA, never()).close();
+    verify(peerPermissionsB, never()).close();
+
+    combined.close();
+
+    verify(peerPermissionsA, times(1)).close();
+    verify(peerPermissionsB, times(1)).close();
   }
 
   private Peer createPeer() {

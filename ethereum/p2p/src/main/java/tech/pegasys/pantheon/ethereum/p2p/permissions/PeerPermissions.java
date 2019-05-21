@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableList;
 
-public abstract class PeerPermissions {
+public abstract class PeerPermissions implements AutoCloseable {
   private final Subscribers<PermissionsUpdateCallback> updateSubscribers = new Subscribers<>();
 
   public static final PeerPermissions NOOP = new NoopPeerPermissions();
@@ -66,6 +66,11 @@ public abstract class PeerPermissions {
    */
   public abstract boolean isPermitted(
       final Peer localNode, final Peer remotePeer, final Action action);
+
+  @Override
+  public void close() {
+    // Do nothing by default
+  }
 
   public void subscribeUpdate(final PermissionsUpdateCallback callback) {
     updateSubscribers.subscribe(callback);
@@ -128,6 +133,13 @@ public abstract class PeerPermissions {
         }
       }
       return true;
+    }
+
+    @Override
+    public void close() {
+      for (final PeerPermissions permission : permissions) {
+        permission.close();
+      }
     }
   }
 }

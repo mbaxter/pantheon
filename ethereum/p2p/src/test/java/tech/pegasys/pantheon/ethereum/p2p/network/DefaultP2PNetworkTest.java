@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Java6Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Java6Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -248,6 +249,21 @@ public final class DefaultP2PNetworkTest {
     network.stop();
 
     verify(peerConnection).disconnect(eq(DisconnectReason.CLIENT_QUITTING));
+  }
+
+  @Test
+  public void stop_removesListeners() {
+    final P2PNetwork network = network();
+
+    network.start();
+    verify(blockchain, never()).removeObserver(anyLong());
+    verify(nodePermissioningController, never()).unsubscribeFromUpdates(anyLong());
+
+    network.stop();
+    network.awaitStop();
+
+    verify(blockchain, times(1)).removeObserver(anyLong());
+    verify(nodePermissioningController, times(1)).unsubscribeFromUpdates(anyLong());
   }
 
   @Test
