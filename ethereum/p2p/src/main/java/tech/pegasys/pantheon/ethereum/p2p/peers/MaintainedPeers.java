@@ -62,10 +62,12 @@ public class MaintainedPeers {
     return maintainedPeers.stream();
   }
 
+  @FunctionalInterface
   public interface PeerAddedCallback {
     void onPeerAdded(Peer peer, boolean wasAdded);
   }
 
+  @FunctionalInterface
   public interface PeerRemovedCallback {
     void onPeerRemoved(Peer peer, boolean wasRemoved);
   }
