@@ -600,16 +600,11 @@ public class DefaultP2PNetwork implements P2PNetwork {
           .map(Optional::get)
           .forEach(conn -> conn.disconnect(DisconnectReason.REQUESTED));
     } else {
-      checkAllConnections();
+      checkAllConnections(permissions);
     }
   }
 
-  private void checkAllConnections() {
-    if (!rlpxPermissions.isPresent()) {
-      return;
-    }
-    final PeerRlpxPermissions permissions = rlpxPermissions.get();
-
+  private void checkAllConnections(final PeerRlpxPermissions permissions) {
     connections
         .getPeerConnections()
         .forEach(
