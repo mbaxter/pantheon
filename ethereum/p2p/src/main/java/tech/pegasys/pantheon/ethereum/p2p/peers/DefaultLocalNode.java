@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.ethereum.p2p.peers;
 
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
-import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.util.List;
@@ -29,7 +28,6 @@ class DefaultLocalNode implements MutableLocalNode {
   private final List<Capability> supportedCapabilities;
   private volatile Optional<PeerInfo> peerInfo = Optional.empty();
   private volatile Optional<Peer> peer = Optional.empty();
-  private final Subscribers<ReadyCallback> readySubscribers = new Subscribers<>();
 
   private DefaultLocalNode(
       final String clientId, final int p2pVersion, final List<Capability> supportedCapabilities) {
@@ -58,7 +56,6 @@ class DefaultLocalNode implements MutableLocalNode {
                 enode.getNodeId()));
     this.peer = Optional.of(DefaultPeer.fromEnodeURL(enode));
     isReady.set(true);
-    dispatchReady();
   }
 
   @Override
@@ -82,19 +79,5 @@ class DefaultLocalNode implements MutableLocalNode {
   @Override
   public boolean isReady() {
     return isReady.get();
-  }
-
-  @Override
-  public synchronized void subscribeReady(final ReadyCallback callback) {
-    if (isReady()) {
-      callback.onReady(this);
-    } else {
-      readySubscribers.subscribe(callback);
-    }
-  }
-
-  private synchronized void dispatchReady() {
-    readySubscribers.forEach(c -> c.onReady(this));
-    readySubscribers.clear();
   }
 }

@@ -57,16 +57,6 @@ public interface LocalNode {
    */
   boolean isReady();
 
-  /**
-   * When this node is up and running with a valid {@link EnodeURL} representation, the given
-   * callback will be invoked. If the callback is added after this node is ready, it is invoked
-   * immediately.
-   *
-   * @param callback The callback to run against the {@link EnodeURL} representing the local node,
-   *     when the local node is ready.
-   */
-  void subscribeReady(ReadyCallback callback);
-
   interface ReadyCallback {
     void onReady(LocalNode localNode);
   }

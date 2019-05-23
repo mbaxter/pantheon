@@ -59,19 +59,4 @@ public class SubscribersTest {
     verify(subscriber2).run();
     verify(subscriber3).run();
   }
-
-  @Test
-  public void shouldClearSubscriber() {
-    subscribers.subscribe(subscriber1);
-    subscribers.subscribe(subscriber2);
-    assertThat(subscribers.getSubscriberCount()).isEqualTo(2);
-
-    subscribers.clear();
-
-    assertThat(subscribers.getSubscriberCount()).isEqualTo(0);
-
-    subscribers.forEach(Runnable::run);
-    verifyZeroInteractions(subscriber1);
-    verifyZeroInteractions(subscriber2);
-  }
 }

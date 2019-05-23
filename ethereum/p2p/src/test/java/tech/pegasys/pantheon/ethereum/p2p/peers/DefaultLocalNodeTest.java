@@ -23,7 +23,6 @@ import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Test;
 
@@ -59,49 +58,6 @@ public class DefaultLocalNodeTest {
 
     assertThat(localNode.isReady()).isTrue();
     validateReadyNode(localNode);
-  }
-
-  @Test
-  public void subscribeReady_beforeReady() {
-    AtomicReference<LocalNode> readyNode = new AtomicReference<>(null);
-    final MutableLocalNode localNode = createLocalNode();
-    localNode.subscribeReady(readyNode::set);
-
-    assertThat(readyNode.get()).isNull();
-
-    localNode.setEnode(enode);
-    assertThat(readyNode.get()).isNotNull();
-    validateReadyNode(readyNode.get());
-  }
-
-  @Test
-  public void subscribeReady_afterReady() {
-    AtomicReference<LocalNode> readyNode = new AtomicReference<>(null);
-    final MutableLocalNode localNode = createLocalNode();
-    localNode.setEnode(enode);
-
-    localNode.subscribeReady(readyNode::set);
-    assertThat(readyNode.get()).isNotNull();
-    validateReadyNode(readyNode.get());
-  }
-
-  @Test
-  public void subscribeReady_beforeAndAfterReady() {
-    final MutableLocalNode localNode = createLocalNode();
-
-    AtomicReference<LocalNode> subscriberA = new AtomicReference<>(null);
-    AtomicReference<LocalNode> subscriberB = new AtomicReference<>(null);
-
-    localNode.subscribeReady(subscriberA::set);
-    assertThat(subscriberA.get()).isNull();
-
-    localNode.setEnode(enode);
-
-    localNode.subscribeReady(subscriberB::set);
-    assertThat(subscriberA.get()).isNotNull();
-    validateReadyNode(subscriberA.get());
-    assertThat(subscriberB.get()).isNotNull();
-    validateReadyNode(subscriberB.get());
   }
 
   private MutableLocalNode createLocalNode() {
