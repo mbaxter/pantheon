@@ -38,6 +38,7 @@ import java.util.function.Consumer;
  * @param <T> the type of subscribers
  */
 public class Subscribers<T> {
+
   private final AtomicLong subscriberId = new AtomicLong();
   private final Map<Long, T> subscribers = new ConcurrentHashMap<>();
 

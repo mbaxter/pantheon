@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Java6Assertions.assertThatThrownBy;
 
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode.NodeNotReadyException;
+import tech.pegasys.pantheon.ethereum.p2p.peers.MutableLocalNode.NodeAlreadySetException;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -58,6 +59,9 @@ public class DefaultLocalNodeTest {
 
     assertThat(localNode.isReady()).isTrue();
     validateReadyNode(localNode);
+
+    // Verify we can't set the enode a second time
+    assertThatThrownBy(() -> localNode.setEnode(enode)).isInstanceOf(NodeAlreadySetException.class);
   }
 
   private MutableLocalNode createLocalNode() {
