@@ -81,9 +81,9 @@ class DefaultLocalNode implements MutableLocalNode {
   public Peer getPeer() throws NodeNotReadyException {
     if (!peer.isPresent()) {
       throw new NodeNotReadyException(
-        "Attempt to access local peer representation before local node is ready.");
+          "Attempt to access local peer representation before local node is ready.");
     }
-    throw new UnsupportedOperationException();
+    return peer.get();
   }
 
   @Override
