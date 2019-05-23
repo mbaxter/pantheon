@@ -94,15 +94,13 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
       final BytesValue nodeId = handshaker.partyPubKey().getEncodedBytes();
       if (peerConnectionRegistry.isAlreadyConnected(nodeId)) {
         LOG.debug("Rejecting connection from already connected client {}", nodeId);
-        ctx.writeAndFlush(
-                new OutboundMessage(
-                    null, DisconnectMessage.create(DisconnectReason.ALREADY_CONNECTED)))
-            .addListener(
-                ff -> {
-                  ctx.close();
-                  connectionFuture.completeExceptionally(
-                      new IllegalStateException("Client already connected"));
-                });
+        disconnect(ctx, DisconnectReason.ALREADY_CONNECTED);
+        return;
+      }
+      if (!localNode.isReady()) {
+        // If we're handling a connection before the node is fully up, just disconnect
+        LOG.debug("Rejecting connection because local node is not ready {}", nodeId);
+        disconnect(ctx, DisconnectReason.UNKNOWN);
         return;
       }
 
@@ -136,6 +134,16 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
       msg.retain();
       ctx.fireChannelRead(msg);
     }
+  }
+
+  private void disconnect(final ChannelHandlerContext ctx, final DisconnectReason reason) {
+    ctx.writeAndFlush(new OutboundMessage(null, DisconnectMessage.create(reason)))
+        .addListener(
+            ff -> {
+              ctx.close();
+              connectionFuture.completeExceptionally(
+                  new IllegalStateException("Disconnecting from peer: " + reason.name()));
+            });
   }
 
   @Override
