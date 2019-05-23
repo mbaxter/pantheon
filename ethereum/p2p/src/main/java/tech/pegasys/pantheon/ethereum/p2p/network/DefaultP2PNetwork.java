@@ -674,7 +674,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
     if (!localNode.isReady()) {
       return Optional.empty();
     }
-    return Optional.of(localNode.getEnode());
+    return Optional.of(localNode.getPeer().getEnodeURL());
   }
 
   private void setLocalNode(final int listeningPort, final int discoveryPort) {

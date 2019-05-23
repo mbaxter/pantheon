@@ -48,7 +48,6 @@ public class DefaultLocalNodeTest {
   public void create() {
     final LocalNode localNode = createLocalNode();
     assertThat(localNode.isReady()).isFalse();
-    assertThatThrownBy(localNode::getEnode).isInstanceOf(NodeNotReadyException.class);
     assertThatThrownBy(localNode::getPeerInfo).isInstanceOf(NodeNotReadyException.class);
     assertThatThrownBy(localNode::getPeer).isInstanceOf(NodeNotReadyException.class);
   }
@@ -110,7 +109,6 @@ public class DefaultLocalNodeTest {
   }
 
   private void validateReadyNode(final LocalNode localNode) {
-    assertThat(localNode.getEnode()).isEqualTo(enode);
     assertThat(localNode.getPeerInfo()).isEqualTo(peerInfo);
     assertThat(localNode.getPeer()).isEqualTo(peer);
   }

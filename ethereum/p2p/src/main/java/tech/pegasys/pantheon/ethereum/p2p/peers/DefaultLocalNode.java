@@ -19,13 +19,14 @@ import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 class DefaultLocalNode implements MutableLocalNode {
 
+  private final AtomicBoolean isReady = new AtomicBoolean(false);
   private final String clientId;
   private final int p2pVersion;
   private final List<Capability> supportedCapabilities;
-  private volatile Optional<EnodeURL> enode = Optional.empty();
   private volatile Optional<PeerInfo> peerInfo = Optional.empty();
   private volatile Optional<Peer> peer = Optional.empty();
   private final Subscribers<ReadyCallback> readySubscribers = new Subscribers<>();
@@ -44,10 +45,9 @@ class DefaultLocalNode implements MutableLocalNode {
 
   @Override
   public void setEnode(final EnodeURL enode) throws NodeAlreadySetException {
-    if (this.enode.isPresent()) {
+    if (peer.isPresent()) {
       throw new NodeAlreadySetException("Attempt to set already initialized local node");
     }
-    this.enode = Optional.of(enode);
     this.peerInfo =
         Optional.of(
             new PeerInfo(
@@ -57,15 +57,8 @@ class DefaultLocalNode implements MutableLocalNode {
                 enode.getListeningPortOrZero(),
                 enode.getNodeId()));
     this.peer = Optional.of(DefaultPeer.fromEnodeURL(enode));
+    isReady.set(true);
     dispatchReady();
-  }
-
-  @Override
-  public EnodeURL getEnode() throws NodeNotReadyException {
-    if (!enode.isPresent()) {
-      throw new NodeNotReadyException("Attempt to access local enode before local node is ready.");
-    }
-    return enode.get();
   }
 
   @Override
@@ -88,7 +81,7 @@ class DefaultLocalNode implements MutableLocalNode {
 
   @Override
   public boolean isReady() {
-    return enode.isPresent();
+    return isReady.get();
   }
 
   @Override

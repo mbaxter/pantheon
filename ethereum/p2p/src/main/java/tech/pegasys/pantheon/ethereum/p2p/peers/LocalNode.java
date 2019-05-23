@@ -37,12 +37,6 @@ public interface LocalNode {
   }
 
   /**
-   * @return The {@link EnodeURL} representation associated with this node.
-   * @throws NodeNotReadyException If the local node is not ready, throws an exception.
-   */
-  EnodeURL getEnode() throws NodeNotReadyException;
-
-  /**
    * @return the {@link PeerInfo} associated with the local node.
    * @throws NodeNotReadyException If the local node is not ready, throws an exception.
    */
