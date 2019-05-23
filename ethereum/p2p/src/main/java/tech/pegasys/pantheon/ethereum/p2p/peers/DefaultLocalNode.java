@@ -27,6 +27,7 @@ class DefaultLocalNode implements MutableLocalNode {
   private final List<Capability> supportedCapabilities;
   private volatile Optional<EnodeURL> enode = Optional.empty();
   private volatile Optional<PeerInfo> peerInfo = Optional.empty();
+  private volatile Optional<Peer> peer = Optional.empty();
   private final Subscribers<ReadyCallback> readySubscribers = new Subscribers<>();
 
   private DefaultLocalNode(
@@ -55,7 +56,8 @@ class DefaultLocalNode implements MutableLocalNode {
                 supportedCapabilities,
                 enode.getListeningPortOrZero(),
                 enode.getNodeId()));
-    dispatchReady(enode);
+    this.peer = Optional.of(DefaultPeer.fromEnodeURL(enode));
+    dispatchReady();
   }
 
   @Override
@@ -76,6 +78,15 @@ class DefaultLocalNode implements MutableLocalNode {
   }
 
   @Override
+  public Peer getPeer() throws NodeNotReadyException {
+    if (!peer.isPresent()) {
+      throw new NodeNotReadyException(
+        "Attempt to access local peer representation before local node is ready.");
+    }
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public boolean isReady() {
     return enode.isPresent();
   }
@@ -83,14 +94,14 @@ class DefaultLocalNode implements MutableLocalNode {
   @Override
   public synchronized void subscribeReady(final ReadyCallback callback) {
     if (isReady()) {
-      callback.onReady(enode.get());
+      callback.onReady(this);
     } else {
       readySubscribers.subscribe(callback);
     }
   }
 
-  private synchronized void dispatchReady(final EnodeURL localNode) {
-    readySubscribers.forEach(c -> c.onReady(localNode));
+  private synchronized void dispatchReady() {
+    readySubscribers.forEach(c -> c.onReady(this));
     readySubscribers.clear();
   }
 }

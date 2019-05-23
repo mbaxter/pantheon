@@ -42,6 +42,7 @@ public class DefaultLocalNodeTest {
           .build();
   private final PeerInfo peerInfo =
       new PeerInfo(p2pVersion, clientId, supportedCapabilities, port, nodeId);
+  private final Peer peer = DefaultPeer.fromEnodeURL(enode);
 
   @Test
   public void create() {
@@ -49,6 +50,7 @@ public class DefaultLocalNodeTest {
     assertThat(localNode.isReady()).isFalse();
     assertThatThrownBy(localNode::getEnode).isInstanceOf(NodeNotReadyException.class);
     assertThatThrownBy(localNode::getPeerInfo).isInstanceOf(NodeNotReadyException.class);
+    assertThatThrownBy(localNode::getPeer).isInstanceOf(NodeNotReadyException.class);
   }
 
   @Test
@@ -57,39 +59,39 @@ public class DefaultLocalNodeTest {
     localNode.setEnode(enode);
 
     assertThat(localNode.isReady()).isTrue();
-    final EnodeURL enodeValue = localNode.getEnode();
-    assertThat(enodeValue).isEqualTo(enode);
-    assertThat(localNode.getPeerInfo()).isEqualTo(peerInfo);
+    validateReadyNode(localNode);
   }
 
   @Test
   public void subscribeReady_beforeReady() {
-    AtomicReference<EnodeURL> localEnode = new AtomicReference<>(null);
+    AtomicReference<LocalNode> readyNode = new AtomicReference<>(null);
     final MutableLocalNode localNode = createLocalNode();
-    localNode.subscribeReady(localEnode::set);
+    localNode.subscribeReady(readyNode::set);
 
-    assertThat(localEnode.get()).isNull();
+    assertThat(readyNode.get()).isNull();
 
     localNode.setEnode(enode);
-    assertThat(localEnode.get()).isEqualTo(enode);
+    assertThat(readyNode.get()).isNotNull();
+    validateReadyNode(readyNode.get());
   }
 
   @Test
   public void subscribeReady_afterReady() {
-    AtomicReference<EnodeURL> localEnode = new AtomicReference<>(null);
+    AtomicReference<LocalNode> readyNode = new AtomicReference<>(null);
     final MutableLocalNode localNode = createLocalNode();
     localNode.setEnode(enode);
 
-    localNode.subscribeReady(localEnode::set);
-    assertThat(localEnode.get()).isEqualTo(enode);
+    localNode.subscribeReady(readyNode::set);
+    assertThat(readyNode.get()).isNotNull();
+    validateReadyNode(readyNode.get());
   }
 
   @Test
   public void subscribeReady_beforeAndAfterReady() {
     final MutableLocalNode localNode = createLocalNode();
 
-    AtomicReference<EnodeURL> subscriberA = new AtomicReference<>(null);
-    AtomicReference<EnodeURL> subscriberB = new AtomicReference<>(null);
+    AtomicReference<LocalNode> subscriberA = new AtomicReference<>(null);
+    AtomicReference<LocalNode> subscriberB = new AtomicReference<>(null);
 
     localNode.subscribeReady(subscriberA::set);
     assertThat(subscriberA.get()).isNull();
@@ -97,11 +99,19 @@ public class DefaultLocalNodeTest {
     localNode.setEnode(enode);
 
     localNode.subscribeReady(subscriberB::set);
-    assertThat(subscriberA.get()).isEqualTo(enode);
-    assertThat(subscriberB.get()).isEqualTo(enode);
+    assertThat(subscriberA.get()).isNotNull();
+    validateReadyNode(subscriberA.get());
+    assertThat(subscriberB.get()).isNotNull();
+    validateReadyNode(subscriberB.get());
   }
 
   private MutableLocalNode createLocalNode() {
     return DefaultLocalNode.create(clientId, p2pVersion, supportedCapabilities);
+  }
+
+  private void validateReadyNode(final LocalNode localNode) {
+    assertThat(localNode.getEnode()).isEqualTo(enode);
+    assertThat(localNode.getPeerInfo()).isEqualTo(peerInfo);
+    assertThat(localNode.getPeer()).isEqualTo(peer);
   }
 }

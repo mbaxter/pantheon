@@ -49,6 +49,12 @@ public interface LocalNode {
   PeerInfo getPeerInfo() throws NodeNotReadyException;
 
   /**
+   * @return a {@link Peer} representing the local node.
+   * @throws NodeNotReadyException If the local node is not ready, throws an exception.
+   */
+  Peer getPeer() throws NodeNotReadyException;
+
+  /**
    * This method can be called prior to invoking any method that may throw a {@link
    * NodeNotReadyException}. If this method returns true, the node is ready and will not throw an
    * exception.
@@ -68,7 +74,7 @@ public interface LocalNode {
   void subscribeReady(ReadyCallback callback);
 
   interface ReadyCallback {
-    void onReady(EnodeURL localNode);
+    void onReady(LocalNode localNode);
   }
 
   class NodeNotReadyException extends RuntimeException {
