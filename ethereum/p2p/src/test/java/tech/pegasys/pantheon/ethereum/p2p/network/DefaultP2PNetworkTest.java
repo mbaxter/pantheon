@@ -93,8 +93,7 @@ public final class DefaultP2PNetworkTest {
   private final NetworkingConfiguration config =
       NetworkingConfiguration.create()
           .setDiscovery(DiscoveryConfiguration.create().setActive(false))
-          .setSupportedProtocols(subProtocol())
-          .setRlpx(RlpxConfiguration.create().setBindPort(0));
+          .setRlpx(RlpxConfiguration.create().setBindPort(0).setSupportedProtocols(subProtocol()));
 
   @Before
   public void before() {
@@ -855,8 +854,7 @@ public final class DefaultP2PNetworkTest {
     final NetworkingConfiguration networkingConfiguration =
         NetworkingConfiguration.create()
             .setDiscovery(noDiscovery)
-            .setSupportedProtocols(subProtocol())
-            .setRlpx(rlpxConfig.get().setBindPort(0));
+            .setRlpx(rlpxConfig.get().setBindPort(0).setSupportedProtocols(subProtocol()));
 
     return DefaultP2PNetwork.builder()
         .vertx(vertx)
