@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 ConsenSys AG.
+ * Copyright 2019 ConsenSys AG.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -12,17 +12,9 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.api;
 
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
-
 @FunctionalInterface
-public interface DisconnectCallback {
-  DisconnectCallback NOOP =
-      (final PeerConnection connection,
-          final DisconnectReason reason,
-          final boolean initiatedByPeer) -> {};
+public interface ConnectCallback {
+  ConnectCallback NOOP = (final PeerConnection peer) -> {};
 
-  void onDisconnect(
-      final PeerConnection connection,
-      final DisconnectReason reason,
-      final boolean initiatedByPeer);
+  void onConnect(final PeerConnection peer);
 }

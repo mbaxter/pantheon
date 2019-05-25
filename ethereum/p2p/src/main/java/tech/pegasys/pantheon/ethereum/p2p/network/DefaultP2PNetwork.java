@@ -519,13 +519,13 @@ public class DefaultP2PNetwork implements P2PNetwork {
   }
 
   @Override
-  public void subscribe(final Capability capability, final Consumer<Message> callback) {
-    protocolCallbacks.computeIfAbsent(capability, key -> new Subscribers<>()).subscribe(callback);
+  public void subscribe(final Capability capability, final MessageCallback callback) {
+    rlpxAgent.subscribeMessage(capability, callback);
   }
 
   @Override
-  public void subscribeConnect(final Consumer<PeerConnection> callback) {
-    connectCallbacks.subscribe(callback);
+  public void subscribeConnect(final ConnectCallback callback) {
+    rlpxAgent.subscribeConnect(callback);
   }
 
   @Override
