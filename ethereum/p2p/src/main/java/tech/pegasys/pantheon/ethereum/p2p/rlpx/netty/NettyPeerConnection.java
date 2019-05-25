@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.network.netty;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.netty;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason.TCP_SUBSYSTEM_ERROR;
@@ -18,7 +18,9 @@ import static tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
+import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
@@ -49,8 +51,9 @@ final class NettyPeerConnection implements PeerConnection {
   private final PeerInfo peerInfo;
   private final Set<Capability> agreedCapabilities;
   private final Map<String, Capability> protocolToCapability = new HashMap<>();
+  private final AtomicBoolean disconnectDispatched = new AtomicBoolean(false);
   private final AtomicBoolean disconnected = new AtomicBoolean(false);
-  private final Callbacks callbacks;
+  private final PeerConnectionEventDispatcher connectionEventDispatcher;
   private final CapabilityMultiplexer multiplexer;
   private final LabelledMetric<Counter> outboundMessagesCounter;
   private final Peer peer;
@@ -60,7 +63,7 @@ final class NettyPeerConnection implements PeerConnection {
       final Peer peer,
       final PeerInfo peerInfo,
       final CapabilityMultiplexer multiplexer,
-      final Callbacks callbacks,
+      final PeerConnectionEventDispatcher connectionEventDispatcher,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     this.ctx = ctx;
     this.peer = peer;
@@ -70,7 +73,7 @@ final class NettyPeerConnection implements PeerConnection {
     for (final Capability cap : agreedCapabilities) {
       protocolToCapability.put(cap.getName(), cap);
     }
-    this.callbacks = callbacks;
+    this.connectionEventDispatcher = connectionEventDispatcher;
     this.outboundMessagesCounter = outboundMessagesCounter;
     ctx.channel().closeFuture().addListener(f -> terminateConnection(TCP_SUBSYSTEM_ERROR, false));
   }
@@ -80,10 +83,6 @@ final class NettyPeerConnection implements PeerConnection {
     if (isDisconnected()) {
       throw new PeerNotConnected("Attempt to send message to a closed peer connection");
     }
-    doSend(capability, message);
-  }
-
-  private void doSend(final Capability capability, final MessageData message) {
     if (capability != null) {
       // Validate message is valid for this capability
       final SubProtocol subProtocol = multiplexer.subProtocol(capability);
@@ -136,9 +135,10 @@ final class NettyPeerConnection implements PeerConnection {
 
   @Override
   public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {
-    if (disconnected.compareAndSet(false, true)) {
+    if (disconnectDispatched.compareAndSet(false, true)) {
       LOG.debug("Disconnected ({}) from {}", reason, peerInfo);
-      callbacks.invokeDisconnect(this, reason, peerInitiated);
+      connectionEventDispatcher.dispatchPeerDisconnected(this, reason, peerInitiated);
+      disconnected.set(true);
     }
     // Always ensure the context gets closed immediately even if we previously sent a disconnect
     // message and are waiting to close.
@@ -147,10 +147,16 @@ final class NettyPeerConnection implements PeerConnection {
 
   @Override
   public void disconnect(final DisconnectReason reason) {
-    if (disconnected.compareAndSet(false, true)) {
+    if (disconnectDispatched.compareAndSet(false, true)) {
       LOG.debug("Disconnecting ({}) from {}", reason, peerInfo);
-      callbacks.invokeDisconnect(this, reason, false);
-      doSend(null, DisconnectMessage.create(reason));
+      connectionEventDispatcher.dispatchPeerDisconnected(this, reason, false);
+      try {
+        send(null, DisconnectMessage.create(reason));
+      } catch (final PeerNotConnected e) {
+        // The connection has already been closed - nothing left to do
+        return;
+      }
+      disconnected.set(true);
       ctx.channel().eventLoop().schedule((Callable<ChannelFuture>) ctx::close, 2L, SECONDS);
     }
   }

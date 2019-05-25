@@ -10,12 +10,13 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.network.netty;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.netty;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.Handshaker;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
 import tech.pegasys.pantheon.metrics.Counter;
@@ -42,16 +43,14 @@ public final class HandshakeHandlerOutbound extends AbstractHandshakeHandler {
       final List<SubProtocol> subProtocols,
       final LocalNode localNode,
       final CompletableFuture<PeerConnection> connectionFuture,
-      final Callbacks callbacks,
-      final PeerConnectionRegistry peerConnectionRegistry,
+      final PeerConnectionEventDispatcher connectionEventDispatcher,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     super(
         subProtocols,
         localNode,
         Optional.of(peer),
         connectionFuture,
-        callbacks,
-        peerConnectionRegistry,
+        connectionEventDispatcher,
         outboundMessagesCounter);
     handshaker.prepareInitiator(kp, SECP256K1.PublicKey.create(peer.getId()));
     this.first = handshaker.firstMessage();

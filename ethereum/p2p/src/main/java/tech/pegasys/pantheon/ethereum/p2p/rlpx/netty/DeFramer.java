@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.network.netty;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.netty;
 
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
@@ -21,8 +21,10 @@ import tech.pegasys.pantheon.ethereum.p2p.network.exceptions.UnexpectedPeerConne
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.Framer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.FramingException;
+import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
@@ -56,7 +58,7 @@ final class DeFramer extends ByteToMessageDecoder {
 
   private final CompletableFuture<PeerConnection> connectFuture;
 
-  private final Callbacks callbacks;
+  private final PeerConnectionEventDispatcher connectionEventDispatcher;
 
   private final Framer framer;
   private final LocalNode localNode;
@@ -71,7 +73,7 @@ final class DeFramer extends ByteToMessageDecoder {
       final List<SubProtocol> subProtocols,
       final LocalNode localNode,
       final Optional<Peer> expectedPeer,
-      final Callbacks callbacks,
+      final PeerConnectionEventDispatcher connectionEventDispatcher,
       final CompletableFuture<PeerConnection> connectFuture,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     this.framer = framer;
@@ -79,7 +81,7 @@ final class DeFramer extends ByteToMessageDecoder {
     this.localNode = localNode;
     this.expectedPeer = expectedPeer;
     this.connectFuture = connectFuture;
-    this.callbacks = callbacks;
+    this.connectionEventDispatcher = connectionEventDispatcher;
     this.outboundMessagesCounter = outboundMessagesCounter;
   }
 
@@ -116,7 +118,12 @@ final class DeFramer extends ByteToMessageDecoder {
         final Peer peer = expectedPeer.orElse(createPeer(peerInfo, ctx));
         final PeerConnection connection =
             new NettyPeerConnection(
-                ctx, peer, peerInfo, capabilityMultiplexer, callbacks, outboundMessagesCounter);
+                ctx,
+                peer,
+                peerInfo,
+                capabilityMultiplexer,
+                connectionEventDispatcher,
+                outboundMessagesCounter);
 
         // Check peer is who we expected
         if (expectedPeer.isPresent()
@@ -144,7 +151,8 @@ final class DeFramer extends ByteToMessageDecoder {
             .addLast(
                 new IdleStateHandler(15, 0, 0),
                 new WireKeepAlive(connection, waitingForPong),
-                new ApiHandler(capabilityMultiplexer, connection, callbacks, waitingForPong),
+                new ApiHandler(
+                    capabilityMultiplexer, connection, connectionEventDispatcher, waitingForPong),
                 new MessageFramer(capabilityMultiplexer, framer));
         connectFuture.complete(connection);
       } else if (message.getCode() == WireMessageCodes.DISCONNECT) {

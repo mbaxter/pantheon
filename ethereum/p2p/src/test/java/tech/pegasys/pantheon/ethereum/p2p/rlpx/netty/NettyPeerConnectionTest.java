@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.network.netty;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.netty;
 
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -24,6 +24,8 @@ import static org.mockito.Mockito.when;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection.PeerNotConnected;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
+import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.HelloMessage;
@@ -45,7 +47,8 @@ public class NettyPeerConnectionTest {
   private final ChannelFuture closeFuture = mock(ChannelFuture.class);
   private final EventLoop eventLoop = mock(EventLoop.class);
   private final CapabilityMultiplexer multiplexer = mock(CapabilityMultiplexer.class);
-  private final Callbacks callbacks = mock(Callbacks.class);
+  private final PeerConnectionEventDispatcher connectionEventDispatcher =
+      mock(PeerConnectionEventDispatcher.class);
   private final PeerInfo peerInfo = new PeerInfo(5, "foo", emptyList(), 0, BytesValue.of(1));
 
   private NettyPeerConnection connection;
@@ -68,7 +71,7 @@ public class NettyPeerConnectionTest {
             peer,
             peerInfo,
             multiplexer,
-            callbacks,
+            connectionEventDispatcher,
             NoOpMetricsSystem.NO_OP_LABELLED_3_COUNTER);
   }
 
