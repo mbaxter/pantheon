@@ -1240,7 +1240,7 @@ public class PeerDiscoveryControllerTest {
     private PeerTable peerTable;
     private OutboundMessageHandler outboundMessageHandler = OutboundMessageHandler.NOOP;
     private static final PeerDiscoveryTestHelper helper = new PeerDiscoveryTestHelper();
-    private Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
+    private Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = Subscribers.create();
     private PeerPermissions peerPermissions = PeerPermissions.noop();
 
     public static ControllerBuilder create() {

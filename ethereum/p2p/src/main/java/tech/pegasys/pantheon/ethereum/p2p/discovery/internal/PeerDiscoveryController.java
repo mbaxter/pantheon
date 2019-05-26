@@ -654,7 +654,7 @@ public class PeerDiscoveryController {
     private long cleanPeerTableIntervalMs = MILLISECONDS.convert(1, TimeUnit.MINUTES);
     private List<DiscoveryPeer> bootstrapNodes = new ArrayList<>();
     private PeerTable peerTable;
-    private Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
+    private Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = Subscribers.create();
 
     // Required dependencies
     private KeyPair keypair;

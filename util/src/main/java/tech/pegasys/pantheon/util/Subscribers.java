@@ -17,6 +17,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 /**
  * Tracks subscribers that should be notified when some event occurred. This class is safe to use
  * from multiple threads.
@@ -39,13 +42,28 @@ import java.util.function.Consumer;
  */
 public class Subscribers<T> {
   private static Subscribers<?> NONE = new EmptySubscribers<>();
+  private static final Logger LOG = LogManager.getLogger();
 
   private final AtomicLong subscriberId = new AtomicLong();
   private final Map<Long, T> subscribers = new ConcurrentHashMap<>();
 
+  private final boolean suppressCallbackExceptions;
+
+  private Subscribers(final boolean suppressCallbackExceptions) {
+    this.suppressCallbackExceptions = suppressCallbackExceptions;
+  }
+
   @SuppressWarnings("unchecked")
   public static <T> Subscribers<T> none() {
     return (Subscribers<T>) NONE;
+  }
+
+  public static <T> Subscribers<T> create() {
+    return new Subscribers<T>(false);
+  }
+
+  public static <T> Subscribers<T> create(final boolean catchCallbackExceptions) {
+    return new Subscribers<T>(catchCallbackExceptions);
   }
 
   /**
@@ -81,7 +99,20 @@ public class Subscribers<T> {
    * @param action the action to perform for each subscriber
    */
   public void forEach(final Consumer<T> action) {
-    subscribers.values().forEach(action);
+    subscribers
+        .values()
+        .forEach(
+            subscriber -> {
+              try {
+                action.accept(subscriber);
+              } catch (Throwable throwable) {
+                if (suppressCallbackExceptions) {
+                  LOG.error("Error in callback: ", throwable);
+                } else {
+                  throw throwable;
+                }
+              }
+            });
   }
 
   /**
@@ -94,6 +125,10 @@ public class Subscribers<T> {
   }
 
   private static class EmptySubscribers<T> extends Subscribers<T> {
+
+    private EmptySubscribers() {
+      super(false);
+    }
 
     @Override
     public long subscribe(final T subscriber) {

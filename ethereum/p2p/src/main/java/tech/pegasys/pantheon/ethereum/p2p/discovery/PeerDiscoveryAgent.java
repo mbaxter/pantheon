@@ -79,7 +79,7 @@ public abstract class PeerDiscoveryAgent {
 
   /* Is discovery enabled? */
   private boolean isActive = false;
-  private final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = new Subscribers<>();
+  private final Subscribers<Consumer<PeerBondedEvent>> peerBondedObservers = Subscribers.create();
 
   public PeerDiscoveryAgent(
       final SECP256K1.KeyPair keyPair,

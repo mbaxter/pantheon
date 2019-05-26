@@ -113,9 +113,9 @@ public final class MockNetwork {
     private final Map<Capability, Subscribers<MessageCallback>> protocolCallbacks =
         new ConcurrentHashMap<>();
 
-    private final Subscribers<ConnectCallback> connectCallbacks = new Subscribers<>();
+    private final Subscribers<ConnectCallback> connectCallbacks = Subscribers.create();
 
-    private final Subscribers<DisconnectCallback> disconnectCallbacks = new Subscribers<>();
+    private final Subscribers<DisconnectCallback> disconnectCallbacks = Subscribers.create();
 
     MockP2PNetwork(final Peer self, final MockNetwork network) {
       this.self = self;
@@ -156,7 +156,9 @@ public final class MockNetwork {
 
     @Override
     public void subscribe(final Capability capability, final MessageCallback callback) {
-      protocolCallbacks.computeIfAbsent(capability, key -> new Subscribers<>()).subscribe(callback);
+      protocolCallbacks
+          .computeIfAbsent(capability, key -> Subscribers.create())
+          .subscribe(callback);
     }
 
     @Override
