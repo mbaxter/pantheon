@@ -32,6 +32,7 @@ import tech.pegasys.pantheon.metrics.LabelledMetric;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -174,6 +175,24 @@ final class NettyPeerConnection implements PeerConnection {
   @Override
   public InetSocketAddress getRemoteAddress() {
     return (InetSocketAddress) ctx.channel().remoteAddress();
+  }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (o == this) {
+      return true;
+    }
+    if (!(o instanceof NettyPeerConnection)) {
+      return false;
+    }
+    final NettyPeerConnection that = (NettyPeerConnection) o;
+    return Objects.equals(ctx.channel().id(), that.ctx.channel().id())
+        && Objects.equals(peer, that.peer);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(ctx.channel().id(), peer);
   }
 
   @Override

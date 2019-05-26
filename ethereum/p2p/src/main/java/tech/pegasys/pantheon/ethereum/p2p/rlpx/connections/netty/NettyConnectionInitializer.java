@@ -218,10 +218,7 @@ public class NettyConnectionInitializer implements ConnectionInitializer {
       protected void initChannel(final SocketChannel ch) {
         final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
         connectionFuture.thenAccept(
-            connection -> {
-              LOG.debug("Inbound connection established with {}", connection.getPeer().getId());
-              connectSubscribers.forEach(c -> c.onConnect(connection));
-            });
+            connection -> connectSubscribers.forEach(c -> c.onConnect(connection)));
 
         ch.pipeline()
             .addLast(

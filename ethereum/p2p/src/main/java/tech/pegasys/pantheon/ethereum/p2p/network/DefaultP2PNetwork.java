@@ -479,6 +479,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
     }
 
     private P2PNetwork doBuild() {
+      // Set up permissions
       // Fold NodePermissioningController into peerPermissions
       if (nodePermissioningController.isPresent()) {
         final List<EnodeURL> bootnodes = config.getDiscovery().getBootnodes();
@@ -486,12 +487,12 @@ public class DefaultP2PNetwork implements P2PNetwork {
             new NodePermissioningAdapter(nodePermissioningController.get(), bootnodes, blockchain);
         peerPermissions = PeerPermissions.combine(peerPermissions, nodePermissions);
       }
-
+      // Fold peer reputation into permissions
       final PeerPermissionsBlacklist misbehavingPeers = PeerPermissionsBlacklist.create(500);
       final PeerReputationManager reputationManager = new PeerReputationManager(misbehavingPeers);
       peerPermissions = PeerPermissions.combine(peerPermissions, misbehavingPeers);
 
-      MutableLocalNode localNode =
+      final MutableLocalNode localNode =
           MutableLocalNode.create(config.getRlpx().getClientId(), 5, supportedCapabilities);
       peerDiscoveryAgent = peerDiscoveryAgent == null ? createDiscoveryAgent() : peerDiscoveryAgent;
       rlpxAgent = createRlpxAgent(localNode);
@@ -530,6 +531,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
       return RlpxAgent.builder()
           .keyPair(keyPair)
           .config(config.getRlpx())
+          .peerPermissions(peerPermissions)
+          .maintainedPeers(maintainedPeers)
           .localNode(localNode)
           .metricsSystem(metricsSystem)
           .build();

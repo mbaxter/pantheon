@@ -16,6 +16,7 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions.Action;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsException;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PermissionsUpdateCallback;
 
 public class PeerRlpxPermissions implements AutoCloseable {
@@ -35,6 +36,10 @@ public class PeerRlpxPermissions implements AutoCloseable {
         localNode.getPeer(), peer, Action.RLPX_ALLOW_NEW_OUTBOUND_CONNECTION);
   }
 
+  public PeerPermissionsException newOutboundConnectionException(final Peer peer) {
+    return new PeerPermissionsException(peer, Action.RLPX_ALLOW_NEW_OUTBOUND_CONNECTION);
+  }
+
   public boolean allowNewInboundConnectionFrom(final Peer peer) {
     if (!localNode.isReady()) {
       return false;
@@ -43,12 +48,20 @@ public class PeerRlpxPermissions implements AutoCloseable {
         localNode.getPeer(), peer, Action.RLPX_ALLOW_NEW_INBOUND_CONNECTION);
   }
 
+  public PeerPermissionsException newInboundConnectionException(final Peer peer) {
+    return new PeerPermissionsException(peer, Action.RLPX_ALLOW_NEW_INBOUND_CONNECTION);
+  }
+
   public boolean allowOngoingConnection(final Peer peer) {
     if (!localNode.isReady()) {
       return false;
     }
     return peerPermissions.isPermitted(
         localNode.getPeer(), peer, Action.RLPX_ALLOW_ONGOING_CONNECTION);
+  }
+
+  public PeerPermissionsException ongoingConnectionException(final Peer peer) {
+    return new PeerPermissionsException(peer, Action.RLPX_ALLOW_ONGOING_CONNECTION);
   }
 
   public void subscribeUpdate(final PermissionsUpdateCallback callback) {
