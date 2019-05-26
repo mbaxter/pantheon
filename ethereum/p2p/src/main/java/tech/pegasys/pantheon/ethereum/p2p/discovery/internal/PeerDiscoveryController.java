@@ -558,7 +558,10 @@ public class PeerDiscoveryController {
    * @return List of peers.
    */
   public Stream<DiscoveryPeer> streamDiscoveredPeers() {
-    return peerTable.streamAllPeers().filter(peerPermissions::isAllowedInPeerTable);
+    return peerTable
+        .streamAllPeers()
+        .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED)
+        .filter(peerPermissions::isAllowedInPeerTable);
   }
 
   public void setRetryDelayFunction(final RetryDelayFunction retryDelayFunction) {

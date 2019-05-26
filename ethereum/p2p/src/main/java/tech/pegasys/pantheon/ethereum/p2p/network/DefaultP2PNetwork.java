@@ -37,6 +37,7 @@ import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.RlpxAgent;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerRlpxPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
+import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -45,12 +46,11 @@ import tech.pegasys.pantheon.util.enode.EnodeURL;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -59,7 +59,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.google.common.annotations.VisibleForTesting;
 import io.vertx.core.Vertx;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -119,12 +118,9 @@ public class DefaultP2PNetwork implements P2PNetwork {
   private final SECP256K1.KeyPair keyPair;
   private final BytesValue nodeId;
   private final MutableLocalNode localNode;
-
   private final PeerRlpxPermissions peerPermissions;
-
   private final MaintainedPeers maintainedPeers;
 
-  final Map<Peer, CompletableFuture<PeerConnection>> pendingConnections = new ConcurrentHashMap<>();
   private OptionalLong peerBondedObserverId = OptionalLong.empty();
 
   private final AtomicBoolean started = new AtomicBoolean(false);
@@ -168,7 +164,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
     this.peerPermissions = new PeerRlpxPermissions(localNode, peerPermissions);
 
     peerDiscoveryAgent.addPeerRequirement(() -> rlpxAgent.getConnectionCount() >= maxPeers);
-
     subscribeDisconnect(reputationManager);
   }
 
@@ -181,9 +176,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
     if (!started.compareAndSet(false, true)) {
       LOG.warn("Attempted to start an already started " + getClass().getSimpleName());
     }
-
-    this.peerPermissions.subscribeUpdate(this::handlePermissionsUpdate);
-    this.maintainedPeers.subscribeAdd(this::handleMaintainedPeerAdded);
     this.maintainedPeers.subscribeRemove(this::handleMaintainedPeerRemoved);
 
     final int listeningPort = rlpxAgent.start().join();
@@ -238,41 +230,14 @@ public class DefaultP2PNetwork implements P2PNetwork {
     if (!localNode.isReady()) {
       return;
     }
-    maintainedPeers.streamPeers().forEach(this::connect);
+    maintainedPeers.streamPeers().forEach(rlpxAgent::forceConnect);
   }
 
-  @VisibleForTesting
-  // TODO
-  void attemptPeerConnections() {
-    //    if (!localNode.isReady()) {
-    //      return;
-    //    }
-    //    final int availablePeerSlots = Math.max(0, maxPeers - connectionCount());
-    //    if (availablePeerSlots <= 0) {
-    //      return;
-    //    }
-    //
-    //    final List<DiscoveryPeer> peers =
-    //        streamDiscoveredPeers()
-    //            .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED)
-    //            .filter(peerPermissions::allowNewOutboundConnectionTo)
-    //            .filter(peer -> !isConnected(peer) && !isConnecting(peer))
-    //            .sorted(Comparator.comparing(DiscoveryPeer::getLastAttemptedConnection))
-    //            .collect(Collectors.toList());
-    //
-    //    if (peers.size() == 0) {
-    //      return;
-    //    }
-    //
-    //    LOG.trace(
-    //        "Initiating connection to {} peers from the peer table",
-    //        Math.min(availablePeerSlots, peers.size()));
-    //    peers.stream().limit(availablePeerSlots).forEach(this::connect);
-  }
-
-  @VisibleForTesting
-  int connectionCount() {
-    return pendingConnections.size() + rlpxAgent.getConnectionCount();
+  private void attemptPeerConnections() {
+    LOG.trace("Initiating connections to discovered peers.");
+    rlpxAgent.connect(
+        streamDiscoveredPeers()
+            .sorted(Comparator.comparing(DiscoveryPeer::getLastAttemptedConnection)));
   }
 
   @Override
@@ -287,34 +252,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public CompletableFuture<PeerConnection> connect(final Peer peer) {
-    final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
-    if (!localNode.isReady()) {
-      connectionFuture.completeExceptionally(
-          new IllegalStateException("Attempt to connect to peer before network is ready"));
-      return connectionFuture;
-    }
-    if (!peerPermissions.allowNewOutboundConnectionTo(peer)) {
-      // Peer not allowed
-      connectionFuture.completeExceptionally(
-          new IllegalStateException("Unable to connect to disallowed peer: " + peer));
-      return connectionFuture;
-    }
-
-    // TODO
-    // Check for existing connection
-    //    final Optional<PeerConnection> existingConnection =
-    //        connections.getConnectionForPeer(peer.getId());
-    //    if (existingConnection.isPresent()) {
-    //      connectionFuture.complete(existingConnection.get());
-    //      return connectionFuture;
-    //    }
-    //    // Check for existing pending connection
-    //    final CompletableFuture<PeerConnection> existingPendingConnection =
-    //        pendingConnections.putIfAbsent(peer, connectionFuture);
-    //    if (existingPendingConnection != null) {
-    //      return existingPendingConnection;
-    //    }
-
     return rlpxAgent.connect(peer);
   }
 
@@ -336,77 +273,12 @@ public class DefaultP2PNetwork implements P2PNetwork {
   private void handleMaintainedPeerRemoved(final Peer peer, final boolean wasRemoved) {
     // Drop peer from peer table
     peerDiscoveryAgent.dropPeer(peer);
-
-    // TODO
-    // Disconnect if connected or connecting
-    //    final CompletableFuture<PeerConnection> connectionFuture = pendingConnections.get(peer);
-    //    if (connectionFuture != null) {
-    //      connectionFuture.thenAccept(connection ->
-    // connection.disconnect(DisconnectReason.REQUESTED));
-    //    }
-    //    final Optional<PeerConnection> peerConnection =
-    // connections.getConnectionForPeer(peer.getId());
-    //    peerConnection.ifPresent(pc -> pc.disconnect(DisconnectReason.REQUESTED));
+    rlpxAgent.disconnect(peer.getId(), DisconnectReason.REQUESTED);
   }
 
-  private void handleMaintainedPeerAdded(final Peer peer, final boolean wasAdded) {
-    this.connect(peer);
+  private void handlePeerBondedEvent(final PeerBondedEvent peerBondedEvent) {
+    rlpxAgent.connect(peerBondedEvent.getPeer());
   }
-
-  @VisibleForTesting
-  // TODO
-  void handlePeerBondedEvent(final PeerBondedEvent peerBondedEvent) {
-    //    return event -> {
-    //      final Peer peer = event.getPeer();
-    //      if (connectionCount() < maxPeers && !isConnecting(peer) && !isConnected(peer)) {
-    //        connect(peer);
-    //      }
-    //    };
-  }
-
-  private void handlePermissionsUpdate(
-      final boolean permissionsRestricted, final Optional<List<Peer>> peers) {
-    if (!permissionsRestricted) {
-      // Nothing to do
-      return;
-    }
-
-    // TODO
-    //    if (peers.isPresent()) {
-    //      peers.get().stream()
-    //          .filter(p -> !peerPermissions.allowOngoingConnection(p))
-    //          .map(Peer::getId)
-    //          .map(connections::getConnectionForPeer)
-    //          .filter(Optional::isPresent)
-    //          .map(Optional::get)
-    //          .forEach(conn -> conn.disconnect(DisconnectReason.REQUESTED));
-    //    } else {
-    //      checkAllConnections();
-    //    }
-  }
-  //
-  //  private void checkAllConnections() {
-  //    connections
-  //        .getPeerConnections()
-  //        .forEach(
-  //            peerConnection -> {
-  //              final Peer peer = peerConnection.getPeer();
-  //              if (!peerPermissions.allowOngoingConnection(peer)) {
-  //                peerConnection.disconnect(DisconnectReason.REQUESTED);
-  //              }
-  //            });
-  //  }
-
-  // TODO
-  //  @VisibleForTesting
-  //  boolean isConnecting(final Peer peer) {
-  //    return pendingConnections.containsKey(peer);
-  //  }
-  //
-  //  @VisibleForTesting
-  //  boolean isConnected(final Peer peer) {
-  //    return connections.isAlreadyConnected(peer.getId());
-  //  }
 
   @Override
   public void close() {
@@ -453,11 +325,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
     LOG.info("Enode URL {}", localEnode.toString());
     localNode.setEnode(localEnode);
   }
-
-  //  private void onConnectionEstablished(final PeerConnection connection) {
-  //    connections.registerConnection(connection);
-  //    connectCallbacks.forEach(callback -> callback.accept(connection));
-  //  }
 
   public static class Builder {
 

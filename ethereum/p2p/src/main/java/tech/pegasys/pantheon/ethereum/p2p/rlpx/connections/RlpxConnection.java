@@ -59,6 +59,14 @@ public abstract class RlpxConnection {
 
   public abstract void disconnect(DisconnectReason reason);
 
+  public boolean isDisconnected() {
+    return isEstablished() && getPeerConnection().isDisconnected();
+  }
+
+  public boolean failed() {
+    return getFuture().isCompletedExceptionally();
+  }
+
   public BytesValue getId() {
     return getPeer().getId();
   }

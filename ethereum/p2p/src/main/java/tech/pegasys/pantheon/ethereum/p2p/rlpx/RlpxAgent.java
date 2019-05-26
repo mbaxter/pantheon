@@ -14,6 +14,7 @@ package tech.pegasys.pantheon.ethereum.p2p.rlpx;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.isNull;
 
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.p2p.api.ConnectCallback;
@@ -41,8 +42,10 @@ import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -111,7 +114,8 @@ public class RlpxAgent {
       throw new IllegalStateException(
           "Unable to start and already started " + getClass().getSimpleName());
     }
-    connectionInitializer.subscribeIncomingConnect(this::handleIncomingConnection);
+
+    setupListeners();
     return connectionInitializer.start();
   }
 
@@ -135,6 +139,13 @@ public class RlpxAgent {
     return Math.toIntExact(streamConnections().count());
   }
 
+  /**
+   * Connect to the peer
+   *
+   * @param peer The peer to connect to
+   * @return A future that will resolve to the existing or newly-established connection with this
+   *     peer.
+   */
   public CompletableFuture<PeerConnection> connect(final Peer peer) {
     if (!peerPermissions.allowNewOutboundConnectionTo(peer)) {
       return FutureUtils.completedExceptionally(
@@ -143,8 +154,90 @@ public class RlpxAgent {
     return connect(peer, false);
   }
 
+  /**
+   * Connect to peer, ignoring maxPeer limit
+   *
+   * @param peer The peer to connect to
+   * @return A future that will resolve to the existing or newly-established connection with this
+   *     peer.
+   */
   public CompletableFuture<PeerConnection> forceConnect(final Peer peer) {
     return connect(peer, true);
+  }
+
+  public void connect(final Stream<? extends Peer> peerStream) {
+    if (!localNode.isReady()) {
+      return;
+    }
+    final int availablePeerSlots = Math.max(0, maxPeers - getConnectionCount());
+    peerStream
+        .filter(peer -> !connectionsById.containsKey(peer.getId()))
+        .filter(peer -> peer.getEnodeURL().isListening())
+        .filter(peerPermissions::allowNewOutboundConnectionTo)
+        .limit(availablePeerSlots)
+        .forEach(this::connect);
+  }
+
+  public void disconnect(final BytesValue peerId, final DisconnectReason reason) {
+    RlpxConnection connection = connectionsById.remove(peerId);
+    if (connection != null) {
+      connection.disconnect(reason);
+    }
+  }
+
+  private void setupListeners() {
+    connectionInitializer.subscribeIncomingConnect(this::handleIncomingConnection);
+    maintainedPeers.subscribeAdd((peer, wasAdded) -> forceConnect(peer));
+    connectionEvents.subscribeDisconnect(this::handleDisconnect);
+    peerPermissions.subscribeUpdate(this::handlePermissionsUpdate);
+  }
+
+  private void handleDisconnect(
+      final PeerConnection peerConnection,
+      final DisconnectReason disconnectReason,
+      final boolean initiatedByPeer) {
+    connectionsById.compute(
+        peerConnection.getPeer().getId(),
+        (peerId, trackedConnection) -> {
+          if (isNull(trackedConnection)
+              || trackedConnection.isDisconnected()
+              || trackedConnection.failed()) {
+            // Remove if failed or disconnected
+            return null;
+          }
+          return trackedConnection;
+        });
+  }
+
+  private void handlePermissionsUpdate(
+      final boolean permissionsRestricted, final Optional<List<Peer>> peers) {
+    if (!permissionsRestricted) {
+      // Nothing to do
+      return;
+    }
+
+    if (peers.isPresent()) {
+      peers.get().stream()
+          .filter(p -> !peerPermissions.allowOngoingConnection(p))
+          .map(Peer::getId)
+          .map(connectionsById::get)
+          .filter(c -> !isNull(c))
+          .forEach(conn -> conn.disconnect(DisconnectReason.REQUESTED));
+    } else {
+      checkAllConnections();
+    }
+  }
+
+  private void checkAllConnections() {
+    connectionsById
+        .values()
+        .forEach(
+            connection -> {
+              final Peer peer = connection.getPeer();
+              if (!peerPermissions.allowOngoingConnection(peer)) {
+                connection.disconnect(DisconnectReason.REQUESTED);
+              }
+            });
   }
 
   private CompletableFuture<PeerConnection> connect(final Peer peer, final boolean forceConnect) {
@@ -238,6 +331,7 @@ public class RlpxAgent {
     }
 
     // Track this new connection, deduplicating existing connection if necessary
+    final AtomicBoolean newConnectionAccepted = new AtomicBoolean(false);
     final RlpxConnection inboundConnection = RlpxConnection.inboundConnection(peerConnection);
     connectionsById.compute(
         peerConnection.getPeer().getId(),
@@ -245,6 +339,7 @@ public class RlpxAgent {
           if (existingConnection == null) {
             // The new connection is unique, set it and return
             LOG.debug("Inbound connection established with {}", peerConnection.getPeer().getId());
+            newConnectionAccepted.set(true);
             return inboundConnection;
           }
           // We already have an existing connection, figure out which connection to keep
@@ -254,6 +349,7 @@ public class RlpxAgent {
                 "Duplicate connection detected, disconnecting previously established connection in favor of new inbound connection for peer:  {}",
                 peerConnection.getPeer().getId());
             existingConnection.disconnect(DisconnectReason.ALREADY_CONNECTED);
+            newConnectionAccepted.set(true);
             return inboundConnection;
           } else {
             // Keep the existing connection
@@ -265,6 +361,9 @@ public class RlpxAgent {
           }
         });
 
+    if (newConnectionAccepted.get()) {
+      dispatchConnect(peerConnection);
+    }
     enforceConnectionLimits();
   }
 
