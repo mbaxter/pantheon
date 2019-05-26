@@ -532,7 +532,7 @@ public final class DefaultP2PNetworkTest {
             Peer.randomId(), new Endpoint("127.0.0.1", 999, OptionalInt.empty()));
     final PeerBondedEvent peerBondedEvent = new PeerBondedEvent(peer, System.currentTimeMillis());
 
-    network.handlePeerBondedEvent().accept(peerBondedEvent);
+    network.handlePeerBondedEvent(peerBondedEvent);
     verify(network, times(1)).connect(peer);
   }
 

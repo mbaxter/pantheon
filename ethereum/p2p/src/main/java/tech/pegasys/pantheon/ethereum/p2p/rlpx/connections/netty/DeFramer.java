@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.rlpx.netty;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty;
 
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
@@ -21,7 +21,7 @@ import tech.pegasys.pantheon.ethereum.p2p.network.exceptions.UnexpectedPeerConne
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionDispatcher;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.Framer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.FramingException;
 import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
@@ -34,6 +34,8 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.WireMessageCodes;
 import tech.pegasys.pantheon.ethereum.rlp.RLPException;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
+import tech.pegasys.pantheon.metrics.MetricCategory;
+import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.io.IOException;
@@ -58,7 +60,7 @@ final class DeFramer extends ByteToMessageDecoder {
 
   private final CompletableFuture<PeerConnection> connectFuture;
 
-  private final PeerConnectionEventDispatcher connectionEventDispatcher;
+  private final PeerConnectionDispatcher connectionEventDispatcher;
 
   private final Framer framer;
   private final LocalNode localNode;
@@ -73,16 +75,23 @@ final class DeFramer extends ByteToMessageDecoder {
       final List<SubProtocol> subProtocols,
       final LocalNode localNode,
       final Optional<Peer> expectedPeer,
-      final PeerConnectionEventDispatcher connectionEventDispatcher,
+      final PeerConnectionDispatcher connectionEventDispatcher,
       final CompletableFuture<PeerConnection> connectFuture,
-      final LabelledMetric<Counter> outboundMessagesCounter) {
+      final MetricsSystem metricsSystem) {
     this.framer = framer;
     this.subProtocols = subProtocols;
     this.localNode = localNode;
     this.expectedPeer = expectedPeer;
     this.connectFuture = connectFuture;
     this.connectionEventDispatcher = connectionEventDispatcher;
-    this.outboundMessagesCounter = outboundMessagesCounter;
+    this.outboundMessagesCounter =
+        metricsSystem.createLabelledCounter(
+            MetricCategory.NETWORK,
+            "p2p_messages_outbound",
+            "Count of each P2P message sent outbound.",
+            "protocol",
+            "name",
+            "code");
   }
 
   @Override

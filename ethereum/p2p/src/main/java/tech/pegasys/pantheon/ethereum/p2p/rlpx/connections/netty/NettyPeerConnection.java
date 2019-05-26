@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.rlpx.netty;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason.TCP_SUBSYSTEM_ERROR;
@@ -18,7 +18,7 @@ import static tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionDispatcher;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
@@ -53,7 +53,7 @@ final class NettyPeerConnection implements PeerConnection {
   private final Map<String, Capability> protocolToCapability = new HashMap<>();
   private final AtomicBoolean disconnectDispatched = new AtomicBoolean(false);
   private final AtomicBoolean disconnected = new AtomicBoolean(false);
-  private final PeerConnectionEventDispatcher connectionEventDispatcher;
+  private final PeerConnectionDispatcher connectionEventDispatcher;
   private final CapabilityMultiplexer multiplexer;
   private final LabelledMetric<Counter> outboundMessagesCounter;
   private final Peer peer;
@@ -63,7 +63,7 @@ final class NettyPeerConnection implements PeerConnection {
       final Peer peer,
       final PeerInfo peerInfo,
       final CapabilityMultiplexer multiplexer,
-      final PeerConnectionEventDispatcher connectionEventDispatcher,
+      final PeerConnectionDispatcher connectionEventDispatcher,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     this.ctx = ctx;
     this.peer = peer;
@@ -137,7 +137,7 @@ final class NettyPeerConnection implements PeerConnection {
   public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {
     if (disconnectDispatched.compareAndSet(false, true)) {
       LOG.debug("Disconnected ({}) from {}", reason, peerInfo);
-      connectionEventDispatcher.dispatchPeerDisconnected(this, reason, peerInitiated);
+      connectionEventDispatcher.dispatchDisconnect(this, reason, peerInitiated);
       disconnected.set(true);
     }
     // Always ensure the context gets closed immediately even if we previously sent a disconnect
@@ -149,7 +149,7 @@ final class NettyPeerConnection implements PeerConnection {
   public void disconnect(final DisconnectReason reason) {
     if (disconnectDispatched.compareAndSet(false, true)) {
       LOG.debug("Disconnecting ({}) from {}", reason, peerInfo);
-      connectionEventDispatcher.dispatchPeerDisconnected(this, reason, false);
+      connectionEventDispatcher.dispatchDisconnect(this, reason, false);
       try {
         send(null, DisconnectMessage.create(reason));
       } catch (final PeerNotConnected e) {

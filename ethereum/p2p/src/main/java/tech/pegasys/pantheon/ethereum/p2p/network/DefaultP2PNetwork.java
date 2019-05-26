@@ -36,7 +36,6 @@ import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.RlpxAgent;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerRlpxPermissions;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.netty.NettyRlpxAgent;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
@@ -528,7 +527,12 @@ public class DefaultP2PNetwork implements P2PNetwork {
     }
 
     private RlpxAgent createRlpxAgent(final LocalNode localNode) {
-      return new NettyRlpxAgent(keyPair, config.getRlpx(), localNode, metricsSystem);
+      return RlpxAgent.builder()
+          .keyPair(keyPair)
+          .config(config.getRlpx())
+          .localNode(localNode)
+          .metricsSystem(metricsSystem)
+          .build();
     }
 
     public Builder vertx(final Vertx vertx) {

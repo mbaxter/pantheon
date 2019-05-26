@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.rlpx.netty;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -31,11 +31,11 @@ import tech.pegasys.pantheon.ethereum.p2p.network.exceptions.UnexpectedPeerConne
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEvents;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty.testhelpers.NettyMocks;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty.testhelpers.SubProtocolMock;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.Framer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.FramingException;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.netty.testhelpers.NettyMocks;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.netty.testhelpers.SubProtocolMock;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.RawMessage;
@@ -78,8 +78,7 @@ public class DeFramerTest {
   private final ChannelPipeline pipeline = mock(ChannelPipeline.class);
   private final EventLoop eventLoop = mock(EventLoop.class);
   private final Framer framer = mock(Framer.class);
-  private final PeerConnectionEventDispatcher connectionEventDispatcher =
-      mock(PeerConnectionEventDispatcher.class);
+  private final PeerConnectionEvents connectionEventDispatcher = mock(PeerConnectionEvents.class);
   private final PeerConnection peerConnection = mock(PeerConnection.class);
   private final CompletableFuture<PeerConnection> connectFuture = new CompletableFuture<>();
   private final int remotePort = 12345;
@@ -387,6 +386,6 @@ public class DeFramerTest {
         Optional.ofNullable(expectedPeer),
         connectionEventDispatcher,
         connectFuture,
-        NoOpMetricsSystem.NO_OP_LABELLED_3_COUNTER);
+        new NoOpMetricsSystem());
   }
 }

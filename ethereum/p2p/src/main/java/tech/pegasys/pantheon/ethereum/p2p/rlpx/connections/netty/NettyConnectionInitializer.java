@@ -10,33 +10,30 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.rlpx.netty;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty;
 
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.function.IntSupplier;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
+import tech.pegasys.pantheon.ethereum.p2p.api.ConnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.RlpxAgent;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
-import tech.pegasys.pantheon.metrics.Counter;
-import tech.pegasys.pantheon.metrics.LabelledMetric;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.ConnectionInitializer;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionDispatcher;
 import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
+import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.net.InetSocketAddress;
-import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import io.netty.bootstrap.Bootstrap;
@@ -53,36 +50,35 @@ import io.netty.util.concurrent.SingleThreadEventExecutor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class NettyRlpxAgent extends RlpxAgent {
+public class NettyConnectionInitializer implements ConnectionInitializer {
+
   private static final Logger LOG = LogManager.getLogger();
-  private static final int TIMEOUT_SECONDS = 30;
+  private static final int TIMEOUT_SECONDS = 10;
+
+  private final KeyPair keyPair;
+  private final RlpxConfiguration config;
+  private final LocalNode localNode;
+  private final PeerConnectionDispatcher eventDispatcher;
+  private final MetricsSystem metricsSystem;
+  private final Subscribers<ConnectCallback> connectSubscribers = Subscribers.create();
 
   private ChannelFuture server;
   private final EventLoopGroup boss = new NioEventLoopGroup(1);
   private final EventLoopGroup workers = new NioEventLoopGroup(1);
+  private final AtomicBoolean started = new AtomicBoolean(false);
+  private final AtomicBoolean stopped = new AtomicBoolean(false);
 
-  private final Collection<PeerConnection> connections = new ConcurrentLinkedQueue<>();
-  private final PeerConnectionEventDispatcher eventDispatcher;
-
-  private final LabelledMetric<Counter> outboundMessagesCounter;
-
-  public NettyRlpxAgent(
+  public NettyConnectionInitializer(
       final KeyPair keyPair,
       final RlpxConfiguration config,
       final LocalNode localNode,
+      final PeerConnectionDispatcher eventDispatcher,
       final MetricsSystem metricsSystem) {
-    super(keyPair, config, localNode, metricsSystem);
-    this.eventDispatcher =
-        new PeerConnectionEventDispatcher(this::dispatchDisconnect, this::dispatchMessage);
-
-    outboundMessagesCounter =
-        metricsSystem.createLabelledCounter(
-            MetricCategory.NETWORK,
-            "p2p_messages_outbound",
-            "Count of each P2P message sent outbound.",
-            "protocol",
-            "name",
-            "code");
+    this.keyPair = keyPair;
+    this.config = config;
+    this.localNode = localNode;
+    this.eventDispatcher = eventDispatcher;
+    this.metricsSystem = metricsSystem;
 
     metricsSystem.createIntegerGauge(
         MetricCategory.NETWORK,
@@ -98,8 +94,15 @@ public class NettyRlpxAgent extends RlpxAgent {
   }
 
   @Override
-  protected CompletableFuture<Integer> startListening() {
-    CompletableFuture<Integer> listeningPortFuture = new CompletableFuture<>();
+  public CompletableFuture<Integer> start() {
+    final CompletableFuture<Integer> listeningPortFuture = new CompletableFuture<>();
+    if (!started.compareAndSet(false, true)) {
+      listeningPortFuture.completeExceptionally(
+          new IllegalStateException(
+              "Attempt to start an already started " + this.getClass().getSimpleName()));
+      return listeningPortFuture;
+    }
+
     this.server =
         new ServerBootstrap()
             .group(boss, workers)
@@ -129,8 +132,14 @@ public class NettyRlpxAgent extends RlpxAgent {
   }
 
   @Override
-  public CompletableFuture<Void> stopListening() {
+  public CompletableFuture<Void> stop() {
     CompletableFuture<Void> stoppedFuture = new CompletableFuture<>();
+    if (!started.get() || !stopped.compareAndSet(false, true)) {
+      stoppedFuture.completeExceptionally(
+          new IllegalStateException("Illegal attempt to stop " + this.getClass().getSimpleName()));
+      return stoppedFuture;
+    }
+
     workers.shutdownGracefully();
     boss.shutdownGracefully();
     server
@@ -148,17 +157,12 @@ public class NettyRlpxAgent extends RlpxAgent {
   }
 
   @Override
-  public Stream<? extends PeerConnection> streamConnections() {
-    return connections.stream();
+  public void subscribeIncomingConnect(final ConnectCallback callback) {
+    throw new UnsupportedOperationException();
   }
 
   @Override
-  public int getConnectionCount() {
-    return connections.size();
-  }
-
-  @Override
-  protected CompletableFuture<PeerConnection> doConnect(final Peer peer) {
+  public CompletableFuture<PeerConnection> connect(final Peer peer) {
     final CompletableFuture<PeerConnection> connectionFuture = new CompletableFuture<>();
 
     if (peer instanceof DiscoveryPeer) {
@@ -193,7 +197,7 @@ public class NettyRlpxAgent extends RlpxAgent {
                             localNode,
                             connectionFuture,
                             eventDispatcher,
-                            outboundMessagesCounter));
+                            metricsSystem));
               }
             })
         .connect()
@@ -209,7 +213,6 @@ public class NettyRlpxAgent extends RlpxAgent {
 
   /** @return a channel initializer for inbound connections */
   private ChannelInitializer<SocketChannel> inboundChannelInitializer() {
-    final NettyRlpxAgent self = this;
     return new ChannelInitializer<SocketChannel>() {
       @Override
       protected void initChannel(final SocketChannel ch) {
@@ -217,7 +220,7 @@ public class NettyRlpxAgent extends RlpxAgent {
         connectionFuture.thenAccept(
             connection -> {
               LOG.debug("Inbound connection established with {}", connection.getPeer().getId());
-              self.dispatchConnect(connection);
+              connectSubscribers.forEach(c -> c.onConnect(connection));
             });
 
         ch.pipeline()
@@ -235,29 +238,9 @@ public class NettyRlpxAgent extends RlpxAgent {
                     localNode,
                     connectionFuture,
                     eventDispatcher,
-                    outboundMessagesCounter));
+                    metricsSystem));
       }
     };
-  }
-
-  @Override
-  protected void dispatchDisconnect(
-      final PeerConnection connection,
-      final DisconnectReason reason,
-      final boolean initiatedByPeer) {
-    connections.remove(connection);
-    super.dispatchDisconnect(connection, reason, initiatedByPeer);
-  }
-
-  @Override
-  protected void dispatchConnect(final PeerConnection connection) {
-    connections.add(connection);
-    if (connection.isDisconnected()) {
-      // Nothing to dispatch
-      connections.remove(connection);
-      return;
-    }
-    super.dispatchConnect(connection);
   }
 
   private IntSupplier pendingTaskCounter(final EventLoopGroup eventLoopGroup) {

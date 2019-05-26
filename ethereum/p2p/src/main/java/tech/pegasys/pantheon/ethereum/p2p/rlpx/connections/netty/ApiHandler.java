@@ -10,12 +10,12 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.rlpx.netty;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty;
 
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection.PeerNotConnected;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionDispatcher;
 import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
@@ -37,14 +37,14 @@ final class ApiHandler extends SimpleChannelInboundHandler<MessageData> {
   private final CapabilityMultiplexer multiplexer;
   private final AtomicBoolean waitingForPong;
 
-  private final PeerConnectionEventDispatcher connectionEventDispatcher;
+  private final PeerConnectionDispatcher connectionEventDispatcher;
 
   private final PeerConnection connection;
 
   ApiHandler(
       final CapabilityMultiplexer multiplexer,
       final PeerConnection connection,
-      final PeerConnectionEventDispatcher connectionEventDispatcher,
+      final PeerConnectionDispatcher connectionEventDispatcher,
       final AtomicBoolean waitingForPong) {
     this.multiplexer = multiplexer;
     this.connectionEventDispatcher = connectionEventDispatcher;
@@ -97,14 +97,13 @@ final class ApiHandler extends SimpleChannelInboundHandler<MessageData> {
       }
       return;
     }
-    connectionEventDispatcher.dispatchMessageReceived(
-        demultiplexed.getCapability(), connection, message);
+    connectionEventDispatcher.dispatchMessage(demultiplexed.getCapability(), connection, message);
   }
 
   @Override
   public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable throwable) {
     LOG.error("Error:", throwable);
-    connectionEventDispatcher.dispatchPeerDisconnected(
+    connectionEventDispatcher.dispatchDisconnect(
         connection, DisconnectReason.TCP_SUBSYSTEM_ERROR, false);
     ctx.close();
   }
