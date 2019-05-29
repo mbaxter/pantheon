@@ -24,8 +24,8 @@ import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
-import tech.pegasys.pantheon.ethereum.p2p.peers.MaintainedPeers;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerProperties;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.ConnectionInitializer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEvents;
@@ -68,7 +68,7 @@ public class RlpxAgent {
 
   private final int maxPeers;
   private final Map<BytesValue, RlpxConnection> connectionsById = new ConcurrentHashMap<>();
-  private final MaintainedPeers maintainedPeers;
+  private final PeerProperties peerProperties;
 
   private AtomicBoolean started = new AtomicBoolean();
   private AtomicBoolean stopped = new AtomicBoolean();
@@ -81,10 +81,10 @@ public class RlpxAgent {
       final PeerConnectionEvents connectionEvents,
       final ConnectionInitializer connectionInitializer,
       final int maxPeers,
-      final MaintainedPeers maintainedPeers,
+      final PeerProperties peerProperties,
       final MetricsSystem metricsSystem) {
     this.maxPeers = maxPeers;
-    this.maintainedPeers = maintainedPeers;
+    this.peerProperties = peerProperties;
     this.localNode = localNode;
     this.peerPermissions = peerPermissions;
     this.connectionEvents = connectionEvents;
@@ -141,28 +141,6 @@ public class RlpxAgent {
     return Math.toIntExact(streamConnections().count());
   }
 
-  /**
-   * Connect to the peer
-   *
-   * @param peer The peer to connect to
-   * @return A future that will resolve to the existing or newly-established connection with this
-   *     peer.
-   */
-  public CompletableFuture<PeerConnection> connect(final Peer peer) {
-    return connect(peer, false);
-  }
-
-  /**
-   * Connect to peer, ignoring maxPeer limit
-   *
-   * @param peer The peer to connect to
-   * @return A future that will resolve to the existing or newly-established connection with this
-   *     peer.
-   */
-  public CompletableFuture<PeerConnection> forceConnect(final Peer peer) {
-    return connect(peer, true);
-  }
-
   public void connect(final Stream<? extends Peer> peerStream) {
     if (!localNode.isReady()) {
       return;
@@ -183,11 +161,80 @@ public class RlpxAgent {
     }
   }
 
+  public Optional<CompletableFuture<PeerConnection>> getPeerConnection(final Peer peer) {
+    final RlpxConnection connection = connectionsById.get(peer.getId());
+    return isNull(connection) ? Optional.empty() : Optional.of(connection.getFuture());
+  }
+
+  /**
+   * Connect to the peer
+   *
+   * @param peer The peer to connect to
+   * @return A future that will resolve to the existing or newly-established connection with this
+   *     peer.
+   */
+  public CompletableFuture<PeerConnection> connect(final Peer peer) {
+    // Check if we're ready to establish connections
+    if (!localNode.isReady()) {
+      return FutureUtils.completedExceptionally(
+          new IllegalStateException(
+              "Cannot connect before "
+                  + this.getClass().getSimpleName()
+                  + " has finished starting"));
+    }
+    // Check peer is valid
+    final EnodeURL enode = peer.getEnodeURL();
+    if (!enode.isListening()) {
+      final String errorMsg =
+          "Attempt to connect to peer with no listening port: " + enode.toString();
+      LOG.warn(errorMsg);
+      return FutureUtils.completedExceptionally((new IllegalArgumentException(errorMsg)));
+    }
+
+    // Shortcut checks if we're already connected
+    final Optional<CompletableFuture<PeerConnection>> peerConnection = getPeerConnection(peer);
+    if (peerConnection.isPresent()) {
+      return peerConnection.get();
+    }
+    // Check max peers
+    if (!peerProperties.ignoreMaxPeerLimits(peer) && getConnectionCount() >= maxPeers) {
+      final String errorMsg =
+          "Max peer peer connections established ("
+              + maxPeers
+              + ").  Cannot connect to peer: "
+              + peer;
+      return FutureUtils.completedExceptionally(new IllegalStateException(errorMsg));
+    }
+    // Check permissions
+    if (!peerPermissions.allowNewOutboundConnectionTo(peer)) {
+      return FutureUtils.completedExceptionally(
+          peerPermissions.newOutboundConnectionException(peer));
+    }
+
+    // Initiate connection or return existing connection
+    AtomicReference<CompletableFuture<PeerConnection>> connectionFuture = new AtomicReference<>();
+    connectionsById.compute(
+        peer.getId(),
+        (id, existingConnection) -> {
+          if (existingConnection != null && !existingConnection.isFailedOrDisconnected()) {
+            // We're already connected or connecting
+            connectionFuture.set(existingConnection.getFuture());
+            return existingConnection;
+          } else {
+            // We're initiating a new connection
+            final CompletableFuture<PeerConnection> future = initiateOutboundConnection(peer);
+            connectionFuture.set(future);
+            return RlpxConnection.outboundConnection(peer, future);
+          }
+        });
+
+    return connectionFuture.get();
+  }
+
   private void setupListeners() {
     connectionInitializer.subscribeIncomingConnect(this::handleIncomingConnection);
     connectionEvents.subscribeDisconnect(this::handleDisconnect);
     peerPermissions.subscribeUpdate(this::handlePermissionsUpdate);
-    maintainedPeers.subscribeAdd((peer, wasAdded) -> forceConnect(peer));
   }
 
   private void handleDisconnect(
@@ -230,58 +277,6 @@ public class RlpxAgent {
         });
   }
 
-  private CompletableFuture<PeerConnection> connect(final Peer peer, final boolean forceConnect) {
-    // Check if we're ready to establish connections
-    if (!localNode.isReady()) {
-      return FutureUtils.completedExceptionally(
-          new IllegalStateException(
-              "Cannot connect before "
-                  + this.getClass().getSimpleName()
-                  + " has finished starting"));
-    }
-    // Check peer is valid
-    final EnodeURL enode = peer.getEnodeURL();
-    if (!enode.isListening()) {
-      final String errorMsg =
-          "Attempt to connect to peer with no listening port: " + enode.toString();
-      LOG.warn(errorMsg);
-      return FutureUtils.completedExceptionally((new IllegalArgumentException(errorMsg)));
-    }
-    // Check max peers
-    if (!forceConnect && getConnectionCount() >= maxPeers) {
-      final String errorMsg =
-          "Max peer peer connections established ("
-              + maxPeers
-              + ").  Cannot connect to peer: "
-              + peer;
-      return FutureUtils.completedExceptionally(new IllegalStateException(errorMsg));
-    }
-    // Check permissions
-    if (!peerPermissions.allowNewOutboundConnectionTo(peer)) {
-      return FutureUtils.completedExceptionally(
-          peerPermissions.newOutboundConnectionException(peer));
-    }
-
-    // Initiate connection or return existing connection
-    AtomicReference<CompletableFuture<PeerConnection>> connectionFuture = new AtomicReference<>();
-    connectionsById.compute(
-        peer.getId(),
-        (id, existingConnection) -> {
-          if (existingConnection != null) {
-            // We're already connected or connecting
-            connectionFuture.set(existingConnection.getFuture());
-            return existingConnection;
-          } else {
-            // We're initiating a new connection
-            final CompletableFuture<PeerConnection> future = initiateOutboundConnection(peer);
-            connectionFuture.set(future);
-            return RlpxConnection.outboundConnection(peer, future);
-          }
-        });
-
-    return connectionFuture.get();
-  }
-
   private CompletableFuture<PeerConnection> initiateOutboundConnection(final Peer peer) {
     LOG.trace("Initiating connection to peer: {}", peer.getEnodeURL());
     if (peer instanceof DiscoveryPeer) {
@@ -303,18 +298,19 @@ public class RlpxAgent {
   }
 
   private void handleIncomingConnection(final PeerConnection peerConnection) {
+    final Peer peer = peerConnection.getPeer();
     // Deny connection if our local node isn't ready
     if (!localNode.isReady()) {
       peerConnection.disconnect(DisconnectReason.UNKNOWN);
       return;
     }
     // Disconnect if too many peers
-    if (!maintainedPeers.contains(peerConnection.getPeer()) && getConnectionCount() >= maxPeers) {
+    if (!peerProperties.ignoreMaxPeerLimits(peer) && getConnectionCount() >= maxPeers) {
       peerConnection.disconnect(DisconnectReason.TOO_MANY_PEERS);
       return;
     }
     // Disconnect if not permitted
-    if (!peerPermissions.allowNewInboundConnectionFrom(peerConnection.getPeer())) {
+    if (!peerPermissions.allowNewInboundConnectionFrom(peer)) {
       peerConnection.disconnect(DisconnectReason.UNKNOWN);
       return;
     }
@@ -323,7 +319,7 @@ public class RlpxAgent {
     final AtomicBoolean newConnectionAccepted = new AtomicBoolean(false);
     final RlpxConnection inboundConnection = RlpxConnection.inboundConnection(peerConnection);
     connectionsById.compute(
-        peerConnection.getPeer().getId(),
+        peer.getId(),
         (nodeId, existingConnection) -> {
           if (existingConnection == null) {
             // The new connection is unique, set it and return
@@ -361,16 +357,16 @@ public class RlpxAgent {
         .filter(RlpxConnection::isActive)
         .sorted(this::prioritizeConnections)
         .skip(maxPeers)
-        .filter(c -> maintainedPeers.contains(c.getPeer()))
+        .filter(c -> !peerProperties.ignoreMaxPeerLimits(c.getPeer()))
         .forEach(c -> c.disconnect(DisconnectReason.TOO_MANY_PEERS));
   }
 
   private int prioritizeConnections(final RlpxConnection a, final RlpxConnection b) {
-    final boolean aMaintained = maintainedPeers.contains(a.getPeer());
-    final boolean bMaintained = maintainedPeers.contains(b.getPeer());
-    if (aMaintained && !bMaintained) {
+    final boolean aIgnoresPeerLimits = peerProperties.ignoreMaxPeerLimits(a.getPeer());
+    final boolean bIgnoresPeerLimits = peerProperties.ignoreMaxPeerLimits(b.getPeer());
+    if (aIgnoresPeerLimits && !bIgnoresPeerLimits) {
       return -1;
-    } else if (bMaintained && !aMaintained) {
+    } else if (bIgnoresPeerLimits && !aIgnoresPeerLimits) {
       return 1;
     } else {
       return Math.toIntExact(a.getInitiatedAt() - b.getInitiatedAt());
@@ -388,6 +384,11 @@ public class RlpxAgent {
   private int compareDuplicateConnections(final RlpxConnection a, final RlpxConnection b) {
     checkState(localNode.isReady());
     checkState(Objects.equals(a.getPeer().getId(), b.getPeer().getId()));
+
+    if (a.isFailedOrDisconnected() != b.isFailedOrDisconnected()) {
+      // One connection has failed - prioritize the one that hasn't failed
+      return a.isFailedOrDisconnected() ? 1 : -1;
+    }
 
     final BytesValue peerId = a.getPeer().getId();
     final BytesValue localId = localNode.getPeer().getId();
@@ -425,7 +426,7 @@ public class RlpxAgent {
     private KeyPair keyPair;
     private LocalNode localNode;
     private RlpxConfiguration config;
-    private MaintainedPeers maintainedPeers;
+    private PeerProperties peerProperties;
     private PeerPermissions peerPermissions;
     private ConnectionInitializer connectionInitializer;
     private PeerConnectionEvents connectionEvents;
@@ -453,7 +454,7 @@ public class RlpxAgent {
           connectionEvents,
           connectionInitializer,
           config.getMaxPeers(),
-          maintainedPeers,
+          peerProperties,
           metricsSystem);
     }
 
@@ -461,7 +462,7 @@ public class RlpxAgent {
       checkState(keyPair != null, "KeyPair must be configured");
       checkState(localNode != null, "LocalNode must be configured");
       checkState(config != null, "RlpxConfiguration must be set");
-      checkState(maintainedPeers != null, "MaintainedPeers must be configured");
+      checkState(peerProperties != null, "MaintainedPeers must be configured");
       checkState(peerPermissions != null, "PeerPermissions must be configured");
       checkState(metricsSystem != null, "MetricsSystem must be configured");
     }
@@ -490,9 +491,9 @@ public class RlpxAgent {
       return this;
     }
 
-    public Builder maintainedPeers(final MaintainedPeers maintainedPeers) {
-      checkNotNull(maintainedPeers);
-      this.maintainedPeers = maintainedPeers;
+    public Builder peerProperties(final PeerProperties peerProperties) {
+      checkNotNull(peerProperties);
+      this.peerProperties = peerProperties;
       return this;
     }
 

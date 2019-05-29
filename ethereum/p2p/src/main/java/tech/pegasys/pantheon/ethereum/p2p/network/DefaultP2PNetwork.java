@@ -28,10 +28,12 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
+import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeerProperties;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.MaintainedPeers;
 import tech.pegasys.pantheon.ethereum.p2p.peers.MutableLocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerProperties;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.RlpxAgent;
@@ -176,7 +178,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
     if (!started.compareAndSet(false, true)) {
       LOG.warn("Attempted to start an already started " + getClass().getSimpleName());
     }
-    this.maintainedPeers.subscribeRemove(this::handleMaintainedPeerRemoved);
+    maintainedPeers.subscribeRemove(this::handleMaintainedPeerRemoved);
+    maintainedPeers.subscribeAdd((peer, wasAdded) -> rlpxAgent.connect(peer));
 
     final int listeningPort = rlpxAgent.start().join();
     final int discoveryPort = peerDiscoveryAgent.start(listeningPort).join();
@@ -230,7 +233,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
     if (!localNode.isReady()) {
       return;
     }
-    maintainedPeers.streamPeers().forEach(rlpxAgent::forceConnect);
+    maintainedPeers.streamPeers().forEach(rlpxAgent::connect);
   }
 
   private void attemptPeerConnections() {
@@ -362,7 +365,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
       final MutableLocalNode localNode =
           MutableLocalNode.create(config.getRlpx().getClientId(), 5, supportedCapabilities);
       peerDiscoveryAgent = peerDiscoveryAgent == null ? createDiscoveryAgent() : peerDiscoveryAgent;
-      rlpxAgent = createRlpxAgent(localNode);
+      final PeerProperties peerProperties = new DefaultPeerProperties(maintainedPeers);
+      rlpxAgent = createRlpxAgent(localNode, peerProperties);
 
       return new DefaultP2PNetwork(
           localNode,
@@ -394,12 +398,13 @@ public class DefaultP2PNetwork implements P2PNetwork {
           vertx, keyPair, config.getDiscovery(), peerPermissions, metricsSystem);
     }
 
-    private RlpxAgent createRlpxAgent(final LocalNode localNode) {
+    private RlpxAgent createRlpxAgent(
+        final LocalNode localNode, final PeerProperties peerProperties) {
       return RlpxAgent.builder()
           .keyPair(keyPair)
           .config(config.getRlpx())
           .peerPermissions(peerPermissions)
-          .maintainedPeers(maintainedPeers)
+          .peerProperties(peerProperties)
           .localNode(localNode)
           .metricsSystem(metricsSystem)
           .build();
