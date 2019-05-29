@@ -48,20 +48,12 @@ public class PeerRlpxPermissions implements AutoCloseable {
         localNode.getPeer(), peer, Action.RLPX_ALLOW_NEW_INBOUND_CONNECTION);
   }
 
-  public PeerPermissionsException newInboundConnectionException(final Peer peer) {
-    return new PeerPermissionsException(peer, Action.RLPX_ALLOW_NEW_INBOUND_CONNECTION);
-  }
-
   public boolean allowOngoingConnection(final Peer peer) {
     if (!localNode.isReady()) {
       return false;
     }
     return peerPermissions.isPermitted(
         localNode.getPeer(), peer, Action.RLPX_ALLOW_ONGOING_CONNECTION);
-  }
-
-  public PeerPermissionsException ongoingConnectionException(final Peer peer) {
-    return new PeerPermissionsException(peer, Action.RLPX_ALLOW_ONGOING_CONNECTION);
   }
 
   public void subscribeUpdate(final PermissionsUpdateCallback callback) {

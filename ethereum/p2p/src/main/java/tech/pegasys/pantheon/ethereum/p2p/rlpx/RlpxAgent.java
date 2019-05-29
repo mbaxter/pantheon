@@ -147,10 +147,6 @@ public class RlpxAgent {
    *     peer.
    */
   public CompletableFuture<PeerConnection> connect(final Peer peer) {
-    if (!peerPermissions.allowNewOutboundConnectionTo(peer)) {
-      return FutureUtils.completedExceptionally(
-          peerPermissions.newOutboundConnectionException(peer));
-    }
     return connect(peer, false);
   }
 
