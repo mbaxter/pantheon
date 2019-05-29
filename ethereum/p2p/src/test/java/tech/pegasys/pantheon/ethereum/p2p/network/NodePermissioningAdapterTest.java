@@ -16,9 +16,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper.createPeer;
 
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
-import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions.Action;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
@@ -354,17 +354,5 @@ public class NodePermissioningAdapterTest {
     when(nodePermissioningController.isPermitted(
             eq(remoteNode.getEnodeURL()), eq(localNode.getEnodeURL())))
         .thenReturn(allowRemoteToLocal);
-  }
-
-  private static Peer createPeer() {
-    return DefaultPeer.fromEnodeURL(createEnode());
-  }
-
-  private static EnodeURL createEnode() {
-    return EnodeURL.builder()
-        .ipAddress("127.0.0.1")
-        .useDefaultPorts()
-        .nodeId(Peer.randomId())
-        .build();
   }
 }

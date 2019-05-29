@@ -42,6 +42,7 @@ import tech.pegasys.pantheon.util.Subscribers;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -50,6 +51,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
@@ -131,7 +133,7 @@ public class RlpxAgent {
 
   public Stream<? extends PeerConnection> streamConnections() {
     return connectionsById.values().stream()
-        .filter(RlpxConnection::isEstablished)
+        .filter(RlpxConnection::isActive)
         .map(RlpxConnection::getPeerConnection);
   }
 
@@ -183,9 +185,9 @@ public class RlpxAgent {
 
   private void setupListeners() {
     connectionInitializer.subscribeIncomingConnect(this::handleIncomingConnection);
-    maintainedPeers.subscribeAdd((peer, wasAdded) -> forceConnect(peer));
     connectionEvents.subscribeDisconnect(this::handleDisconnect);
     peerPermissions.subscribeUpdate(this::handlePermissionsUpdate);
+    maintainedPeers.subscribeAdd((peer, wasAdded) -> forceConnect(peer));
   }
 
   private void handleDisconnect(
@@ -195,9 +197,7 @@ public class RlpxAgent {
     connectionsById.compute(
         peerConnection.getPeer().getId(),
         (peerId, trackedConnection) -> {
-          if (isNull(trackedConnection)
-              || trackedConnection.isDisconnected()
-              || trackedConnection.failed()) {
+          if (isNull(trackedConnection) || trackedConnection.isFailedOrDisconnected()) {
             // Remove if failed or disconnected
             return null;
           }
@@ -212,28 +212,22 @@ public class RlpxAgent {
       return;
     }
 
-    if (peers.isPresent()) {
-      peers.get().stream()
-          .filter(p -> !peerPermissions.allowOngoingConnection(p))
-          .map(Peer::getId)
-          .map(connectionsById::get)
-          .filter(c -> !isNull(c))
-          .forEach(conn -> conn.disconnect(DisconnectReason.REQUESTED));
-    } else {
-      checkAllConnections();
-    }
-  }
+    final List<RlpxConnection> connectionsToCheck =
+        peers
+            .map(
+                p ->
+                    p.stream()
+                        .map(peer -> connectionsById.get(peer.getId()))
+                        .filter(c -> !isNull(c))
+                        .collect(Collectors.toList()))
+            .orElse(new ArrayList<>(connectionsById.values()));
 
-  private void checkAllConnections() {
-    connectionsById
-        .values()
-        .forEach(
-            connection -> {
-              final Peer peer = connection.getPeer();
-              if (!peerPermissions.allowOngoingConnection(peer)) {
-                connection.disconnect(DisconnectReason.REQUESTED);
-              }
-            });
+    connectionsToCheck.forEach(
+        conn -> {
+          if (!peerPermissions.allowOngoingConnection(conn.getPeer())) {
+            conn.disconnect(DisconnectReason.REQUESTED);
+          }
+        });
   }
 
   private CompletableFuture<PeerConnection> connect(final Peer peer, final boolean forceConnect) {
@@ -264,7 +258,6 @@ public class RlpxAgent {
     }
     // Check permissions
     if (!peerPermissions.allowNewOutboundConnectionTo(peer)) {
-      // Peer not allowed
       return FutureUtils.completedExceptionally(
           peerPermissions.newOutboundConnectionException(peer));
     }
@@ -365,7 +358,7 @@ public class RlpxAgent {
 
   private void enforceConnectionLimits() {
     connectionsById.values().stream()
-        .filter(RlpxConnection::isEstablished)
+        .filter(RlpxConnection::isActive)
         .sorted(this::prioritizeConnections)
         .skip(maxPeers)
         .filter(c -> maintainedPeers.contains(c.getPeer()))

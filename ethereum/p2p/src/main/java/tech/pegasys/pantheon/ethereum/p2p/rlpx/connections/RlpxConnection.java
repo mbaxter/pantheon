@@ -12,8 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
@@ -21,23 +19,13 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class RlpxConnection {
 
-  enum State {
-    INITIALIZING_OUTBOUND,
-    INITIALIZING_INBOUND,
-    ESTABLISHED,
-  }
-
-  protected final AtomicReference<State> state;
   private final long initiatedAt;
-  private final CompletableFuture<PeerConnection> future;
+  protected final CompletableFuture<PeerConnection> future;
 
-  private RlpxConnection(final State initialState, CompletableFuture<PeerConnection> future) {
-    checkState(isInitializing(initialState), "Invalid initial state: " + initialState.name());
-    this.state = new AtomicReference<>(initialState);
+  private RlpxConnection(final CompletableFuture<PeerConnection> future) {
     this.future = future;
     this.initiatedAt = System.currentTimeMillis();
   }
@@ -51,28 +39,12 @@ public abstract class RlpxConnection {
     return new LocallyInitiatedRlpxConnection(peer, future);
   }
 
-  private boolean isInitializing(final State state) {
-    return state == State.INITIALIZING_OUTBOUND || state == State.INITIALIZING_INBOUND;
-  }
-
   public abstract Peer getPeer();
 
   public abstract void disconnect(DisconnectReason reason);
 
-  public boolean isDisconnected() {
-    return isEstablished() && getPeerConnection().isDisconnected();
-  }
-
-  public boolean failed() {
-    return getFuture().isCompletedExceptionally();
-  }
-
   public BytesValue getId() {
     return getPeer().getId();
-  }
-
-  public State getState() {
-    return state.get();
   }
 
   public abstract PeerConnection getPeerConnection() throws ConnectionNotEstablishedException;
@@ -81,9 +53,11 @@ public abstract class RlpxConnection {
     return future;
   }
 
-  public boolean isEstablished() {
-    return state.get() == State.ESTABLISHED;
-  }
+  public abstract boolean isActive();
+
+  public abstract boolean isPending();
+
+  public abstract boolean isFailedOrDisconnected();
 
   public abstract boolean initiatedRemotely();
 
@@ -100,7 +74,7 @@ public abstract class RlpxConnection {
     private final PeerConnection peerConnection;
 
     private RemotelyInitiatedRlpxConnection(final PeerConnection peerConnection) {
-      super(State.INITIALIZING_INBOUND, CompletableFuture.completedFuture(peerConnection));
+      super(CompletableFuture.completedFuture(peerConnection));
       this.peerConnection = peerConnection;
     }
 
@@ -117,6 +91,21 @@ public abstract class RlpxConnection {
     @Override
     public PeerConnection getPeerConnection() {
       return peerConnection;
+    }
+
+    @Override
+    public boolean isActive() {
+      return !peerConnection.isDisconnected();
+    }
+
+    @Override
+    public boolean isPending() {
+      return false;
+    }
+
+    @Override
+    public boolean isFailedOrDisconnected() {
+      return peerConnection.isDisconnected();
     }
 
     @Override
@@ -145,13 +134,11 @@ public abstract class RlpxConnection {
   private static class LocallyInitiatedRlpxConnection extends RlpxConnection {
 
     private final Peer peer;
-    private final CompletableFuture<PeerConnection> future;
 
     private LocallyInitiatedRlpxConnection(
         final Peer peer, final CompletableFuture<PeerConnection> future) {
-      super(State.INITIALIZING_OUTBOUND, future);
+      super(future);
       this.peer = peer;
-      this.future = future;
     }
 
     @Override
@@ -171,6 +158,24 @@ public abstract class RlpxConnection {
             "Cannot access PeerConnection before connection is fully established.");
       }
       return future.getNow(null);
+    }
+
+    @Override
+    public boolean isActive() {
+      return future.isDone()
+          && !future.isCompletedExceptionally()
+          && !getPeerConnection().isDisconnected();
+    }
+
+    @Override
+    public boolean isPending() {
+      return !future.isDone();
+    }
+
+    @Override
+    public boolean isFailedOrDisconnected() {
+      return future.isCompletedExceptionally()
+          || (future.isDone() && getPeerConnection().isDisconnected());
     }
 
     @Override
