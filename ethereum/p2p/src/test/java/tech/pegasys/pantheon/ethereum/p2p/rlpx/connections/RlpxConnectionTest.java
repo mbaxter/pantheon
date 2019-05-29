@@ -263,6 +263,6 @@ public class RlpxConnectionTest {
   }
 
   private PeerConnection peerConnection(final Peer peer) {
-    return spy(PeerConnectionMock.create(peer));
+    return spy(MockPeerConnection.create(peer));
   }
 }

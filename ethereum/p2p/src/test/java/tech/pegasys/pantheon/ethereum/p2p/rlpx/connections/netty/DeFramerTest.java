@@ -36,9 +36,9 @@ import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty.testhelpers.Net
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.Framer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.FramingException;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
+import tech.pegasys.pantheon.ethereum.p2p.wire.MockSubProtocol;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.RawMessage;
-import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocolMock;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.HelloMessage;
@@ -381,7 +381,7 @@ public class DeFramerTest {
   private DeFramer createDeFramer(final Peer expectedPeer) {
     return new DeFramer(
         framer,
-        Arrays.asList(SubProtocolMock.create("eth")),
+        Arrays.asList(MockSubProtocol.create("eth")),
         localNode,
         Optional.ofNullable(expectedPeer),
         connectionEventDispatcher,

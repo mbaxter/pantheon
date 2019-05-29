@@ -12,7 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.wire;
 
-public class SubProtocolMock {
+public class MockSubProtocol {
   public static SubProtocol create() {
     return create("eth");
   }

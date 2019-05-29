@@ -19,9 +19,9 @@ import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
+import tech.pegasys.pantheon.ethereum.p2p.wire.MockSubProtocol;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
-import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocolMock;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
@@ -31,10 +31,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class PeerConnectionMock extends AbstractPeerConnection {
+public class MockPeerConnection extends AbstractPeerConnection {
   static final AtomicInteger connectionId = new AtomicInteger(0);
 
-  private PeerConnectionMock(
+  private MockPeerConnection(
       final Peer peer,
       final PeerInfo peerInfo,
       final InetSocketAddress localAddress,
@@ -54,18 +54,18 @@ public class PeerConnectionMock extends AbstractPeerConnection {
         outboundMessagesCounter);
   }
 
-  public static PeerConnectionMock create() {
+  public static MockPeerConnection create() {
     return create(createPeer());
   }
 
-  public static PeerConnectionMock create(final Peer peer) {
-    final List<SubProtocol> subProtocols = Arrays.asList(SubProtocolMock.create("eth"));
+  public static MockPeerConnection create(final Peer peer) {
+    final List<SubProtocol> subProtocols = Arrays.asList(MockSubProtocol.create("eth"));
     final List<Capability> caps = Arrays.asList(Capability.create("eth", 63));
     final CapabilityMultiplexer multiplexer = new CapabilityMultiplexer(subProtocols, caps, caps);
     final PeerInfo peerInfo =
         new PeerInfo(5, "test", caps, peer.getEnodeURL().getListeningPortOrZero(), peer.getId());
 
-    return new PeerConnectionMock(
+    return new MockPeerConnection(
         peer,
         peerInfo,
         mock(InetSocketAddress.class),
