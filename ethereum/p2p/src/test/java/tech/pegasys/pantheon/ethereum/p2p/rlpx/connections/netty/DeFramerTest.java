@@ -63,6 +63,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DecoderException;
@@ -75,6 +76,7 @@ public class DeFramerTest {
 
   private final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
   private final Channel channel = mock(Channel.class);
+  private final ChannelId channelId = mock(ChannelId.class);
   private final ChannelPipeline pipeline = mock(ChannelPipeline.class);
   private final EventLoop eventLoop = mock(EventLoop.class);
   private final Framer framer = mock(Framer.class);
@@ -106,6 +108,10 @@ public class DeFramerTest {
 
     when(channel.remoteAddress()).thenReturn(remoteAddress);
     when(channel.pipeline()).thenReturn(pipeline);
+    when(channel.id()).thenReturn(channelId);
+
+    when(channelId.asLongText()).thenReturn("1");
+    when(channelId.asShortText()).thenReturn("1");
 
     when(pipeline.addLast(any())).thenReturn(pipeline);
     when(pipeline.addFirst(any())).thenReturn(pipeline);

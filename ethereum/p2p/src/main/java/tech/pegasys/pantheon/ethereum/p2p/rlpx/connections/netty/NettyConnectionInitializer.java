@@ -158,7 +158,7 @@ public class NettyConnectionInitializer implements ConnectionInitializer {
 
   @Override
   public void subscribeIncomingConnect(final ConnectCallback callback) {
-    throw new UnsupportedOperationException();
+    connectSubscribers.subscribe(callback);
   }
 
   @Override
