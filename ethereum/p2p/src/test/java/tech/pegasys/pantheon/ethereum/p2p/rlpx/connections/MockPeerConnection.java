@@ -22,6 +22,7 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.MockSubProtocol;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
+import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.metrics.Counter;
 import tech.pegasys.pantheon.metrics.LabelledMetric;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
@@ -29,10 +30,12 @@ import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MockPeerConnection extends AbstractPeerConnection {
   static final AtomicInteger connectionId = new AtomicInteger(0);
+  private Optional<DisconnectReason> disconnectReason = Optional.empty();
 
   private MockPeerConnection(
       final Peer peer,
@@ -59,6 +62,11 @@ public class MockPeerConnection extends AbstractPeerConnection {
   }
 
   public static MockPeerConnection create(final Peer peer) {
+    return create(peer, mock(PeerConnectionDispatcher.class));
+  }
+
+  public static MockPeerConnection create(
+      final Peer peer, final PeerConnectionDispatcher eventDispatcher) {
     final List<SubProtocol> subProtocols = Arrays.asList(MockSubProtocol.create("eth"));
     final List<Capability> caps = Arrays.asList(Capability.create("eth", 63));
     final CapabilityMultiplexer multiplexer = new CapabilityMultiplexer(subProtocols, caps, caps);
@@ -72,13 +80,13 @@ public class MockPeerConnection extends AbstractPeerConnection {
         mock(InetSocketAddress.class),
         Integer.toString(connectionId.incrementAndGet()),
         multiplexer,
-        mock(PeerConnectionDispatcher.class),
+        eventDispatcher,
         NoOpMetricsSystem.NO_OP_LABELLED_3_COUNTER);
   }
 
   @Override
   protected void doSendMessage(final Capability capability, final MessageData message) {
-    // Do nothing
+    connectionEventDispatcher.dispatchMessage(capability, this, message);
   }
 
   @Override
@@ -89,5 +97,15 @@ public class MockPeerConnection extends AbstractPeerConnection {
   @Override
   protected void closeConnection() {
     // Do nothing
+  }
+
+  @Override
+  public void disconnect(final DisconnectReason reason) {
+    super.disconnect(reason);
+    disconnectReason = Optional.of(reason);
+  }
+
+  public Optional<DisconnectReason> getDisconnectReason() {
+    return disconnectReason;
   }
 }

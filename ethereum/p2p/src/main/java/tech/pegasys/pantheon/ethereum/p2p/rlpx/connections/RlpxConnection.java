@@ -61,6 +61,16 @@ public abstract class RlpxConnection {
 
   public abstract boolean initiatedRemotely();
 
+  public void subscribeConnectionEstablished(final RlpxConnectCallback callback) {
+    future.whenComplete(
+        (conn, err) -> {
+          if (err != null) {
+            return;
+          }
+          callback.onConnect(this);
+        });
+  }
+
   public boolean initiatedLocally() {
     return !initiatedRemotely();
   }
@@ -206,5 +216,10 @@ public abstract class RlpxConnection {
     public ConnectionNotEstablishedException(final String message) {
       super(message);
     }
+  }
+
+  @FunctionalInterface
+  public interface RlpxConnectCallback {
+    void onConnect(RlpxConnection connection);
   }
 }

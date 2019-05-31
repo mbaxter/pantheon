@@ -51,7 +51,7 @@ public abstract class AbstractPeerConnection implements PeerConnection {
   private final Map<String, Capability> protocolToCapability = new HashMap<>();
   private final AtomicBoolean disconnectDispatched = new AtomicBoolean(false);
   private final AtomicBoolean disconnected = new AtomicBoolean(false);
-  private final PeerConnectionDispatcher connectionEventDispatcher;
+  protected final PeerConnectionDispatcher connectionEventDispatcher;
   private final LabelledMetric<Counter> outboundMessagesCounter;
 
   public AbstractPeerConnection(
@@ -155,6 +155,7 @@ public abstract class AbstractPeerConnection implements PeerConnection {
   public void disconnect(final DisconnectReason reason) {
     if (disconnectDispatched.compareAndSet(false, true)) {
       LOG.debug("Disconnecting ({}) from {}", reason, peerInfo);
+      disconnected.set(true);
       connectionEventDispatcher.dispatchDisconnect(this, reason, false);
       try {
         send(null, DisconnectMessage.create(reason));
@@ -162,7 +163,6 @@ public abstract class AbstractPeerConnection implements PeerConnection {
         // The connection has already been closed - nothing left to do
         return;
       }
-      disconnected.set(true);
       closeConnection();
     }
   }

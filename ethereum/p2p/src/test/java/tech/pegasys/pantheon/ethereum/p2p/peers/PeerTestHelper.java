@@ -12,19 +12,39 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.peers;
 
+import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
+import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.enode.EnodeURL;
+
+import java.util.Arrays;
 
 public class PeerTestHelper {
 
   public static Peer createPeer() {
-    return DefaultPeer.fromEnodeURL(createEnode());
+    return DefaultPeer.fromEnodeURL(enode());
   }
 
-  public static EnodeURL createEnode() {
-    return EnodeURL.builder()
-        .ipAddress("127.0.0.1")
-        .useDefaultPorts()
-        .nodeId(Peer.randomId())
-        .build();
+  public static Peer createPeer(final BytesValue nodeId) {
+    return DefaultPeer.fromEnodeURL(enodeBuilder().nodeId(nodeId).build());
+  }
+
+  public static EnodeURL enode() {
+    return enodeBuilder().build();
+  }
+
+  public static EnodeURL.Builder enodeBuilder() {
+    return EnodeURL.builder().ipAddress("127.0.0.1").useDefaultPorts().nodeId(Peer.randomId());
+  }
+
+  /** @return A LocalNode that is setup and ready. */
+  public static LocalNode createLocalNode() {
+    final MutableLocalNode localNode = createMutableLocalNode();
+    localNode.setEnode(enode());
+    return localNode;
+  }
+
+  /** @return A MutableLocalNode that is not ready (the enode has not been set). */
+  public static MutableLocalNode createMutableLocalNode() {
+    return MutableLocalNode.create("clientId", 5, Arrays.asList(Capability.create("eth", 63)));
   }
 }

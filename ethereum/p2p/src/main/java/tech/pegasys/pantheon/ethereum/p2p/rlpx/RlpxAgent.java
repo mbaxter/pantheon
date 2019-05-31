@@ -113,8 +113,9 @@ public class RlpxAgent {
 
   public CompletableFuture<Integer> start() {
     if (!started.compareAndSet(false, true)) {
-      throw new IllegalStateException(
-          "Unable to start and already started " + getClass().getSimpleName());
+      return FutureUtils.completedExceptionally(
+          new IllegalStateException(
+              "Unable to start an already started " + getClass().getSimpleName()));
     }
 
     setupListeners();
@@ -201,7 +202,7 @@ public class RlpxAgent {
       final String errorMsg =
           "Max peer peer connections established ("
               + maxPeers
-              + ").  Cannot connect to peer: "
+              + "). Cannot connect to peer: "
               + peer;
       return FutureUtils.completedExceptionally(new IllegalStateException(errorMsg));
     }
@@ -224,7 +225,13 @@ public class RlpxAgent {
             // We're initiating a new connection
             final CompletableFuture<PeerConnection> future = initiateOutboundConnection(peer);
             connectionFuture.set(future);
-            return RlpxConnection.outboundConnection(peer, future);
+            RlpxConnection newConnection = RlpxConnection.outboundConnection(peer, future);
+            newConnection.subscribeConnectionEstablished(
+                (conn) -> {
+                  this.dispatchConnect(conn.getPeerConnection());
+                  this.enforceConnectionLimits();
+                });
+            return newConnection;
           }
         });
 
@@ -291,8 +298,6 @@ public class RlpxAgent {
                 LOG.debug("Failed to connect to peer {}: {}", peer.getId(), err);
               } else {
                 LOG.debug("Outbound connection established to peer: {}", peer.getId());
-                dispatchConnect(conn);
-                enforceConnectionLimits();
               }
             });
   }
@@ -318,6 +323,9 @@ public class RlpxAgent {
     // Track this new connection, deduplicating existing connection if necessary
     final AtomicBoolean newConnectionAccepted = new AtomicBoolean(false);
     final RlpxConnection inboundConnection = RlpxConnection.inboundConnection(peerConnection);
+    // Our disconnect handler runs connectionsById.compute(), so don't actually execute the
+    // disconnect command until we've returned from our compute() calculation
+    final AtomicReference<Runnable> disconnectAction = new AtomicReference<>();
     connectionsById.compute(
         peer.getId(),
         (nodeId, existingConnection) -> {
@@ -333,7 +341,8 @@ public class RlpxAgent {
             LOG.debug(
                 "Duplicate connection detected, disconnecting previously established connection in favor of new inbound connection for peer:  {}",
                 peerConnection.getPeer().getId());
-            existingConnection.disconnect(DisconnectReason.ALREADY_CONNECTED);
+            disconnectAction.set(
+                () -> existingConnection.disconnect(DisconnectReason.ALREADY_CONNECTED));
             newConnectionAccepted.set(true);
             return inboundConnection;
           } else {
@@ -341,11 +350,15 @@ public class RlpxAgent {
             LOG.debug(
                 "Duplicate connection detected, disconnecting inbound connection in favor of previously established connection for peer:  {}",
                 peerConnection.getPeer().getId());
-            inboundConnection.disconnect(DisconnectReason.ALREADY_CONNECTED);
+            disconnectAction.set(
+                () -> inboundConnection.disconnect(DisconnectReason.ALREADY_CONNECTED));
             return existingConnection;
           }
         });
 
+    if (!isNull(disconnectAction.get())) {
+      disconnectAction.get().run();
+    }
     if (newConnectionAccepted.get()) {
       dispatchConnect(peerConnection);
     }
