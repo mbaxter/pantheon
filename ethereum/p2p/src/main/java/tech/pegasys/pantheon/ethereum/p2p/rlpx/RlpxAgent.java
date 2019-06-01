@@ -101,10 +101,10 @@ public class RlpxAgent {
         "Number of peers currently connected",
         () -> (double) getConnectionCount());
     metricsSystem.createIntegerGauge(
-      MetricCategory.NETWORK,
-      "peers_limit",
-      "Maximum P2P peer connections that can be established",
-      () -> maxPeers);
+        MetricCategory.NETWORK,
+        "peers_limit",
+        "Maximum P2P peer connections that can be established",
+        () -> maxPeers);
   }
 
   public static Builder builder() {

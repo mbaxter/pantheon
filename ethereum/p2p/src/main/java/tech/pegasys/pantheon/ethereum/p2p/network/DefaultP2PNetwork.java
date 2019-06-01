@@ -27,6 +27,7 @@ import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryEvent.PeerBondedEvent;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.PeerDiscoveryStatus;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.VertxPeerDiscoveryAgent;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeerProperties;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
@@ -240,6 +241,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
     LOG.trace("Initiating connections to discovered peers.");
     rlpxAgent.connect(
         streamDiscoveredPeers()
+            .filter(peer -> peer.getStatus() == PeerDiscoveryStatus.BONDED)
             .sorted(Comparator.comparing(DiscoveryPeer::getLastAttemptedConnection)));
   }
 
