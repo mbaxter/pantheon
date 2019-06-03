@@ -49,7 +49,6 @@ public abstract class AbstractPeerConnection implements PeerConnection {
 
   private final Set<Capability> agreedCapabilities;
   private final Map<String, Capability> protocolToCapability = new HashMap<>();
-  private final AtomicBoolean disconnectDispatched = new AtomicBoolean(false);
   private final AtomicBoolean disconnected = new AtomicBoolean(false);
   protected final PeerConnectionDispatcher connectionEventDispatcher;
   private final LabelledMetric<Counter> outboundMessagesCounter;
@@ -83,6 +82,10 @@ public abstract class AbstractPeerConnection implements PeerConnection {
     if (isDisconnected()) {
       throw new PeerNotConnected("Attempt to send message to a closed peer connection");
     }
+    doSend(capability, message);
+  }
+
+  private void doSend(final Capability capability, final MessageData message) {
     if (capability != null) {
       // Validate message is valid for this capability
       final SubProtocol subProtocol = multiplexer.subProtocol(capability);
@@ -137,9 +140,8 @@ public abstract class AbstractPeerConnection implements PeerConnection {
 
   @Override
   public void terminateConnection(final DisconnectReason reason, final boolean peerInitiated) {
-    if (disconnectDispatched.compareAndSet(false, true)) {
+    if (disconnected.compareAndSet(false, true)) {
       LOG.debug("Disconnected ({}) from {}", reason, peerInfo);
-      disconnected.set(true);
       connectionEventDispatcher.dispatchDisconnect(this, reason, peerInitiated);
     }
     // Always ensure the context gets closed immediately even if we previously sent a disconnect
@@ -153,16 +155,10 @@ public abstract class AbstractPeerConnection implements PeerConnection {
 
   @Override
   public void disconnect(final DisconnectReason reason) {
-    if (disconnectDispatched.compareAndSet(false, true)) {
+    if (disconnected.compareAndSet(false, true)) {
       LOG.debug("Disconnecting ({}) from {}", reason, peerInfo);
-      disconnected.set(true);
       connectionEventDispatcher.dispatchDisconnect(this, reason, false);
-      try {
-        send(null, DisconnectMessage.create(reason));
-      } catch (final PeerNotConnected e) {
-        // The connection has already been closed - nothing left to do
-        return;
-      }
+      doSend(null, DisconnectMessage.create(reason));
       closeConnection();
     }
   }
