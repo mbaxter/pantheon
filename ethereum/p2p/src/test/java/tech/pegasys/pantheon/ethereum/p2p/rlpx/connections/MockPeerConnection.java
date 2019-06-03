@@ -86,7 +86,7 @@ public class MockPeerConnection extends AbstractPeerConnection {
 
   @Override
   protected void doSendMessage(final Capability capability, final MessageData message) {
-    connectionEventDispatcher.dispatchMessage(capability, this, message);
+    // Do nothing
   }
 
   @Override

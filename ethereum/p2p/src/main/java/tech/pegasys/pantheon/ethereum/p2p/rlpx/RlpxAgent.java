@@ -70,8 +70,8 @@ public class RlpxAgent {
   private final Map<BytesValue, RlpxConnection> connectionsById = new ConcurrentHashMap<>();
   private final PeerProperties peerProperties;
 
-  private AtomicBoolean started = new AtomicBoolean();
-  private AtomicBoolean stopped = new AtomicBoolean();
+  private AtomicBoolean started = new AtomicBoolean(false);
+  private AtomicBoolean stopped = new AtomicBoolean(false);
 
   private final Counter connectedPeersCounter;
 

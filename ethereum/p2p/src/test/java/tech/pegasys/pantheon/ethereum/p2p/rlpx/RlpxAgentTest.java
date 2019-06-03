@@ -653,8 +653,9 @@ public class RlpxAgentTest {
     final AtomicBoolean eventFired = new AtomicBoolean(false);
     agent.subscribeMessage(cap, (capability, msg) -> eventFired.set(true));
 
-    MockPeerConnection connection = (MockPeerConnection) agent.connect(peer).get();
-    connection.send(cap, PingMessage.get());
+    final PeerConnection connection = agent.connect(peer).get();
+    peerConnectionEvents.dispatchMessage(
+        Capability.create("eth", 63), connection, PingMessage.get());
 
     assertThat(eventFired).isTrue();
   }
