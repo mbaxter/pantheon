@@ -248,9 +248,6 @@ public class P2PNetworkTest {
       // Blacklist the remote peer
       localBlacklist.add(remotePeer);
 
-      localNetwork.start();
-      remoteNetwork.start();
-
       // Setup disconnect listener
       final CompletableFuture<PeerConnection> peerFuture = new CompletableFuture<>();
       final CompletableFuture<DisconnectReason> reasonFuture = new CompletableFuture<>();
