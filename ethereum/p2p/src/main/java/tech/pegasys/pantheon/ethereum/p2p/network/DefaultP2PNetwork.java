@@ -38,7 +38,6 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.PeerProperties;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.RlpxAgent;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerRlpxPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
@@ -116,12 +115,10 @@ public class DefaultP2PNetwork implements P2PNetwork {
   private final RlpxAgent rlpxAgent;
 
   private final NetworkingConfiguration config;
-  private final int maxPeers;
 
-  private final SECP256K1.KeyPair keyPair;
   private final BytesValue nodeId;
   private final MutableLocalNode localNode;
-  private final PeerRlpxPermissions peerPermissions;
+  private final PeerPermissions peerPermissions;
   private final MaintainedPeers maintainedPeers;
 
   private OptionalLong peerBondedObserverId = OptionalLong.empty();
@@ -157,15 +154,13 @@ public class DefaultP2PNetwork implements P2PNetwork {
     this.localNode = localNode;
     this.peerDiscoveryAgent = peerDiscoveryAgent;
     this.rlpxAgent = rlpxAgent;
-    this.keyPair = keyPair;
     this.config = config;
     this.maintainedPeers = maintainedPeers;
 
-    this.nodeId = this.keyPair.getPublicKey().getEncodedBytes();
-    this.maxPeers = config.getRlpx().getMaxPeers();
+    this.nodeId = keyPair.getPublicKey().getEncodedBytes();
+    this.peerPermissions = peerPermissions;
 
-    this.peerPermissions = new PeerRlpxPermissions(localNode, peerPermissions);
-
+    final int maxPeers = config.getRlpx().getMaxPeers();
     peerDiscoveryAgent.addPeerRequirement(() -> rlpxAgent.getConnectionCount() >= maxPeers);
     subscribeDisconnect(reputationManager);
   }
@@ -234,7 +229,10 @@ public class DefaultP2PNetwork implements P2PNetwork {
     if (!localNode.isReady()) {
       return;
     }
-    maintainedPeers.streamPeers().forEach(rlpxAgent::connect);
+    maintainedPeers
+        .streamPeers()
+        .filter(p -> !rlpxAgent.getPeerConnection(p).isPresent())
+        .forEach(rlpxAgent::connect);
   }
 
   private void attemptPeerConnections() {
@@ -302,7 +300,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public boolean isDiscoveryEnabled() {
-    return config.getDiscovery().isActive();
+    return peerDiscoveryAgent.isActive();
   }
 
   @Override

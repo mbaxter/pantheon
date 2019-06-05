@@ -19,7 +19,7 @@ import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions.Action;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsException;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PermissionsUpdateCallback;
 
-public class PeerRlpxPermissions implements AutoCloseable {
+public class PeerRlpxPermissions {
   private final LocalNode localNode;
   private final PeerPermissions peerPermissions;
 
@@ -58,10 +58,5 @@ public class PeerRlpxPermissions implements AutoCloseable {
 
   public void subscribeUpdate(final PermissionsUpdateCallback callback) {
     peerPermissions.subscribeUpdate(callback);
-  }
-
-  @Override
-  public void close() {
-    peerPermissions.close();
   }
 }
