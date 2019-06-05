@@ -19,19 +19,24 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper.createMutableLocalNode;
 import static tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper.createPeer;
+import static tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper.enode;
 import static tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper.enodeBuilder;
 
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection.PeerNotConnected;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
+import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.MutableLocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.PeerProperties;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions.Action;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsException;
@@ -53,6 +58,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -93,7 +99,7 @@ public class RlpxAgentTest {
   }
 
   @Test
-  public void stop() {
+  public void stop() throws ExecutionException, InterruptedException {
     // Cannot stop before starting
     final CompletableFuture<Void> future = agent.stop();
     assertThat(future).isDone();
@@ -104,9 +110,12 @@ public class RlpxAgentTest {
 
     // Stop after starting should succeed
     agent.start();
+    final MockPeerConnection connection = (MockPeerConnection) agent.connect(createPeer()).get();
     final CompletableFuture<Void> future2 = agent.stop();
     assertThat(future2).isDone();
     assertThat(future2).isNotCompletedExceptionally();
+    // Check peer was disconnected
+    assertThat(connection.getDisconnectReason()).contains(DisconnectReason.CLIENT_QUITTING);
 
     // Cannot stop again
     final CompletableFuture<Void> future3 = agent.stop();
@@ -127,6 +136,18 @@ public class RlpxAgentTest {
     assertThat(connection).isNotCompletedExceptionally();
 
     assertThat(agent.getPeerConnection(peer)).contains(connection);
+  }
+
+  @Test
+  public void connect_toDiscoveryPeerUpdatesStats() {
+    startAgent();
+    final DiscoveryPeer peer = DiscoveryPeer.fromEnode(enode());
+    assertThat(peer.getLastAttemptedConnection()).isEqualTo(0);
+    final CompletableFuture<PeerConnection> connection = agent.connect(peer);
+
+    assertThat(connection).isDone();
+    assertThat(connection).isNotCompletedExceptionally();
+    assertThat(peer.getLastAttemptedConnection()).isGreaterThan(0);
   }
 
   @Test
@@ -457,6 +478,20 @@ public class RlpxAgentTest {
   }
 
   @Test
+  public void connect_largeStreamOfPeers() {
+    final int maxPeers = 5;
+    final Stream<Peer> peerStream = Stream.generate(PeerTestHelper::createPeer).limit(20);
+
+    startAgentWithMaxPeers(maxPeers);
+    agent = spy(agent);
+    agent.connect(peerStream);
+
+    assertThat(agent.getConnectionCount()).isEqualTo(maxPeers);
+    // Check that stream was not fully iterated
+    verify(agent, times(maxPeers)).connect(any(Peer.class));
+  }
+
+  @Test
   public void disconnect() throws ExecutionException, InterruptedException {
     startAgent();
     final Peer peer = spy(createPeer());
@@ -658,6 +693,29 @@ public class RlpxAgentTest {
         Capability.create("eth", 63), connection, PingMessage.get());
 
     assertThat(eventFired).isTrue();
+  }
+
+  @Test
+  public void getPeerConnection_pending() {
+    connectionInitializer.setAutocompleteConnections(false);
+    startAgent();
+
+    final Peer peer = createPeer();
+    final CompletableFuture<PeerConnection> future = agent.connect(peer);
+    assertThat(future).isNotDone();
+
+    assertThat(agent.getPeerConnection(peer)).contains(future);
+  }
+
+  @Test
+  public void getPeerConnection_established() {
+    startAgent();
+
+    final Peer peer = createPeer();
+    final CompletableFuture<PeerConnection> future = agent.connect(peer);
+    assertThat(future).isDone();
+
+    assertThat(agent.getPeerConnection(peer)).contains(future);
   }
 
   private void startAgent() {

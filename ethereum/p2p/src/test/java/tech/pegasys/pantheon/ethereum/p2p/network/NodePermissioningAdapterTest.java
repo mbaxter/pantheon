@@ -18,7 +18,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper.createPeer;
 
-import tech.pegasys.pantheon.ethereum.chain.Blockchain;
+import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
+import tech.pegasys.pantheon.ethereum.core.Block;
+import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator;
+import tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions.Action;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
@@ -28,6 +31,7 @@ import tech.pegasys.pantheon.util.enode.EnodeURL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.Test;
 
@@ -37,7 +41,9 @@ public class NodePermissioningAdapterTest {
   private final Peer remoteNode = createPeer();
   private final NodePermissioningController nodePermissioningController =
       mock(NodePermissioningController.class);
-  private final Blockchain blockchain = mock(Blockchain.class);
+  private final BlockDataGenerator gen = new BlockDataGenerator();
+  private final MutableBlockchain blockchain =
+      InMemoryStorageProvider.createInMemoryBlockchain(gen.genesisBlock());
   private final List<EnodeURL> bootNodes = new ArrayList<>();
   private final NodePermissioningAdapter adapter =
       new NodePermissioningAdapter(nodePermissioningController, bootNodes, blockchain);
@@ -330,6 +336,20 @@ public class NodePermissioningAdapterTest {
 
     mockControllerPermissions(false, false);
     assertThat(adapter.isPermitted(localNode, remoteNode, action)).isFalse();
+  }
+
+  @Test
+  public void subscribeUpdate_firesWhenBlockAdded() {
+    final AtomicBoolean updateDispatched = new AtomicBoolean(false);
+    adapter.subscribeUpdate(
+        (restricted, peers) -> {
+          updateDispatched.set(true);
+        });
+
+    final Block newBlock = gen.nextBlock(blockchain.getGenesisBlock());
+    blockchain.appendBlock(newBlock, gen.receipts(newBlock));
+
+    assertThat(updateDispatched).isTrue();
   }
 
   private void mockSyncStatusNodePermissioning(final boolean isPresent, final boolean isInSync) {
