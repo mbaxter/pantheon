@@ -61,6 +61,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.vertx.core.Vertx;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -174,8 +175,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
     if (!started.compareAndSet(false, true)) {
       LOG.warn("Attempted to start an already started " + getClass().getSimpleName());
     }
-    maintainedPeers.subscribeRemove(this::handleMaintainedPeerRemoved);
-    maintainedPeers.subscribeAdd((peer, wasAdded) -> rlpxAgent.connect(peer));
 
     final int listeningPort = rlpxAgent.start().join();
     final int discoveryPort = peerDiscoveryAgent.start(listeningPort).join();
@@ -217,14 +216,20 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public boolean addMaintainConnectionPeer(final Peer peer) {
-    return maintainedPeers.add(peer);
+    final boolean wasAdded = maintainedPeers.add(peer);
+    rlpxAgent.connect(peer);
+    return wasAdded;
   }
 
   @Override
   public boolean removeMaintainedConnectionPeer(final Peer peer) {
-    return maintainedPeers.remove(peer);
+    final boolean wasRemoved = maintainedPeers.remove(peer);
+    peerDiscoveryAgent.dropPeer(peer);
+    rlpxAgent.disconnect(peer.getId(), DisconnectReason.REQUESTED);
+    return wasRemoved;
   }
 
+  @VisibleForTesting
   void checkMaintainedConnectionPeers() {
     if (!localNode.isReady()) {
       return;
@@ -235,7 +240,8 @@ public class DefaultP2PNetwork implements P2PNetwork {
         .forEach(rlpxAgent::connect);
   }
 
-  private void attemptPeerConnections() {
+  @VisibleForTesting
+  void attemptPeerConnections() {
     LOG.trace("Initiating connections to discovered peers.");
     rlpxAgent.connect(
         streamDiscoveredPeers()
@@ -271,12 +277,6 @@ public class DefaultP2PNetwork implements P2PNetwork {
   @Override
   public void subscribeDisconnect(final DisconnectCallback callback) {
     rlpxAgent.subscribeDisconnect(callback);
-  }
-
-  private void handleMaintainedPeerRemoved(final Peer peer, final boolean wasRemoved) {
-    // Drop peer from peer table
-    peerDiscoveryAgent.dropPeer(peer);
-    rlpxAgent.disconnect(peer.getId(), DisconnectReason.REQUESTED);
   }
 
   private void handlePeerBondedEvent(final PeerBondedEvent peerBondedEvent) {
@@ -331,17 +331,20 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   public static class Builder {
 
+    private Vertx vertx;
     private PeerDiscoveryAgent peerDiscoveryAgent;
     private RlpxAgent rlpxAgent;
-    private KeyPair keyPair;
+
     private NetworkingConfiguration config = NetworkingConfiguration.create();
     private List<Capability> supportedCapabilities;
+    private KeyPair keyPair;
+
+    private MaintainedPeers maintainedPeers = new MaintainedPeers();
     private PeerPermissions peerPermissions = PeerPermissions.noop();
-    private MetricsSystem metricsSystem;
     private Optional<NodePermissioningController> nodePermissioningController = Optional.empty();
     private Blockchain blockchain = null;
-    private Vertx vertx;
-    private MaintainedPeers maintainedPeers = new MaintainedPeers();
+
+    private MetricsSystem metricsSystem;
 
     public P2PNetwork build() {
       validate();
@@ -364,9 +367,9 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
       final MutableLocalNode localNode =
           MutableLocalNode.create(config.getRlpx().getClientId(), 5, supportedCapabilities);
-      peerDiscoveryAgent = peerDiscoveryAgent == null ? createDiscoveryAgent() : peerDiscoveryAgent;
       final PeerProperties peerProperties = new DefaultPeerProperties(maintainedPeers);
-      rlpxAgent = createRlpxAgent(localNode, peerProperties);
+      peerDiscoveryAgent = peerDiscoveryAgent == null ? createDiscoveryAgent() : peerDiscoveryAgent;
+      rlpxAgent = rlpxAgent == null ? createRlpxAgent(localNode, peerProperties) : rlpxAgent;
 
       return new DefaultP2PNetwork(
           localNode,
@@ -389,7 +392,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
       checkState(
           !nodePermissioningController.isPresent() || blockchain != null,
           "Network permissioning needs to listen to BlockAddedEvents. Blockchain can't be null.");
-      checkState(vertx != null, "Vertx must be set.");
+      checkState(peerDiscoveryAgent != null || vertx != null, "Vertx must be set.");
     }
 
     private PeerDiscoveryAgent createDiscoveryAgent() {
@@ -408,6 +411,18 @@ public class DefaultP2PNetwork implements P2PNetwork {
           .localNode(localNode)
           .metricsSystem(metricsSystem)
           .build();
+    }
+
+    public Builder peerDiscoveryAgent(final PeerDiscoveryAgent peerDiscoveryAgent) {
+      checkNotNull(peerDiscoveryAgent);
+      this.peerDiscoveryAgent = peerDiscoveryAgent;
+      return this;
+    }
+
+    public Builder rlpxAgent(final RlpxAgent rlpxAgent) {
+      checkNotNull(rlpxAgent);
+      this.rlpxAgent = rlpxAgent;
+      return this;
     }
 
     public Builder vertx(final Vertx vertx) {

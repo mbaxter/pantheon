@@ -109,7 +109,7 @@ public class RlpxAgentTest {
         .hasMessageContaining("Illegal attempt to stop");
 
     // Stop after starting should succeed
-    agent.start();
+    startAgent();
     final MockPeerConnection connection = (MockPeerConnection) agent.connect(createPeer()).get();
     final CompletableFuture<Void> future2 = agent.stop();
     assertThat(future2).isDone();

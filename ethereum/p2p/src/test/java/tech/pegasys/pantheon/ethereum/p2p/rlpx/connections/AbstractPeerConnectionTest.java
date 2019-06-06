@@ -21,9 +21,6 @@ import static tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper.createPeer
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection.PeerNotConnected;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.AbstractPeerConnection;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionDispatcher;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEvents;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
