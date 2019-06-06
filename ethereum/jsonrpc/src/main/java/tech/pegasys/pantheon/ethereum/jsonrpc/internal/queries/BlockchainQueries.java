@@ -287,6 +287,20 @@ public class BlockchainQueries {
     return blockchain.getBlockHashByNumber(number).flatMap(this::blockByHash);
   }
 
+  public Optional<Block> getBlockByNumber(final long number) {
+    Block block = null;
+    final Optional<BlockHeader> header = blockchain.getBlockHeader(number);
+    if (header.isPresent()) {
+      final Optional<BlockBody> body = blockchain
+        .getBlockBody(header.map(BlockHeader::getHash).orElse(Hash.EMPTY));
+      if (body.isPresent()) {
+        block = new Block(header.get(), body.get());
+      }
+    }
+
+    return Optional.ofNullable(block);
+  }
+
   /**
    * Returns the latest block augmented with metadata.
    *

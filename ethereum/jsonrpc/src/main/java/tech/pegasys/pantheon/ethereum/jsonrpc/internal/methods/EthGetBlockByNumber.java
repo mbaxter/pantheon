@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods;
 
+import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcMethod;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.JsonRpcRequest;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.parameters.BlockParameter;
@@ -19,6 +20,7 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.parameters.JsonRpcParamet
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.queries.BlockchainQueries;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.BlockResult;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.BlockResultFactory;
+import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 public class EthGetBlockByNumber extends AbstractBlockParameterMethod {
 
@@ -48,7 +50,8 @@ public class EthGetBlockByNumber extends AbstractBlockParameterMethod {
       return transactionComplete(blockNumber);
     }
 
-    return transactionHash(blockNumber);
+    return blockchainQueries()
+      .getBlockByNumber(blockNumber).map(Block::toRlp).map(BytesValue::toString).orElse("empty");
   }
 
   private BlockResult transactionComplete(final long blockNumber) {
