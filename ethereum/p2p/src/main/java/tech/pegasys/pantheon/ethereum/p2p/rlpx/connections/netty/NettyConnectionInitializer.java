@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty;
 
 import static com.google.common.base.Preconditions.checkState;
 
-import java.util.function.IntSupplier;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.p2p.api.ConnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
@@ -33,7 +32,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
+import java.util.function.IntSupplier;
 import java.util.stream.StreamSupport;
 
 import io.netty.bootstrap.Bootstrap;
