@@ -126,7 +126,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final AtomicBoolean stopped = new AtomicBoolean(false);
-  private CountDownLatch shutdownLatch = new CountDownLatch(2);
+  private final CountDownLatch shutdownLatch = new CountDownLatch(2);
   private final Duration shutdownTimeout = Duration.ofMinutes(1);
 
   /**
@@ -208,8 +208,17 @@ public class DefaultP2PNetwork implements P2PNetwork {
   @Override
   public void awaitStop() {
     try {
-      peerConnectionScheduler.awaitTermination(shutdownTimeout.getSeconds(), TimeUnit.SECONDS);
-      shutdownLatch.await(shutdownTimeout.getSeconds(), TimeUnit.SECONDS);
+      if (!peerConnectionScheduler.awaitTermination(
+          shutdownTimeout.getSeconds(), TimeUnit.SECONDS)) {
+        LOG.error(
+            "{} did not shutdown cleanly: peerConnectionScheduler executor did not fully terminate.",
+            this.getClass().getSimpleName());
+      }
+      if (!shutdownLatch.await(shutdownTimeout.getSeconds(), TimeUnit.SECONDS)) {
+        LOG.error(
+            "{} did not shutdown cleanly: some internal services failed to fully terminate.",
+            this.getClass().getSimpleName());
+      }
     } catch (final InterruptedException ex) {
       throw new IllegalStateException(ex);
     }

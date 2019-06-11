@@ -70,8 +70,8 @@ public class RlpxAgent {
   private final Map<BytesValue, RlpxConnection> connectionsById = new ConcurrentHashMap<>();
   private final PeerProperties peerProperties;
 
-  private AtomicBoolean started = new AtomicBoolean(false);
-  private AtomicBoolean stopped = new AtomicBoolean(false);
+  private final AtomicBoolean started = new AtomicBoolean(false);
+  private final AtomicBoolean stopped = new AtomicBoolean(false);
 
   private final Counter connectedPeersCounter;
 
@@ -269,17 +269,17 @@ public class RlpxAgent {
     final List<RlpxConnection> connectionsToCheck =
         peers
             .map(
-                p ->
-                    p.stream()
+                updatedPeers ->
+                    updatedPeers.stream()
                         .map(peer -> connectionsById.get(peer.getId()))
-                        .filter(c -> !isNull(c))
+                        .filter(connection -> !isNull(connection))
                         .collect(Collectors.toList()))
             .orElse(new ArrayList<>(connectionsById.values()));
 
     connectionsToCheck.forEach(
-        conn -> {
-          if (!peerPermissions.allowOngoingConnection(conn.getPeer())) {
-            conn.disconnect(DisconnectReason.REQUESTED);
+        connection -> {
+          if (!peerPermissions.allowOngoingConnection(connection.getPeer())) {
+            connection.disconnect(DisconnectReason.REQUESTED);
           }
         });
   }
