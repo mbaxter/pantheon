@@ -22,7 +22,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.ConnectionInitializer;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionDispatcher;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
 import tech.pegasys.pantheon.metrics.MetricCategory;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.util.Subscribers;
@@ -57,7 +57,7 @@ public class NettyConnectionInitializer implements ConnectionInitializer {
   private final KeyPair keyPair;
   private final RlpxConfiguration config;
   private final LocalNode localNode;
-  private final PeerConnectionDispatcher eventDispatcher;
+  private final PeerConnectionEventDispatcher eventDispatcher;
   private final MetricsSystem metricsSystem;
   private final Subscribers<ConnectCallback> connectSubscribers = Subscribers.create();
 
@@ -71,7 +71,7 @@ public class NettyConnectionInitializer implements ConnectionInitializer {
       final KeyPair keyPair,
       final RlpxConfiguration config,
       final LocalNode localNode,
-      final PeerConnectionDispatcher eventDispatcher,
+      final PeerConnectionEventDispatcher eventDispatcher,
       final MetricsSystem metricsSystem) {
     this.keyPair = keyPair;
     this.config = config;

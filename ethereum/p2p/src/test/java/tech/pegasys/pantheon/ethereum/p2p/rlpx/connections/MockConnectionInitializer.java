@@ -26,12 +26,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MockConnectionInitializer implements ConnectionInitializer {
   private static AtomicInteger NEXT_PORT = new AtomicInteger(0);
 
-  private final PeerConnectionDispatcher eventDispatcher;
+  private final PeerConnectionEventDispatcher eventDispatcher;
   private final Subscribers<ConnectCallback> connectCallbacks = Subscribers.create();
   private boolean autocompleteConnections = true;
   private Map<Peer, CompletableFuture<PeerConnection>> incompleteConnections = new HashMap<>();
 
-  public MockConnectionInitializer(final PeerConnectionDispatcher eventDispatcher) {
+  public MockConnectionInitializer(final PeerConnectionEventDispatcher eventDispatcher) {
     this.eventDispatcher = eventDispatcher;
   }
 

@@ -15,7 +15,7 @@ package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionDispatcher;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.Framer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.Handshaker;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.ecies.ECIESHandshaker;
@@ -49,7 +49,7 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
   private final Optional<Peer> expectedPeer;
   private final LocalNode localNode;
 
-  private final PeerConnectionDispatcher connectionEventDispatcher;
+  private final PeerConnectionEventDispatcher connectionEventDispatcher;
 
   private final CompletableFuture<PeerConnection> connectionFuture;
   private final List<SubProtocol> subProtocols;
@@ -61,7 +61,7 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
       final LocalNode localNode,
       final Optional<Peer> expectedPeer,
       final CompletableFuture<PeerConnection> connectionFuture,
-      final PeerConnectionDispatcher connectionEventDispatcher,
+      final PeerConnectionEventDispatcher connectionEventDispatcher,
       final MetricsSystem metricsSystem) {
     this.subProtocols = subProtocols;
     this.localNode = localNode;

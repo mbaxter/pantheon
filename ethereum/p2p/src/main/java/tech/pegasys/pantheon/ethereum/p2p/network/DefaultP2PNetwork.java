@@ -174,6 +174,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
   public void start() {
     if (!started.compareAndSet(false, true)) {
       LOG.warn("Attempted to start an already started " + getClass().getSimpleName());
+      return;
     }
 
     final int listeningPort = rlpxAgent.start().join();
@@ -290,7 +291,7 @@ public class DefaultP2PNetwork implements P2PNetwork {
 
   @Override
   public boolean isListening() {
-    return peerDiscoveryAgent.isActive();
+    return localNode.isReady();
   }
 
   @Override

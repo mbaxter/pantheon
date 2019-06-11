@@ -15,7 +15,7 @@ package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty;
 import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection.PeerNotConnected;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionDispatcher;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
 import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
@@ -37,14 +37,14 @@ final class ApiHandler extends SimpleChannelInboundHandler<MessageData> {
   private final CapabilityMultiplexer multiplexer;
   private final AtomicBoolean waitingForPong;
 
-  private final PeerConnectionDispatcher connectionEventDispatcher;
+  private final PeerConnectionEventDispatcher connectionEventDispatcher;
 
   private final PeerConnection connection;
 
   ApiHandler(
       final CapabilityMultiplexer multiplexer,
       final PeerConnection connection,
-      final PeerConnectionDispatcher connectionEventDispatcher,
+      final PeerConnectionEventDispatcher connectionEventDispatcher,
       final AtomicBoolean waitingForPong) {
     this.multiplexer = multiplexer;
     this.connectionEventDispatcher = connectionEventDispatcher;

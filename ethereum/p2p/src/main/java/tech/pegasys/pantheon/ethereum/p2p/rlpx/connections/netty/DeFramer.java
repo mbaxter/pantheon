@@ -21,7 +21,7 @@ import tech.pegasys.pantheon.ethereum.p2p.network.exceptions.UnexpectedPeerConne
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionDispatcher;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.Framer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.framing.FramingException;
 import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
@@ -60,7 +60,7 @@ final class DeFramer extends ByteToMessageDecoder {
 
   private final CompletableFuture<PeerConnection> connectFuture;
 
-  private final PeerConnectionDispatcher connectionEventDispatcher;
+  private final PeerConnectionEventDispatcher connectionEventDispatcher;
 
   private final Framer framer;
   private final LocalNode localNode;
@@ -75,7 +75,7 @@ final class DeFramer extends ByteToMessageDecoder {
       final List<SubProtocol> subProtocols,
       final LocalNode localNode,
       final Optional<Peer> expectedPeer,
-      final PeerConnectionDispatcher connectionEventDispatcher,
+      final PeerConnectionEventDispatcher connectionEventDispatcher,
       final CompletableFuture<PeerConnection> connectFuture,
       final MetricsSystem metricsSystem) {
     this.framer = framer;

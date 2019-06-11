@@ -164,7 +164,7 @@ public class RlpxAgent {
 
   public Optional<CompletableFuture<PeerConnection>> getPeerConnection(final Peer peer) {
     final RlpxConnection connection = connectionsById.get(peer.getId());
-    return isNull(connection) ? Optional.empty() : Optional.of(connection.getFuture());
+    return Optional.ofNullable(connection.getFuture());
   }
 
   /**

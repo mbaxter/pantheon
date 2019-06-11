@@ -16,7 +16,5 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 
 @FunctionalInterface
 public interface MessageCallback {
-  MessageCallback NOOP = (final Capability capability, final Message message) -> {};
-
   void onMessage(final Capability capability, final Message message);
 }

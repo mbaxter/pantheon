@@ -29,7 +29,7 @@ import tech.pegasys.pantheon.util.Subscribers;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class PeerConnectionEvents implements PeerConnectionDispatcher {
+public class PeerConnectionEvents implements PeerConnectionEventDispatcher {
   private final Subscribers<DisconnectCallback> disconnectSubscribers = Subscribers.create(true);
   private final Map<Capability, Subscribers<MessageCallback>> messageSubscribers =
       new ConcurrentHashMap<>();

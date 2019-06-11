@@ -16,7 +16,7 @@ import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionDispatcher;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDispatcher;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.Handshaker;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
@@ -42,7 +42,7 @@ final class HandshakeHandlerOutbound extends AbstractHandshakeHandler {
       final List<SubProtocol> subProtocols,
       final LocalNode localNode,
       final CompletableFuture<PeerConnection> connectionFuture,
-      final PeerConnectionDispatcher connectionEventDispatcher,
+      final PeerConnectionEventDispatcher connectionEventDispatcher,
       final MetricsSystem metricsSystem) {
     super(
         subProtocols,

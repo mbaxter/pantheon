@@ -169,7 +169,7 @@ public class AbstractPeerConnectionTest {
         final InetSocketAddress remoteAddress,
         final String connectionId,
         final CapabilityMultiplexer multiplexer,
-        final PeerConnectionDispatcher connectionEventDispatcher,
+        final PeerConnectionEventDispatcher connectionEventDispatcher,
         final LabelledMetric<Counter> outboundMessagesCounter) {
       super(
           peer,

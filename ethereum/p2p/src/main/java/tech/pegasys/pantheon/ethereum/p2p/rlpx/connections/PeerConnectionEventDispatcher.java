@@ -17,7 +17,7 @@ import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
 
-public interface PeerConnectionDispatcher {
+public interface PeerConnectionEventDispatcher {
 
   void dispatchDisconnect(
       final PeerConnection connection,

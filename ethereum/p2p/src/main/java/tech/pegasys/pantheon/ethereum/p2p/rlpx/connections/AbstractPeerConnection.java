@@ -50,7 +50,7 @@ public abstract class AbstractPeerConnection implements PeerConnection {
   private final Set<Capability> agreedCapabilities;
   private final Map<String, Capability> protocolToCapability = new HashMap<>();
   private final AtomicBoolean disconnected = new AtomicBoolean(false);
-  protected final PeerConnectionDispatcher connectionEventDispatcher;
+  protected final PeerConnectionEventDispatcher connectionEventDispatcher;
   private final LabelledMetric<Counter> outboundMessagesCounter;
 
   public AbstractPeerConnection(
@@ -60,7 +60,7 @@ public abstract class AbstractPeerConnection implements PeerConnection {
       final InetSocketAddress remoteAddress,
       final String connectionId,
       final CapabilityMultiplexer multiplexer,
-      final PeerConnectionDispatcher connectionEventDispatcher,
+      final PeerConnectionEventDispatcher connectionEventDispatcher,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     this.peer = peer;
     this.peerInfo = peerInfo;

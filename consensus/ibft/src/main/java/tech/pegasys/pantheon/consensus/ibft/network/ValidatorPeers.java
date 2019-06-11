@@ -40,7 +40,7 @@ public class ValidatorPeers implements ValidatorMulticaster, PeerConnectionTrack
   private static final String PROTOCOL_NAME = "IBF";
 
   // It's possible for multiple connections between peers to exist for brief periods, so map each
-  // address to a {@code Set} of connections
+  // address to a set of connections
   private final Map<Address, Set<PeerConnection>> connectionsByAddress = new ConcurrentHashMap<>();
   private final VoteTallyCache voteTallyCache;
 

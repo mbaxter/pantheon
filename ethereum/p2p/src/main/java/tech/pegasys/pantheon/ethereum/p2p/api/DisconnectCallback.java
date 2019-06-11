@@ -16,11 +16,6 @@ import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.Discon
 
 @FunctionalInterface
 public interface DisconnectCallback {
-  DisconnectCallback NOOP =
-      (final PeerConnection connection,
-          final DisconnectReason reason,
-          final boolean initiatedByPeer) -> {};
-
   void onDisconnect(
       final PeerConnection connection,
       final DisconnectReason reason,

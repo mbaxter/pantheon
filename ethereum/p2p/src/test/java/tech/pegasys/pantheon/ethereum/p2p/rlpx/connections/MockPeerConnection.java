@@ -44,7 +44,7 @@ public class MockPeerConnection extends AbstractPeerConnection {
       final InetSocketAddress remoteAddress,
       final String connectionId,
       final CapabilityMultiplexer multiplexer,
-      final PeerConnectionDispatcher connectionEventDispatcher,
+      final PeerConnectionEventDispatcher connectionEventDispatcher,
       final LabelledMetric<Counter> outboundMessagesCounter) {
     super(
         peer,
@@ -62,11 +62,11 @@ public class MockPeerConnection extends AbstractPeerConnection {
   }
 
   public static MockPeerConnection create(final Peer peer) {
-    return create(peer, mock(PeerConnectionDispatcher.class));
+    return create(peer, mock(PeerConnectionEventDispatcher.class));
   }
 
   public static MockPeerConnection create(
-      final Peer peer, final PeerConnectionDispatcher eventDispatcher) {
+      final Peer peer, final PeerConnectionEventDispatcher eventDispatcher) {
     final List<SubProtocol> subProtocols = Arrays.asList(MockSubProtocol.create("eth"));
     final List<Capability> caps = Arrays.asList(Capability.create("eth", 63));
     final CapabilityMultiplexer multiplexer = new CapabilityMultiplexer(subProtocols, caps, caps);

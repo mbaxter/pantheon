@@ -14,7 +14,5 @@ package tech.pegasys.pantheon.ethereum.p2p.api;
 
 @FunctionalInterface
 public interface ConnectCallback {
-  ConnectCallback NOOP = (final PeerConnection peer) -> {};
-
   void onConnect(final PeerConnection peer);
 }
