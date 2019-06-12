@@ -46,7 +46,6 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.subscription.pending.Pen
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.subscription.pending.PendingTransactionSubscriptionService;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.subscription.syncing.SyncingSubscriptionService;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
-import tech.pegasys.pantheon.ethereum.p2p.InsufficientPeersPermissioningProvider;
 import tech.pegasys.pantheon.ethereum.p2p.NetworkRunner;
 import tech.pegasys.pantheon.ethereum.p2p.NetworkRunner.NetworkBuilder;
 import tech.pegasys.pantheon.ethereum.p2p.NoopP2PNetwork;
@@ -58,6 +57,8 @@ import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.SubProtocolConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.network.DefaultP2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
+import tech.pegasys.pantheon.ethereum.p2p.peers.EnodeURL;
+import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsBlacklist;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;
@@ -66,14 +67,15 @@ import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioning
 import tech.pegasys.pantheon.ethereum.permissioning.NodePermissioningControllerFactory;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.account.AccountPermissioningController;
+import tech.pegasys.pantheon.ethereum.permissioning.node.InsufficientPeersPermissioningProvider;
 import tech.pegasys.pantheon.ethereum.permissioning.node.NodePermissioningController;
+import tech.pegasys.pantheon.ethereum.permissioning.node.PeerPermissionsAdapter;
 import tech.pegasys.pantheon.ethereum.transaction.TransactionSimulator;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsService;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
-import tech.pegasys.pantheon.util.enode.EnodeURL;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -266,6 +268,10 @@ public class RunnerBuilder {
     final Optional<NodePermissioningController> nodePermissioningController =
         buildNodePermissioningController(
             bootnodes, synchronizer, transactionSimulator, localNodeId);
+    final PeerPermissions nodePermissions =
+        new PeerPermissionsAdapter(
+            nodePermissioningController.get(), bootnodes, context.getBlockchain());
+    final PeerPermissions peerPermissions = PeerPermissions.combine(nodePermissions, bannedNodes);
 
     NetworkBuilder inactiveNetwork = (caps) -> new NoopP2PNetwork();
     NetworkBuilder activeNetwork =
@@ -274,11 +280,9 @@ public class RunnerBuilder {
                 .vertx(vertx)
                 .keyPair(keyPair)
                 .config(networkConfig)
-                .peerPermissions(bannedNodes)
+                .peerPermissions(peerPermissions)
                 .metricsSystem(metricsSystem)
                 .supportedCapabilities(caps)
-                .nodePermissioningController(nodePermissioningController)
-                .blockchain(context.getBlockchain())
                 .build();
 
     final NetworkRunner networkRunner =
