@@ -21,8 +21,6 @@ import static org.mockito.Mockito.when;
 
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
-import tech.pegasys.pantheon.ethereum.chain.BlockAddedObserver;
-import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
@@ -48,31 +46,17 @@ import java.util.concurrent.TimeUnit;
 
 import io.vertx.core.Vertx;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.StrictStubs.class)
 public class P2PNetworkTest {
-
-  @Mock private Blockchain blockchain;
-
-  private ArgumentCaptor<BlockAddedObserver> observerCaptor =
-      ArgumentCaptor.forClass(BlockAddedObserver.class);
-
   private final Vertx vertx = Vertx.vertx();
   private final NetworkingConfiguration config =
       NetworkingConfiguration.create()
           .setDiscovery(DiscoveryConfiguration.create().setActive(false))
           .setRlpx(RlpxConfiguration.create().setBindPort(0).setSupportedProtocols(subProtocol()));
-
-  @Before
-  public void before() {
-    when(blockchain.observeBlockAdded(observerCaptor.capture())).thenReturn(1L);
-  }
 
   @After
   public void closeVertx() {

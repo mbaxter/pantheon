@@ -14,6 +14,7 @@ package tech.pegasys.pantheon.ethereum.p2p.network;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -79,11 +80,14 @@ public final class DefaultP2PNetworkTest {
 
   @Before
   public void before() {
-    when(rlpxAgent.start()).thenReturn(CompletableFuture.completedFuture(30303));
-    when(rlpxAgent.stop()).thenReturn(CompletableFuture.completedFuture(null));
-    when(discoveryAgent.start(anyInt())).thenReturn(CompletableFuture.completedFuture(30303));
-    when(discoveryAgent.stop()).thenReturn(CompletableFuture.completedFuture(null));
-    when(discoveryAgent.observePeerBondedEvents(discoverySubscriberCaptor.capture()))
+    lenient().when(rlpxAgent.start()).thenReturn(CompletableFuture.completedFuture(30303));
+    lenient().when(rlpxAgent.stop()).thenReturn(CompletableFuture.completedFuture(null));
+    lenient()
+        .when(discoveryAgent.start(anyInt()))
+        .thenReturn(CompletableFuture.completedFuture(30303));
+    lenient().when(discoveryAgent.stop()).thenReturn(CompletableFuture.completedFuture(null));
+    lenient()
+        .when(discoveryAgent.observePeerBondedEvents(discoverySubscriberCaptor.capture()))
         .thenReturn(1L);
   }
 
