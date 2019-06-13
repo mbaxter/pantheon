@@ -268,10 +268,12 @@ public class RunnerBuilder {
     final Optional<NodePermissioningController> nodePermissioningController =
         buildNodePermissioningController(
             bootnodes, synchronizer, transactionSimulator, localNodeId);
-    final PeerPermissions nodePermissions =
-        new PeerPermissionsAdapter(
-            nodePermissioningController.get(), bootnodes, context.getBlockchain());
-    final PeerPermissions peerPermissions = PeerPermissions.combine(nodePermissions, bannedNodes);
+
+    final PeerPermissions peerPermissions =
+        nodePermissioningController
+            .map(nodePC -> new PeerPermissionsAdapter(nodePC, bootnodes, context.getBlockchain()))
+            .map(nodePerms -> PeerPermissions.combine(nodePerms, bannedNodes))
+            .orElse(bannedNodes);
 
     NetworkBuilder inactiveNetwork = (caps) -> new NoopP2PNetwork();
     NetworkBuilder activeNetwork =
