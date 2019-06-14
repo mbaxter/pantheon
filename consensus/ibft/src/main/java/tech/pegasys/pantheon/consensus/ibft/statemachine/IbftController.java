@@ -29,8 +29,8 @@ import tech.pegasys.pantheon.consensus.ibft.messagewrappers.IbftMessage;
 import tech.pegasys.pantheon.consensus.ibft.payload.Authored;
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
-import tech.pegasys.pantheon.ethereum.p2p.wire.Message;
-import tech.pegasys.pantheon.ethereum.p2p.wire.MessageData;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.Message;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.MessageData;
 
 import java.util.function.Consumer;
 

@@ -12,8 +12,8 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.rlpx;
 
-import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
-import tech.pegasys.pantheon.ethereum.p2p.wire.Message;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.Capability;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.Message;
 
 @FunctionalInterface
 public interface MessageCallback {

@@ -10,32 +10,24 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.wire;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.wire;
 
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
 
-/**
- * Simple implementation of {@link Message} that associates a {@link MessageData} instance with a
- * {@link PeerConnection}.
- */
-public final class DefaultMessage implements Message {
+/** A P2P network message received from another peer. */
+public interface Message {
 
-  private final MessageData data;
+  /**
+   * Returns the {@link MessageData} contained in the message.
+   *
+   * @return Data in the message
+   */
+  MessageData getData();
 
-  private final PeerConnection connection;
-
-  public DefaultMessage(final PeerConnection channel, final MessageData data) {
-    this.connection = channel;
-    this.data = data;
-  }
-
-  @Override
-  public PeerConnection getConnection() {
-    return connection;
-  }
-
-  @Override
-  public MessageData getData() {
-    return data;
-  }
+  /**
+   * {@link PeerConnection} this message was sent from.
+   *
+   * @return PeerConnection this message was sent from.
+   */
+  PeerConnection getConnection();
 }

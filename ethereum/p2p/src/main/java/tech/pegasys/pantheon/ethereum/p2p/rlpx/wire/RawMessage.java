@@ -10,28 +10,26 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.wire.messages;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.wire;
 
-public final class WireMessageCodes {
-  public static final int HELLO = 0x00;
-  public static final int DISCONNECT = 0x01;
-  public static final int PING = 0x02;
-  public static final int PONG = 0x03;
+import tech.pegasys.pantheon.util.bytes.BytesValue;
 
-  private WireMessageCodes() {}
+public final class RawMessage extends AbstractMessageData {
 
-  public static String messageName(final int code) {
-    switch (code) {
-      case HELLO:
-        return "Hello";
-      case DISCONNECT:
-        return "Disconnect";
-      case PING:
-        return "Ping";
-      case PONG:
-        return "Pong";
-      default:
-        return "invalid";
-    }
+  private final int code;
+
+  public RawMessage(final int code, final BytesValue data) {
+    super(data);
+    this.code = code;
+  }
+
+  @Override
+  public int getCode() {
+    return code;
+  }
+
+  @Override
+  public String toString() {
+    return "RawMessage{" + "code=" + code + ", data=" + data + '}';
   }
 }

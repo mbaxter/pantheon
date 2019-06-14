@@ -13,7 +13,7 @@
 package tech.pegasys.pantheon.ethereum.eth.manager;
 
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection.PeerNotConnected;
-import tech.pegasys.pantheon.ethereum.p2p.wire.MessageData;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.MessageData;
 
 import java.util.ArrayList;
 import java.util.Collection;

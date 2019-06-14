@@ -10,15 +10,32 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.rlpx;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.wire;
 
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
 
-@FunctionalInterface
-public interface DisconnectCallback {
-  void onDisconnect(
-      final PeerConnection connection,
-      final DisconnectReason reason,
-      final boolean initiatedByPeer);
+/**
+ * Simple implementation of {@link Message} that associates a {@link MessageData} instance with a
+ * {@link PeerConnection}.
+ */
+public final class DefaultMessage implements Message {
+
+  private final MessageData data;
+
+  private final PeerConnection connection;
+
+  public DefaultMessage(final PeerConnection channel, final MessageData data) {
+    this.connection = channel;
+    this.data = data;
+  }
+
+  @Override
+  public PeerConnection getConnection() {
+    return connection;
+  }
+
+  @Override
+  public MessageData getData() {
+    return data;
+  }
 }

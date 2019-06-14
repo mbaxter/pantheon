@@ -10,24 +10,20 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.wire;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.messages;
 
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
+public final class PongMessage extends EmptyMessage {
 
-/** A P2P network message received from another peer. */
-public interface Message {
+  private static final PongMessage INSTANCE = new PongMessage();
 
-  /**
-   * Returns the {@link MessageData} contained in the message.
-   *
-   * @return Data in the message
-   */
-  MessageData getData();
+  public static PongMessage get() {
+    return INSTANCE;
+  }
 
-  /**
-   * {@link PeerConnection} this message was sent from.
-   *
-   * @return PeerConnection this message was sent from.
-   */
-  PeerConnection getConnection();
+  private PongMessage() {}
+
+  @Override
+  public int getCode() {
+    return WireMessageCodes.PONG;
+  }
 }

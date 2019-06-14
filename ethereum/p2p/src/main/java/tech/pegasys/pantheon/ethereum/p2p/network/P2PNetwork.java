@@ -19,8 +19,8 @@ import tech.pegasys.pantheon.ethereum.p2p.rlpx.ConnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.MessageCallback;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
-import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
-import tech.pegasys.pantheon.ethereum.p2p.wire.Message;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.Capability;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.Message;
 
 import java.io.Closeable;
 import java.util.Collection;

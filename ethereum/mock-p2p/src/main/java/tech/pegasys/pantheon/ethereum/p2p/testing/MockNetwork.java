@@ -20,12 +20,12 @@ import tech.pegasys.pantheon.ethereum.p2p.rlpx.ConnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.DisconnectCallback;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.MessageCallback;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
-import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
-import tech.pegasys.pantheon.ethereum.p2p.wire.DefaultMessage;
-import tech.pegasys.pantheon.ethereum.p2p.wire.Message;
-import tech.pegasys.pantheon.ethereum.p2p.wire.MessageData;
-import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.Capability;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.DefaultMessage;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.Message;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.MessageData;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.PeerInfo;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
 import tech.pegasys.pantheon.util.Subscribers;
 
 import java.net.InetSocketAddress;

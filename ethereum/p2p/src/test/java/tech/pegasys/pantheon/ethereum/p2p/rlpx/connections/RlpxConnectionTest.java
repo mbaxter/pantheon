@@ -20,7 +20,7 @@ import static tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper.createPeer
 
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.RlpxConnection.ConnectionNotEstablishedException;
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.messages.DisconnectMessage.DisconnectReason;
 
 import java.util.concurrent.CompletableFuture;
 

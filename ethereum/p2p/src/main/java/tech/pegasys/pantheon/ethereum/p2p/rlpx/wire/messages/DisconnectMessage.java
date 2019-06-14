@@ -10,10 +10,10 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.wire.messages;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.messages;
 
-import tech.pegasys.pantheon.ethereum.p2p.wire.AbstractMessageData;
-import tech.pegasys.pantheon.ethereum.p2p.wire.MessageData;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.AbstractMessageData;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.MessageData;
 import tech.pegasys.pantheon.ethereum.rlp.BytesValueRLPOutput;
 import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.ethereum.rlp.RLPInput;

@@ -10,26 +10,21 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.wire;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.messages;
 
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.MessageData;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
-public final class RawMessage extends AbstractMessageData {
+/** A message without a body. */
+abstract class EmptyMessage implements MessageData {
 
-  private final int code;
-
-  public RawMessage(final int code, final BytesValue data) {
-    super(data);
-    this.code = code;
+  @Override
+  public final int getSize() {
+    return 0;
   }
 
   @Override
-  public int getCode() {
-    return code;
-  }
-
-  @Override
-  public String toString() {
-    return "RawMessage{" + "code=" + code + ", data=" + data + '}';
+  public BytesValue getData() {
+    return BytesValue.EMPTY;
   }
 }

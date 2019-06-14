@@ -10,20 +10,28 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.consensus.ibft.ibftevent;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.messages;
 
-import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.Message;
+public final class WireMessageCodes {
+  public static final int HELLO = 0x00;
+  public static final int DISCONNECT = 0x01;
+  public static final int PING = 0x02;
+  public static final int PONG = 0x03;
 
-/** Static helper functions for producing and working with IbftEvent objects */
-public class IbftEvents {
-  public static IbftEvent fromMessage(final Message message) {
-    return new IbftReceivedMessageEvent(message);
-  }
+  private WireMessageCodes() {}
 
-  public enum Type {
-    ROUND_EXPIRY,
-    NEW_CHAIN_HEAD,
-    BLOCK_TIMER_EXPIRY,
-    MESSAGE
+  public static String messageName(final int code) {
+    switch (code) {
+      case HELLO:
+        return "Hello";
+      case DISCONNECT:
+        return "Disconnect";
+      case PING:
+        return "Ping";
+      case PONG:
+        return "Pong";
+      default:
+        return "invalid";
+    }
   }
 }
