@@ -10,10 +10,10 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p;
+package tech.pegasys.pantheon.ethereum.p2p.network.exceptions;
 
-public class P2pDisabledException extends RuntimeException {
-  public P2pDisabledException(final String message) {
+public class P2PDisabledException extends RuntimeException {
+  public P2PDisabledException(final String message) {
     super(message);
   }
 }

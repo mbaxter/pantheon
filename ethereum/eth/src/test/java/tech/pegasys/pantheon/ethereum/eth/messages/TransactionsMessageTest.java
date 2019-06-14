@@ -14,7 +14,7 @@ package tech.pegasys.pantheon.ethereum.eth.messages;
 
 import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator;
 import tech.pegasys.pantheon.ethereum.core.Transaction;
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
+import tech.pegasys.pantheon.ethereum.p2p.wire.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.wire.RawMessage;
 
 import java.util.ArrayList;

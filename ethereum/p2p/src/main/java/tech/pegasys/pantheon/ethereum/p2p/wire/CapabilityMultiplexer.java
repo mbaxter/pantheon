@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.ethereum.p2p.wire;
 
 import static java.util.Comparator.comparing;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.ArrayList;

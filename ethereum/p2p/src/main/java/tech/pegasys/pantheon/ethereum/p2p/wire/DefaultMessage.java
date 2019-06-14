@@ -12,9 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.wire;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.Message;
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
-import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
 
 /**
  * Simple implementation of {@link Message} that associates a {@link MessageData} instance with a

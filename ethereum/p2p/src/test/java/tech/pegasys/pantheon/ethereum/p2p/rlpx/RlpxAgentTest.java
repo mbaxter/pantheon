@@ -28,8 +28,6 @@ import static tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper.enode;
 import static tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper.enodeBuilder;
 
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
-import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
-import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection.PeerNotConnected;
 import tech.pegasys.pantheon.ethereum.p2p.config.RlpxConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.DefaultPeer;
@@ -43,6 +41,8 @@ import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions.Action;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissionsException;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.MockConnectionInitializer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.MockPeerConnection;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection.PeerNotConnected;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEvents;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;

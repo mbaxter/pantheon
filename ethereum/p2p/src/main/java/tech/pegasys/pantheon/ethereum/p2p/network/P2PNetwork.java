@@ -10,12 +10,17 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.api;
+package tech.pegasys.pantheon.ethereum.p2p.network;
 
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.EnodeURL;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.ConnectCallback;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.DisconnectCallback;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.MessageCallback;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
+import tech.pegasys.pantheon.ethereum.p2p.wire.Message;
 
 import java.io.Closeable;
 import java.util.Collection;

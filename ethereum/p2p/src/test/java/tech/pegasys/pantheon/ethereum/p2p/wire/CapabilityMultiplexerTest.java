@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.ethereum.p2p.wire;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer.ProtocolMessage;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 

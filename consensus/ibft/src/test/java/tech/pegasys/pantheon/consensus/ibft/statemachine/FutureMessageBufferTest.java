@@ -17,10 +17,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import tech.pegasys.pantheon.consensus.ibft.network.MockPeerFactory;
 import tech.pegasys.pantheon.ethereum.core.AddressHelpers;
-import tech.pegasys.pantheon.ethereum.p2p.api.Message;
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
-import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.wire.DefaultMessage;
+import tech.pegasys.pantheon.ethereum.p2p.wire.Message;
+import tech.pegasys.pantheon.ethereum.p2p.wire.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.wire.RawMessage;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 

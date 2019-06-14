@@ -12,7 +12,7 @@
  */
 package tech.pegasys.pantheon.consensus.ibft;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.Message;
+import tech.pegasys.pantheon.ethereum.p2p.wire.Message;
 
 public interface Gossiper {
 

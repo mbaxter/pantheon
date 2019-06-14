@@ -15,7 +15,7 @@ package tech.pegasys.pantheon.consensus.ibft;
 import static java.util.Collections.newSetFromMap;
 
 import tech.pegasys.pantheon.ethereum.core.Hash;
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
+import tech.pegasys.pantheon.ethereum.p2p.wire.MessageData;
 
 import java.util.Set;
 

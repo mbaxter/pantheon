@@ -10,22 +10,31 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.api;
+package tech.pegasys.pantheon.ethereum.p2p.wire;
 
-/** A P2P network message received from another peer. */
-public interface Message {
+import tech.pegasys.pantheon.util.bytes.BytesValue;
 
-  /**
-   * Returns the {@link MessageData} contained in the message.
-   *
-   * @return Data in the message
-   */
-  MessageData getData();
+/** A P2P Network Message's Data. */
+public interface MessageData {
 
   /**
-   * {@link PeerConnection} this message was sent from.
+   * Returns the size of the message.
    *
-   * @return PeerConnection this message was sent from.
+   * @return Number of bytes in this data.
    */
-  PeerConnection getConnection();
+  int getSize();
+
+  /**
+   * Returns the message's code.
+   *
+   * @return Message Code
+   */
+  int getCode();
+
+  /**
+   * Get the serialized representation for this message
+   *
+   * @return the serialized representation of this message
+   */
+  BytesValue getData();
 }

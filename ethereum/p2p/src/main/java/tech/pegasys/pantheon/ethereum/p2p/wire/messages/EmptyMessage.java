@@ -12,7 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.wire.messages;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
+import tech.pegasys.pantheon.ethereum.p2p.wire.MessageData;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 /** A message without a body. */

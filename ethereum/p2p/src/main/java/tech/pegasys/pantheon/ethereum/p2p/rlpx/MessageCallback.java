@@ -10,9 +10,12 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.api;
+package tech.pegasys.pantheon.ethereum.p2p.rlpx;
+
+import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
+import tech.pegasys.pantheon.ethereum.p2p.wire.Message;
 
 @FunctionalInterface
-public interface ConnectCallback {
-  void onConnect(final PeerConnection peer);
+public interface MessageCallback {
+  void onMessage(final Capability capability, final Message message);
 }

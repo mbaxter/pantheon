@@ -10,16 +10,16 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p;
+package tech.pegasys.pantheon.ethereum.p2p.network;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.ConnectCallback;
-import tech.pegasys.pantheon.ethereum.p2p.api.DisconnectCallback;
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageCallback;
-import tech.pegasys.pantheon.ethereum.p2p.api.P2PNetwork;
-import tech.pegasys.pantheon.ethereum.p2p.api.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
+import tech.pegasys.pantheon.ethereum.p2p.network.exceptions.P2PDisabledException;
 import tech.pegasys.pantheon.ethereum.p2p.peers.EnodeURL;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.ConnectCallback;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.DisconnectCallback;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.MessageCallback;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 
 import java.io.IOException;
@@ -31,7 +31,7 @@ import java.util.stream.Stream;
 public class NoopP2PNetwork implements P2PNetwork {
   @Override
   public Collection<PeerConnection> getPeers() {
-    throw new P2pDisabledException("P2P networking disabled.  Peers list unavailable.");
+    throw new P2PDisabledException("P2P networking disabled.  Peers list unavailable.");
   }
 
   @Override
@@ -41,7 +41,7 @@ public class NoopP2PNetwork implements P2PNetwork {
 
   @Override
   public CompletableFuture<PeerConnection> connect(final Peer peer) {
-    throw new P2pDisabledException("P2P networking disabled.  Unable to connect to network.");
+    throw new P2PDisabledException("P2P networking disabled.  Unable to connect to network.");
   }
 
   @Override
@@ -55,12 +55,12 @@ public class NoopP2PNetwork implements P2PNetwork {
 
   @Override
   public boolean addMaintainConnectionPeer(final Peer peer) {
-    throw new P2pDisabledException("P2P networking disabled.  Unable to connect to add peer.");
+    throw new P2PDisabledException("P2P networking disabled.  Unable to connect to add peer.");
   }
 
   @Override
   public boolean removeMaintainedConnectionPeer(final Peer peer) {
-    throw new P2pDisabledException("P2P networking disabled.  Unable to remove a connected peer.");
+    throw new P2PDisabledException("P2P networking disabled.  Unable to remove a connected peer.");
   }
 
   @Override

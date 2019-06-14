@@ -15,10 +15,10 @@ package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections;
 import static org.mockito.Mockito.mock;
 import static tech.pegasys.pantheon.ethereum.p2p.peers.PeerTestHelper.createPeer;
 
-import tech.pegasys.pantheon.ethereum.p2p.api.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.wire.Capability;
 import tech.pegasys.pantheon.ethereum.p2p.wire.CapabilityMultiplexer;
+import tech.pegasys.pantheon.ethereum.p2p.wire.MessageData;
 import tech.pegasys.pantheon.ethereum.p2p.wire.MockSubProtocol;
 import tech.pegasys.pantheon.ethereum.p2p.wire.PeerInfo;
 import tech.pegasys.pantheon.ethereum.p2p.wire.SubProtocol;

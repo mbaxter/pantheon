@@ -10,14 +10,24 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.ethereum.p2p.api;
+package tech.pegasys.pantheon.ethereum.p2p.wire;
 
-import tech.pegasys.pantheon.ethereum.p2p.wire.messages.DisconnectMessage.DisconnectReason;
+import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
 
-@FunctionalInterface
-public interface DisconnectCallback {
-  void onDisconnect(
-      final PeerConnection connection,
-      final DisconnectReason reason,
-      final boolean initiatedByPeer);
+/** A P2P network message received from another peer. */
+public interface Message {
+
+  /**
+   * Returns the {@link MessageData} contained in the message.
+   *
+   * @return Data in the message
+   */
+  MessageData getData();
+
+  /**
+   * {@link PeerConnection} this message was sent from.
+   *
+   * @return PeerConnection this message was sent from.
+   */
+  PeerConnection getConnection();
 }
