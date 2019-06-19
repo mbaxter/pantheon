@@ -54,7 +54,7 @@ public class PingPacketData implements PacketData {
     final Endpoint from = Endpoint.decodeStandalone(in);
     final Endpoint to = Endpoint.decodeStandalone(in);
     final long expiration = in.readLongScalar();
-    in.leaveList(true);
+    in.leaveListLenient();
     return new PingPacketData(from, to, expiration);
   }
 
