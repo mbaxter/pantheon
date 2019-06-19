@@ -44,7 +44,7 @@ public class PongPacketData implements PacketData {
     final Endpoint to = Endpoint.decodeStandalone(in);
     final BytesValue hash = in.readBytesValue();
     final long expiration = in.readLongScalar();
-    in.leaveList();
+    in.leaveList(true);
     return new PongPacketData(to, hash, expiration);
   }
 
