@@ -14,16 +14,23 @@ package tech.pegasys.pantheon.ethereum.p2p.config;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import picocli.CommandLine;
 
 public class NetworkingConfiguration {
+  private final String INITIATE_CONNECTIONS_FREQUENCY_FLAG =
+      "--Xp2p-initiate-connections-frequency";
+  private final String CHECK_MAINTAINED_CONNECTIONS_FREQUENCY_FLAG =
+      "--Xp2p-check-maintained-connections-frequency";
+
   private DiscoveryConfiguration discovery = new DiscoveryConfiguration();
   private RlpxConfiguration rlpx = new RlpxConfiguration();
 
   @CommandLine.Option(
-      names = "--Xp2p-initiate-connections-frequency",
+      names = INITIATE_CONNECTIONS_FREQUENCY_FLAG,
       hidden = true,
       defaultValue = "30",
       paramLabel = "<INTEGER>",
@@ -32,7 +39,7 @@ public class NetworkingConfiguration {
   private int initiateConnectionsFrequencySec = 30;
 
   @CommandLine.Option(
-      names = "--Xp2p-check-maintained-connections-frequency",
+      names = CHECK_MAINTAINED_CONNECTIONS_FREQUENCY_FLAG,
       hidden = true,
       defaultValue = "60",
       paramLabel = "<INTEGER>",
@@ -42,6 +49,14 @@ public class NetworkingConfiguration {
 
   public static NetworkingConfiguration create() {
     return new NetworkingConfiguration();
+  }
+
+  public List<String> toCLIParams() {
+    return Arrays.asList(
+        CHECK_MAINTAINED_CONNECTIONS_FREQUENCY_FLAG,
+        Integer.toString(getCheckMaintainedConnectionsFrequencySec(), 10),
+        INITIATE_CONNECTIONS_FREQUENCY_FLAG,
+        Integer.toString(getInitiateConnectionsFrequencySec(), 10));
   }
 
   public DiscoveryConfiguration getDiscovery() {
