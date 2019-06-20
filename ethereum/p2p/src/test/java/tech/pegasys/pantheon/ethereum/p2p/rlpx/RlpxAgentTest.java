@@ -139,6 +139,20 @@ public class RlpxAgentTest {
   }
 
   @Test
+  public void connect_fails() {
+    connectionInitializer.setAutocompleteConnections(false);
+    startAgent();
+    final Peer peer = createPeer();
+    final CompletableFuture<PeerConnection> connection = agent.connect(peer);
+
+    // Fail connection
+    connection.completeExceptionally(new RuntimeException("whoopsies"));
+
+    assertThat(agent.getPeerConnection(peer)).isEmpty();
+    assertThat(agent.connectionsById.get(peer.getId())).isNull();
+  }
+
+  @Test
   public void connect_toDiscoveryPeerUpdatesStats() {
     startAgent();
     final DiscoveryPeer peer = DiscoveryPeer.fromEnode(enode());
