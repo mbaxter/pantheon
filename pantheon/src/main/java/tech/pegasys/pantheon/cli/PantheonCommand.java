@@ -56,6 +56,7 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApi;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApis;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
+import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.peers.EnodeURL;
 import tech.pegasys.pantheon.ethereum.p2p.peers.StaticNodesParser;
 import tech.pegasys.pantheon.ethereum.permissioning.LocalPermissioningConfiguration;
@@ -138,6 +139,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
 
   private final BlockImporter blockImporter;
 
+  private final NetworkingConfiguration networkingConfiguration;
   private final SynchronizerConfiguration.Builder synchronizerConfigurationBuilder;
   private final EthereumWireProtocolConfiguration.Builder ethereumWireConfigurationBuilder;
   private final RocksDbConfiguration.Builder rocksDbConfigurationBuilder;
@@ -605,12 +607,14 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       final PantheonController.Builder controllerBuilderFactory,
       final SynchronizerConfiguration.Builder synchronizerConfigurationBuilder,
       final EthereumWireProtocolConfiguration.Builder ethereumWireConfigurationBuilder,
+      final NetworkingConfiguration networkingConfiguration,
       final RocksDbConfiguration.Builder rocksDbConfigurationBuilder,
       final PantheonPluginContextImpl pantheonPluginContext) {
     this.logger = logger;
     this.blockImporter = blockImporter;
     this.runnerBuilder = runnerBuilder;
     this.controllerBuilderFactory = controllerBuilderFactory;
+    this.networkingConfiguration = networkingConfiguration;
     this.synchronizerConfigurationBuilder = synchronizerConfigurationBuilder;
     this.ethereumWireConfigurationBuilder = ethereumWireConfigurationBuilder;
     this.rocksDbConfigurationBuilder = rocksDbConfigurationBuilder;
@@ -664,6 +668,8 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
     UnstableOptionsSubCommand.createUnstableOptions(
         commandLine,
         ImmutableMap.of(
+            "P2P Network",
+            networkingConfiguration,
             "Synchronizer",
             synchronizerConfigurationBuilder,
             "RocksDB",
@@ -1107,6 +1113,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
             .p2pAdvertisedHost(p2pAdvertisedHost)
             .p2pListenPort(p2pListenPort)
             .maxPeers(maxPeers)
+            .networkingConfiguration(networkingConfiguration)
             .graphQLConfiguration(graphQLConfiguration)
             .jsonRpcConfiguration(jsonRpcConfiguration)
             .webSocketConfiguration(webSocketConfiguration)

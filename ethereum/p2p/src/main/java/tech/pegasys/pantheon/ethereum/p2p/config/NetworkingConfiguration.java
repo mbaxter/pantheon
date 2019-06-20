@@ -12,11 +12,33 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.config;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.Objects;
+
+import picocli.CommandLine;
 
 public class NetworkingConfiguration {
   private DiscoveryConfiguration discovery = new DiscoveryConfiguration();
   private RlpxConfiguration rlpx = new RlpxConfiguration();
+
+  @CommandLine.Option(
+      names = "--Xp2p-initiate-connections-frequency",
+      hidden = true,
+      defaultValue = "30",
+      paramLabel = "<INTEGER>",
+      description =
+          "The frequency (in seconds) at which to initiate new outgoing connections (default: ${DEFAULT-VALUE})")
+  private int initiateConnectionsFrequencySec = 30;
+
+  @CommandLine.Option(
+      names = "--Xp2p-check-maintained-connections-frequency",
+      hidden = true,
+      defaultValue = "60",
+      paramLabel = "<INTEGER>",
+      description =
+          "The frequency (in seconds) at which to check maintained connections (default: ${DEFAULT-VALUE})")
+  private int checkMaintainedConnectionsFrequencySec = 60;
 
   public static NetworkingConfiguration create() {
     return new NetworkingConfiguration();
@@ -37,6 +59,28 @@ public class NetworkingConfiguration {
 
   public NetworkingConfiguration setRlpx(final RlpxConfiguration rlpx) {
     this.rlpx = rlpx;
+    return this;
+  }
+
+  public int getInitiateConnectionsFrequencySec() {
+    return initiateConnectionsFrequencySec;
+  }
+
+  public NetworkingConfiguration setInitiateConnectionsFrequency(
+      final int initiateConnectionsFrequency) {
+    checkArgument(initiateConnectionsFrequency > 0);
+    this.initiateConnectionsFrequencySec = initiateConnectionsFrequency;
+    return this;
+  }
+
+  public int getCheckMaintainedConnectionsFrequencySec() {
+    return checkMaintainedConnectionsFrequencySec;
+  }
+
+  public NetworkingConfiguration setCheckMaintainedConnectionsFrequency(
+      final int checkMaintainedConnectionsFrequency) {
+    checkArgument(checkMaintainedConnectionsFrequency > 0);
+    this.checkMaintainedConnectionsFrequencySec = checkMaintainedConnectionsFrequency;
     return this;
   }
 

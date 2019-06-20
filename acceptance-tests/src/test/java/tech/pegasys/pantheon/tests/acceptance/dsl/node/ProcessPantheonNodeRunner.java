@@ -143,6 +143,11 @@ public class ProcessPantheonNodeRunner implements PantheonNodeRunner {
     if (!node.isP2pEnabled()) {
       params.add("--p2p-enabled");
       params.add("false");
+    } else {
+      final int initiateConnectionsFreq =
+          node.getNetworkingConfiguration().getInitiateConnectionsFrequencySec();
+      params.add("--Xp2p-initiate-connections-frequency");
+      params.add(Integer.toString(initiateConnectionsFreq, 10));
     }
 
     node.getPermissioningConfiguration()

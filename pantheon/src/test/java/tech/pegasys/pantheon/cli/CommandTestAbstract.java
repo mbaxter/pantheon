@@ -35,6 +35,7 @@ import tech.pegasys.pantheon.ethereum.graphql.GraphQLConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.JsonRpcConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketConfiguration;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
+import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.services.PantheonPluginContextImpl;
@@ -88,6 +89,7 @@ public abstract class CommandTestAbstract {
   @Mock BlockBroadcaster mockBlockBroadcaster;
   @Mock SynchronizerConfiguration.Builder mockSyncConfBuilder;
   @Mock EthereumWireProtocolConfiguration.Builder mockEthereumWireProtocolConfigurationBuilder;
+  @Mock NetworkingConfiguration mockNetworkingConfiguration;
   @Mock SynchronizerConfiguration mockSyncConf;
   @Mock RocksDbConfiguration.Builder mockRocksDbConfBuilder;
   @Mock RocksDbConfiguration mockRocksDbConf;
@@ -213,6 +215,7 @@ public abstract class CommandTestAbstract {
             mockControllerBuilderFactory,
             mockSyncConfBuilder,
             mockEthereumWireProtocolConfigurationBuilder,
+            mockNetworkingConfiguration,
             mockRocksDbConfBuilder,
             keyLoader,
             mockPantheonPluginContext);
@@ -243,6 +246,7 @@ public abstract class CommandTestAbstract {
         final PantheonController.Builder controllerBuilderFactory,
         final SynchronizerConfiguration.Builder mockSyncConfBuilder,
         final EthereumWireProtocolConfiguration.Builder mockEthereumConfigurationMockBuilder,
+        final NetworkingConfiguration mockNetworkingConfiguration,
         final RocksDbConfiguration.Builder mockRocksDbConfBuilder,
         final KeyLoader keyLoader,
         final PantheonPluginContextImpl pantheonPluginContext) {
@@ -253,6 +257,7 @@ public abstract class CommandTestAbstract {
           controllerBuilderFactory,
           mockSyncConfBuilder,
           mockEthereumConfigurationMockBuilder,
+          mockNetworkingConfiguration,
           mockRocksDbConfBuilder,
           pantheonPluginContext);
       this.keyLoader = keyLoader;
