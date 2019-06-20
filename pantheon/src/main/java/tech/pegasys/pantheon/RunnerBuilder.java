@@ -105,7 +105,7 @@ public class RunnerBuilder {
   private Vertx vertx;
   private PantheonController<?> pantheonController;
 
-  private NetworkingConfiguration networkingConfiguration;
+  private NetworkingConfiguration networkingConfiguration = NetworkingConfiguration.create();
   private Collection<BytesValue> bannedNodeIds = new ArrayList<>();
   private boolean p2pEnabled = true;
   private boolean discovery;
