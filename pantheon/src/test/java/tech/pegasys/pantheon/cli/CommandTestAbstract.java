@@ -89,7 +89,6 @@ public abstract class CommandTestAbstract {
   @Mock BlockBroadcaster mockBlockBroadcaster;
   @Mock SynchronizerConfiguration.Builder mockSyncConfBuilder;
   @Mock EthereumWireProtocolConfiguration.Builder mockEthereumWireProtocolConfigurationBuilder;
-  NetworkingConfiguration networkingConfiguration = NetworkingConfiguration.create();
   @Mock SynchronizerConfiguration mockSyncConf;
   @Mock RocksDbConfiguration.Builder mockRocksDbConfBuilder;
   @Mock RocksDbConfiguration mockRocksDbConf;
@@ -105,6 +104,7 @@ public abstract class CommandTestAbstract {
   @Captor ArgumentCaptor<String> stringArgumentCaptor;
   @Captor ArgumentCaptor<Integer> intArgumentCaptor;
   @Captor ArgumentCaptor<EthNetworkConfig> ethNetworkConfigArgumentCaptor;
+  @Captor ArgumentCaptor<NetworkingConfiguration> networkingConfigurationArgumentCaptor;
   @Captor ArgumentCaptor<JsonRpcConfiguration> jsonRpcConfigArgumentCaptor;
   @Captor ArgumentCaptor<GraphQLConfiguration> graphQLConfigArgumentCaptor;
   @Captor ArgumentCaptor<WebSocketConfiguration> wsRpcConfigArgumentCaptor;
@@ -216,7 +216,6 @@ public abstract class CommandTestAbstract {
             mockControllerBuilderFactory,
             mockSyncConfBuilder,
             mockEthereumWireProtocolConfigurationBuilder,
-            networkingConfiguration,
             mockRocksDbConfBuilder,
             keyLoader,
             mockPantheonPluginContext);
@@ -247,7 +246,6 @@ public abstract class CommandTestAbstract {
         final PantheonController.Builder controllerBuilderFactory,
         final SynchronizerConfiguration.Builder mockSyncConfBuilder,
         final EthereumWireProtocolConfiguration.Builder mockEthereumConfigurationMockBuilder,
-        final NetworkingConfiguration networkingConfiguration,
         final RocksDbConfiguration.Builder mockRocksDbConfBuilder,
         final KeyLoader keyLoader,
         final PantheonPluginContextImpl pantheonPluginContext) {
@@ -258,7 +256,6 @@ public abstract class CommandTestAbstract {
           controllerBuilderFactory,
           mockSyncConfBuilder,
           mockEthereumConfigurationMockBuilder,
-          networkingConfiguration,
           mockRocksDbConfBuilder,
           pantheonPluginContext);
       this.keyLoader = keyLoader;

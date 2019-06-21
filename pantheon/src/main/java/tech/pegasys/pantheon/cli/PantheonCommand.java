@@ -31,6 +31,8 @@ import static tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration.DEFA
 import tech.pegasys.pantheon.Runner;
 import tech.pegasys.pantheon.RunnerBuilder;
 import tech.pegasys.pantheon.cli.PublicKeySubCommand.KeyLoader;
+import tech.pegasys.pantheon.cli.adapter.CLIAdapter;
+import tech.pegasys.pantheon.cli.adapter.NetworkingConfigurationCLIAdapter;
 import tech.pegasys.pantheon.cli.converter.MetricCategoryConverter;
 import tech.pegasys.pantheon.cli.converter.RpcApisConverter;
 import tech.pegasys.pantheon.cli.custom.CorsAllowedOriginsProperty;
@@ -139,7 +141,8 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
 
   private final BlockImporter blockImporter;
 
-  private final NetworkingConfiguration networkingConfiguration;
+  private final CLIAdapter<NetworkingConfiguration> networkingConfigAdapter =
+      NetworkingConfigurationCLIAdapter.create();
   private final SynchronizerConfiguration.Builder synchronizerConfigurationBuilder;
   private final EthereumWireProtocolConfiguration.Builder ethereumWireConfigurationBuilder;
   private final RocksDbConfiguration.Builder rocksDbConfigurationBuilder;
@@ -607,14 +610,12 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       final PantheonController.Builder controllerBuilderFactory,
       final SynchronizerConfiguration.Builder synchronizerConfigurationBuilder,
       final EthereumWireProtocolConfiguration.Builder ethereumWireConfigurationBuilder,
-      final NetworkingConfiguration networkingConfiguration,
       final RocksDbConfiguration.Builder rocksDbConfigurationBuilder,
       final PantheonPluginContextImpl pantheonPluginContext) {
     this.logger = logger;
     this.blockImporter = blockImporter;
     this.runnerBuilder = runnerBuilder;
     this.controllerBuilderFactory = controllerBuilderFactory;
-    this.networkingConfiguration = networkingConfiguration;
     this.synchronizerConfigurationBuilder = synchronizerConfigurationBuilder;
     this.ethereumWireConfigurationBuilder = ethereumWireConfigurationBuilder;
     this.rocksDbConfigurationBuilder = rocksDbConfigurationBuilder;
@@ -669,7 +670,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
         commandLine,
         ImmutableMap.of(
             "P2P Network",
-            networkingConfiguration,
+            networkingConfigAdapter,
             "Synchronizer",
             synchronizerConfigurationBuilder,
             "RocksDB",
@@ -1113,7 +1114,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
             .p2pAdvertisedHost(p2pAdvertisedHost)
             .p2pListenPort(p2pListenPort)
             .maxPeers(maxPeers)
-            .networkingConfiguration(networkingConfiguration)
+            .networkingConfiguration(networkingConfigAdapter.fromCLI())
             .graphQLConfiguration(graphQLConfiguration)
             .jsonRpcConfiguration(jsonRpcConfiguration)
             .webSocketConfiguration(webSocketConfiguration)

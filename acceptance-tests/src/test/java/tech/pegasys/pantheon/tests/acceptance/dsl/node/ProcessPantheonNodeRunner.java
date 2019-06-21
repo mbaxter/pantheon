@@ -14,6 +14,7 @@ package tech.pegasys.pantheon.tests.acceptance.dsl.node;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import tech.pegasys.pantheon.cli.adapter.NetworkingConfigurationCLIAdapter;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApi;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApis;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
@@ -144,7 +145,9 @@ public class ProcessPantheonNodeRunner implements PantheonNodeRunner {
       params.add("--p2p-enabled");
       params.add("false");
     } else {
-      params.addAll(node.getNetworkingConfiguration().toCLIParams());
+      final List<String> networkConfigParams =
+          NetworkingConfigurationCLIAdapter.toCLI(node.getNetworkingConfiguration());
+      params.addAll(networkConfigParams);
     }
 
     node.getPermissioningConfiguration()

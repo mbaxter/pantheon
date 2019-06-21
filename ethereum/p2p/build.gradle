@@ -30,7 +30,6 @@ dependencies {
   implementation project(':ethereum:core')
   implementation project(':ethereum:rlp')
   implementation project(':metrics:core')
-  implementation 'info.picocli:picocli'
 
   implementation 'com.google.guava:guava'
   implementation 'io.prometheus:simpleclient'
