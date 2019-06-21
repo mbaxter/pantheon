@@ -89,7 +89,7 @@ public abstract class CommandTestAbstract {
   @Mock BlockBroadcaster mockBlockBroadcaster;
   @Mock SynchronizerConfiguration.Builder mockSyncConfBuilder;
   @Mock EthereumWireProtocolConfiguration.Builder mockEthereumWireProtocolConfigurationBuilder;
-  @Mock NetworkingConfiguration mockNetworkingConfiguration;
+  NetworkingConfiguration networkingConfiguration = NetworkingConfiguration.create();
   @Mock SynchronizerConfiguration mockSyncConf;
   @Mock RocksDbConfiguration.Builder mockRocksDbConfBuilder;
   @Mock RocksDbConfiguration mockRocksDbConf;
@@ -161,6 +161,7 @@ public abstract class CommandTestAbstract {
     when(mockRunnerBuilder.pantheonController(any())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.discovery(anyBoolean())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.ethNetworkConfig(any())).thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.networkingConfiguration(any())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.p2pAdvertisedHost(anyString())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.p2pListenPort(anyInt())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.maxPeers(anyInt())).thenReturn(mockRunnerBuilder);
@@ -215,7 +216,7 @@ public abstract class CommandTestAbstract {
             mockControllerBuilderFactory,
             mockSyncConfBuilder,
             mockEthereumWireProtocolConfigurationBuilder,
-            mockNetworkingConfiguration,
+            networkingConfiguration,
             mockRocksDbConfBuilder,
             keyLoader,
             mockPantheonPluginContext);
@@ -246,7 +247,7 @@ public abstract class CommandTestAbstract {
         final PantheonController.Builder controllerBuilderFactory,
         final SynchronizerConfiguration.Builder mockSyncConfBuilder,
         final EthereumWireProtocolConfiguration.Builder mockEthereumConfigurationMockBuilder,
-        final NetworkingConfiguration mockNetworkingConfiguration,
+        final NetworkingConfiguration networkingConfiguration,
         final RocksDbConfiguration.Builder mockRocksDbConfBuilder,
         final KeyLoader keyLoader,
         final PantheonPluginContextImpl pantheonPluginContext) {
@@ -257,7 +258,7 @@ public abstract class CommandTestAbstract {
           controllerBuilderFactory,
           mockSyncConfBuilder,
           mockEthereumConfigurationMockBuilder,
-          mockNetworkingConfiguration,
+          networkingConfiguration,
           mockRocksDbConfBuilder,
           pantheonPluginContext);
       this.keyLoader = keyLoader;
