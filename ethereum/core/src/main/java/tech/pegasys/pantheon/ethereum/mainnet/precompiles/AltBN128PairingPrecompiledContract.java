@@ -34,10 +34,10 @@ public class AltBN128PairingPrecompiledContract extends AbstractPrecompiledContr
   private static final int FIELD_LENGTH = 32;
   private static final int PARAMETER_LENGTH = 192;
 
-  public static final BytesValue FALSE =
+  static final BytesValue FALSE =
       BytesValue.fromHexString(
           "0x0000000000000000000000000000000000000000000000000000000000000000");
-  public static final BytesValue TRUE =
+  static final BytesValue TRUE =
       BytesValue.fromHexString(
           "0x0000000000000000000000000000000000000000000000000000000000000001");
 
