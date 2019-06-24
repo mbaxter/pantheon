@@ -106,7 +106,7 @@ public class AltBN128PairingPrecompiledContractTest {
                 "0x08331c0a261a74e7e75db1232956663cbc88110f726159c5cba1857ecd03fa64"),
             BytesValue.fromHexString(
                 "0x1fbf8045ce3e79b5cde4112d38bcd0efbdb1295d2eefdf58151ae309d7ded7db"));
-    
+
     final BytesValue input = BytesValues.concatenate(g1Point0, g2Point0, g1Point1, g2Point1);
     final BytesValue result = precompile.compute(input, messageFrame);
     assertThat(result).isNull();
