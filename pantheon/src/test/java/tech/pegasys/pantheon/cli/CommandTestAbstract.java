@@ -50,6 +50,8 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -76,6 +78,7 @@ public abstract class CommandTestAbstract {
 
   protected final ByteArrayOutputStream commandErrorOutput = new ByteArrayOutputStream();
   private final PrintStream errPrintStream = new PrintStream(commandErrorOutput);
+  private final HashMap<String, String> environment = new HashMap<>();
 
   @Mock RunnerBuilder mockRunnerBuilder;
   @Mock Runner mockRunner;
@@ -190,6 +193,10 @@ public abstract class CommandTestAbstract {
     commandErrorOutput.close();
   }
 
+  protected void setEnvironemntVariable(final String name, final String value) {
+    environment.put(name, value);
+  }
+
   protected CommandLine.Model.CommandSpec parseCommand(final String... args) {
     return parseCommand(System.in, args);
   }
@@ -218,7 +225,8 @@ public abstract class CommandTestAbstract {
             mockEthereumWireProtocolConfigurationBuilder,
             mockRocksDbConfBuilder,
             keyLoader,
-            mockPantheonPluginContext);
+            mockPantheonPluginContext,
+            environment);
 
     // parse using Ansi.OFF to be able to assert on non formatted output results
     pantheonCommand.parse(
@@ -248,7 +256,8 @@ public abstract class CommandTestAbstract {
         final EthereumWireProtocolConfiguration.Builder mockEthereumConfigurationMockBuilder,
         final RocksDbConfiguration.Builder mockRocksDbConfBuilder,
         final KeyLoader keyLoader,
-        final PantheonPluginContextImpl pantheonPluginContext) {
+        final PantheonPluginContextImpl pantheonPluginContext,
+        final Map<String, String> environment) {
       super(
           mockLogger,
           mockBlockImporter,
@@ -257,7 +266,8 @@ public abstract class CommandTestAbstract {
           mockSyncConfBuilder,
           mockEthereumConfigurationMockBuilder,
           mockRocksDbConfBuilder,
-          pantheonPluginContext);
+          pantheonPluginContext,
+          environment);
       this.keyLoader = keyLoader;
     }
   }
