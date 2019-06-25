@@ -10,13 +10,24 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.cli.adapter;
+package tech.pegasys.pantheon.cli.options;
 
 import java.util.List;
 
-public interface CLIAdapter<T> {
+/**
+ * This interface represents logic that translates between CLI options and a domain object.
+ *
+ * @param <T> A class to be constructed from CLI arguments.
+ */
+public interface CLIOptions<T> {
 
-  T fromCLI();
+  /**
+   * Transform CLI options into a domain object.
+   *
+   * @return A domain object representing these CLI options.
+   */
+  T toDomainObject();
 
-  List<String> toCLIParams(T config);
+  /** @return The list of CLI options corresponding to this class. */
+  List<String> getCLIOptions();
 }

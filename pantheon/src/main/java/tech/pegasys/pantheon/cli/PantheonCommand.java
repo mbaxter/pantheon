@@ -32,14 +32,14 @@ import tech.pegasys.pantheon.PantheonInfo;
 import tech.pegasys.pantheon.Runner;
 import tech.pegasys.pantheon.RunnerBuilder;
 import tech.pegasys.pantheon.cli.PublicKeySubCommand.KeyLoader;
-import tech.pegasys.pantheon.cli.adapter.CLIAdapter;
-import tech.pegasys.pantheon.cli.adapter.NetworkingConfigurationCLIAdapter;
 import tech.pegasys.pantheon.cli.converter.MetricCategoryConverter;
 import tech.pegasys.pantheon.cli.converter.RpcApisConverter;
 import tech.pegasys.pantheon.cli.custom.CorsAllowedOriginsProperty;
 import tech.pegasys.pantheon.cli.custom.JsonRPCWhitelistHostsProperty;
 import tech.pegasys.pantheon.cli.custom.RpcAuthFileValidator;
 import tech.pegasys.pantheon.cli.operator.OperatorSubCommand;
+import tech.pegasys.pantheon.cli.options.CLIOptions;
+import tech.pegasys.pantheon.cli.options.NetworkingOptions;
 import tech.pegasys.pantheon.cli.rlp.RLPSubCommand;
 import tech.pegasys.pantheon.config.GenesisConfigFile;
 import tech.pegasys.pantheon.controller.KeyPairUtil;
@@ -143,8 +143,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
 
   private final BlockImporter blockImporter;
 
-  private final CLIAdapter<NetworkingConfiguration> networkingConfigAdapter =
-      NetworkingConfigurationCLIAdapter.create();
+  private final CLIOptions<NetworkingConfiguration> networkingOptions = NetworkingOptions.create();
   private final SynchronizerConfiguration.Builder synchronizerConfigurationBuilder;
   private final EthereumWireProtocolConfiguration.Builder ethereumWireConfigurationBuilder;
   private final RocksDbConfiguration.Builder rocksDbConfigurationBuilder;
@@ -675,7 +674,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
         commandLine,
         ImmutableMap.of(
             "P2P Network",
-            networkingConfigAdapter,
+            networkingOptions,
             "Synchronizer",
             synchronizerConfigurationBuilder,
             "RocksDB",
@@ -1121,7 +1120,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
             .p2pAdvertisedHost(p2pAdvertisedHost)
             .p2pListenPort(p2pListenPort)
             .maxPeers(maxPeers)
-            .networkingConfiguration(networkingConfigAdapter.fromCLI())
+            .networkingConfiguration(networkingOptions.toDomainObject())
             .graphQLConfiguration(graphQLConfiguration)
             .jsonRpcConfiguration(jsonRpcConfiguration)
             .webSocketConfiguration(webSocketConfiguration)

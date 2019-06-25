@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.cli.adapter;
+package tech.pegasys.pantheon.cli.options;
 
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 
@@ -19,7 +19,7 @@ import java.util.List;
 
 import picocli.CommandLine;
 
-public class NetworkingConfigurationCLIAdapter implements CLIAdapter<NetworkingConfiguration> {
+public class NetworkingOptions implements CLIOptions<NetworkingConfiguration> {
   private final String INITIATE_CONNECTIONS_FREQUENCY_FLAG =
       "--Xp2p-initiate-connections-frequency";
   private final String CHECK_MAINTAINED_CONNECTIONS_FREQUENCY_FLAG =
@@ -43,18 +43,24 @@ public class NetworkingConfigurationCLIAdapter implements CLIAdapter<NetworkingC
           "The frequency (in seconds) at which to check maintained connections (default: ${DEFAULT-VALUE})")
   private int checkMaintainedConnectionsFrequencySec = 60;
 
-  private static final NetworkingConfigurationCLIAdapter internalInstance = create();
+  private NetworkingOptions() {}
 
-  public static NetworkingConfigurationCLIAdapter create() {
-    return new NetworkingConfigurationCLIAdapter();
+  public static NetworkingOptions create() {
+    return new NetworkingOptions();
   }
 
-  public static List<String> toCLI(final NetworkingConfiguration config) {
-    return internalInstance.toCLIParams(config);
+  public static CLIOptions<NetworkingConfiguration> fromConfig(
+      final NetworkingConfiguration networkingConfig) {
+    final NetworkingOptions cliOptions = new NetworkingOptions();
+    cliOptions.checkMaintainedConnectionsFrequencySec =
+        networkingConfig.getCheckMaintainedConnectionsFrequencySec();
+    cliOptions.initiateConnectionsFrequencySec =
+        networkingConfig.getInitiateConnectionsFrequencySec();
+    return cliOptions;
   }
 
   @Override
-  public NetworkingConfiguration fromCLI() {
+  public NetworkingConfiguration toDomainObject() {
     NetworkingConfiguration config = NetworkingConfiguration.create();
     config.setCheckMaintainedConnectionsFrequency(checkMaintainedConnectionsFrequencySec);
     config.setInitiateConnectionsFrequency(initiateConnectionsFrequencySec);
@@ -62,11 +68,11 @@ public class NetworkingConfigurationCLIAdapter implements CLIAdapter<NetworkingC
   }
 
   @Override
-  public List<String> toCLIParams(final NetworkingConfiguration config) {
+  public List<String> getCLIOptions() {
     return Arrays.asList(
         CHECK_MAINTAINED_CONNECTIONS_FREQUENCY_FLAG,
-        Integer.toString(config.getCheckMaintainedConnectionsFrequencySec(), 10),
+        Integer.toString(checkMaintainedConnectionsFrequencySec, 10),
         INITIATE_CONNECTIONS_FREQUENCY_FLAG,
-        Integer.toString(config.getInitiateConnectionsFrequencySec(), 10));
+        Integer.toString(initiateConnectionsFrequencySec, 10));
   }
 }

@@ -14,7 +14,7 @@ package tech.pegasys.pantheon.tests.acceptance.dsl.node;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import tech.pegasys.pantheon.cli.adapter.NetworkingConfigurationCLIAdapter;
+import tech.pegasys.pantheon.cli.options.NetworkingOptions;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApi;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApis;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
@@ -146,7 +146,7 @@ public class ProcessPantheonNodeRunner implements PantheonNodeRunner {
       params.add("false");
     } else {
       final List<String> networkConfigParams =
-          NetworkingConfigurationCLIAdapter.toCLI(node.getNetworkingConfiguration());
+          NetworkingOptions.fromConfig(node.getNetworkingConfiguration()).getCLIOptions();
       params.addAll(networkConfigParams);
     }
 
