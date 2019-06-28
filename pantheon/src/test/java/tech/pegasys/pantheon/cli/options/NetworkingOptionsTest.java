@@ -12,12 +12,58 @@
  */
 package tech.pegasys.pantheon.cli.options;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 
+import org.junit.Test;
+
 public class NetworkingOptionsTest
     extends AbstractCLIOptionsTest<NetworkingConfiguration, NetworkingOptions> {
+
+  @Test
+  public void checkMaintainedConnectionsFrequencyFlag_isSet() {
+    parseCommand("--Xp2p-check-maintained-connections-frequency", "2");
+
+    final NetworkingConfiguration networkingConfig = getDomainObjectFromPantheonCommand();
+    assertThat(networkingConfig.getCheckMaintainedConnectionsFrequencySec()).isEqualTo(2);
+
+    assertThat(commandErrorOutput.toString()).isEmpty();
+    assertThat(commandOutput.toString()).isEmpty();
+  }
+
+  @Test
+  public void checkMaintainedFrequencyConnectionsFlag_isNotSet() {
+    parseCommand();
+
+    final NetworkingConfiguration networkingConfig = getDomainObjectFromPantheonCommand();
+    assertThat(networkingConfig.getCheckMaintainedConnectionsFrequencySec()).isEqualTo(60);
+
+    assertThat(commandErrorOutput.toString()).isEmpty();
+    assertThat(commandOutput.toString()).isEmpty();
+  }
+
+  @Test
+  public void initiateConnectionsFrequencyFlag_isSet() {
+    parseCommand("--Xp2p-initiate-connections-frequency", "2");
+
+    final NetworkingConfiguration networkingConfig = getDomainObjectFromPantheonCommand();
+    assertThat(networkingConfig.getInitiateConnectionsFrequencySec()).isEqualTo(2);
+
+    assertThat(commandErrorOutput.toString()).isEmpty();
+    assertThat(commandOutput.toString()).isEmpty();
+  }
+
+  @Test
+  public void initiateConnectionsFrequencyFlag_isNotSet() {
+    parseCommand();
+    final NetworkingConfiguration networkingConfig = getDomainObjectFromPantheonCommand();
+    assertThat(networkingConfig.getInitiateConnectionsFrequencySec()).isEqualTo(30);
+
+    assertThat(commandErrorOutput.toString()).isEmpty();
+    assertThat(commandOutput.toString()).isEmpty();
+  }
 
   @Override
   NetworkingConfiguration createDefaultDomainObject() {

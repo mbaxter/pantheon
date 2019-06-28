@@ -28,9 +28,8 @@ public class EthProtocolOptionsTest
   public void parsesValidEwpMaxGetHeadersOptions() {
 
     parseCommand("--Xewp-max-get-headers", "13");
-    verify(mockControllerBuilder)
-        .ethProtocolConfiguration(ethProtocolConfigurationCaptor.capture());
-    final EthProtocolConfiguration config = ethProtocolConfigurationCaptor.getValue();
+
+    final EthProtocolConfiguration config = getDomainObjectFromPantheonCommand();
     assertThat(config.getMaxGetBlockHeaders()).isEqualTo(13);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -38,7 +37,6 @@ public class EthProtocolOptionsTest
 
   @Test
   public void parsesInvalidEwpMaxGetHeadersOptionsShouldFail() {
-
     parseCommand("--Xewp-max-get-headers", "-13");
     verifyZeroInteractions(mockRunnerBuilder);
     assertThat(commandOutput.toString()).isEmpty();
@@ -49,11 +47,9 @@ public class EthProtocolOptionsTest
 
   @Test
   public void parsesValidEwpMaxGetBodiesOptions() {
-
     parseCommand("--Xewp-max-get-bodies", "14");
-    verify(mockControllerBuilder)
-        .ethProtocolConfiguration(ethProtocolConfigurationCaptor.capture());
-    final EthProtocolConfiguration config = ethProtocolConfigurationCaptor.getValue();
+
+    final EthProtocolConfiguration config = getDomainObjectFromPantheonCommand();
     assertThat(config.getMaxGetBlockBodies()).isEqualTo(14);
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -62,7 +58,6 @@ public class EthProtocolOptionsTest
 
   @Test
   public void parsesInvalidEwpMaxGetBodiesOptionsShouldFail() {
-
     parseCommand("--Xewp-max-get-bodies", "-14");
     verifyZeroInteractions(mockRunnerBuilder);
     assertThat(commandOutput.toString()).isEmpty();
@@ -73,11 +68,9 @@ public class EthProtocolOptionsTest
 
   @Test
   public void parsesValidEwpMaxGetReceiptsOptions() {
-
     parseCommand("--Xewp-max-get-receipts", "15");
-    verify(mockControllerBuilder)
-        .ethProtocolConfiguration(ethProtocolConfigurationCaptor.capture());
-    final EthProtocolConfiguration config = ethProtocolConfigurationCaptor.getValue();
+
+    final EthProtocolConfiguration config = getDomainObjectFromPantheonCommand();
     assertThat(config.getMaxGetReceipts()).isEqualTo(15);
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -86,8 +79,8 @@ public class EthProtocolOptionsTest
 
   @Test
   public void parsesInvalidEwpMaxGetReceiptsOptionsShouldFail() {
-
     parseCommand("--Xewp-max-get-receipts", "-15");
+
     verifyZeroInteractions(mockRunnerBuilder);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString())
@@ -97,11 +90,9 @@ public class EthProtocolOptionsTest
 
   @Test
   public void parsesValidEwpMaxGetNodeDataOptions() {
-
     parseCommand("--Xewp-max-get-node-data", "16");
-    verify(mockControllerBuilder)
-        .ethProtocolConfiguration(ethProtocolConfigurationCaptor.capture());
-    final EthProtocolConfiguration config = ethProtocolConfigurationCaptor.getValue();
+
+    final EthProtocolConfiguration config = getDomainObjectFromPantheonCommand();
     assertThat(config.getMaxGetNodeData()).isEqualTo(16);
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -110,7 +101,6 @@ public class EthProtocolOptionsTest
 
   @Test
   public void parsesInvalidEwpMaxGetNodeDataOptionsShouldFail() {
-
     parseCommand("--Xewp-max-get-node-data", "-16");
     verifyZeroInteractions(mockRunnerBuilder);
     assertThat(commandOutput.toString()).isEmpty();

@@ -46,7 +46,6 @@ import tech.pegasys.pantheon.ethereum.graphql.GraphQLConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.JsonRpcConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApi;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketConfiguration;
-import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.peers.EnodeURL;
 import tech.pegasys.pantheon.ethereum.permissioning.LocalPermissioningConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
@@ -336,58 +335,6 @@ public class PantheonCommandTest extends CommandTestAbstract {
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
-  }
-
-  @Test
-  public void checkMaintainedConnectionsFrequencyFlag_isSet() {
-    parseCommand("--Xp2p-check-maintained-connections-frequency", "2");
-    verify(mockRunnerBuilder)
-        .networkingConfiguration(networkingConfigurationArgumentCaptor.capture());
-    final NetworkingConfiguration networkingConfig =
-        networkingConfigurationArgumentCaptor.getValue();
-    assertThat(networkingConfig.getCheckMaintainedConnectionsFrequencySec()).isEqualTo(2);
-
-    assertThat(commandErrorOutput.toString()).isEmpty();
-    assertThat(commandOutput.toString()).isEmpty();
-  }
-
-  @Test
-  public void checkMaintainedFrequencyConnectionsFlag_isNotSet() {
-    parseCommand();
-    verify(mockRunnerBuilder)
-        .networkingConfiguration(networkingConfigurationArgumentCaptor.capture());
-    final NetworkingConfiguration networkingConfig =
-        networkingConfigurationArgumentCaptor.getValue();
-    assertThat(networkingConfig.getCheckMaintainedConnectionsFrequencySec()).isEqualTo(60);
-
-    assertThat(commandErrorOutput.toString()).isEmpty();
-    assertThat(commandOutput.toString()).isEmpty();
-  }
-
-  @Test
-  public void initiateConnectionsFrequencyFlag_isSet() {
-    parseCommand("--Xp2p-initiate-connections-frequency", "2");
-    verify(mockRunnerBuilder)
-        .networkingConfiguration(networkingConfigurationArgumentCaptor.capture());
-    final NetworkingConfiguration networkingConfig =
-        networkingConfigurationArgumentCaptor.getValue();
-    assertThat(networkingConfig.getInitiateConnectionsFrequencySec()).isEqualTo(2);
-
-    assertThat(commandErrorOutput.toString()).isEmpty();
-    assertThat(commandOutput.toString()).isEmpty();
-  }
-
-  @Test
-  public void initiateConnectionsFrequencyFlag_isNotSet() {
-    parseCommand();
-    verify(mockRunnerBuilder)
-        .networkingConfiguration(networkingConfigurationArgumentCaptor.capture());
-    final NetworkingConfiguration networkingConfig =
-        networkingConfigurationArgumentCaptor.getValue();
-    assertThat(networkingConfig.getInitiateConnectionsFrequencySec()).isEqualTo(30);
-
-    assertThat(commandErrorOutput.toString()).isEmpty();
-    assertThat(commandOutput.toString()).isEmpty();
   }
 
   @Test

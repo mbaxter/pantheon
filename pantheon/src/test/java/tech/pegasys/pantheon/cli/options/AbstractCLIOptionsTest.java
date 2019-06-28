@@ -37,7 +37,10 @@ public abstract class AbstractCLIOptionsTest<D, T extends CLIOptions<?>>
   private void fromDomainObject(final D domainObject) {
     final T options = optionsFromDomainObject(domainObject);
     final D domainObjectFromOptions = optionsToDomainObject(options);
-    assertThat(domainObjectFromOptions).isEqualToComparingFieldByField(domainObject);
+
+    final List<String> fieldsToIgnore = getFieldsToIgnore();
+    final String[] ignored = fieldsToIgnore.toArray(new String[0]);
+    assertThat(domainObjectFromOptions).isEqualToIgnoringGivenFields(domainObject, ignored);
   }
 
   @Test
