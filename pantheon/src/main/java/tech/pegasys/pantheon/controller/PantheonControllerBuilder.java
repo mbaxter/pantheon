@@ -198,7 +198,7 @@ public abstract class PantheonControllerBuilder<C> {
 
     final MutableBlockchain blockchain = protocolContext.getBlockchain();
 
-    final boolean fastSyncEnabled = syncConfig.syncMode().equals(SyncMode.FAST);
+    final boolean fastSyncEnabled = syncConfig.getSyncMode().equals(SyncMode.FAST);
     ethProtocolManager = createEthProtocolManager(protocolContext, fastSyncEnabled);
     final SyncState syncState =
         new SyncState(blockchain, ethProtocolManager.ethContext().getEthPeers());
@@ -314,9 +314,9 @@ public abstract class PantheonControllerBuilder<C> {
         protocolContext.getWorldStateArchive(),
         networkId,
         fastSyncEnabled,
-        syncConfig.downloaderParallelism(),
-        syncConfig.transactionsParallelism(),
-        syncConfig.computationParallelism(),
+        syncConfig.getDownloaderParallelism(),
+        syncConfig.getTransactionsParallelism(),
+        syncConfig.getComputationParallelism(),
         clock,
         metricsSystem,
         ethereumWireProtocolConfiguration);

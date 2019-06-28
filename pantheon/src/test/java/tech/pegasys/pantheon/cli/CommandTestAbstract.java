@@ -80,39 +80,41 @@ public abstract class CommandTestAbstract {
   private final PrintStream errPrintStream = new PrintStream(commandErrorOutput);
   private final HashMap<String, String> environment = new HashMap<>();
 
-  @Mock RunnerBuilder mockRunnerBuilder;
-  @Mock Runner mockRunner;
+  protected @Mock RunnerBuilder mockRunnerBuilder;
+  protected @Mock Runner mockRunner;
 
-  @Mock PantheonController.Builder mockControllerBuilderFactory;
+  protected @Mock PantheonController.Builder mockControllerBuilderFactory;
 
-  @Mock PantheonControllerBuilder<Void> mockControllerBuilder;
-  @Mock EthProtocolManager mockEthProtocolManager;
-  @Mock ProtocolSchedule<Object> mockProtocolSchedule;
-  @Mock ProtocolContext<Object> mockProtocolContext;
-  @Mock BlockBroadcaster mockBlockBroadcaster;
-  @Mock SynchronizerConfiguration.Builder mockSyncConfBuilder;
-  @Mock EthereumWireProtocolConfiguration.Builder mockEthereumWireProtocolConfigurationBuilder;
-  @Mock SynchronizerConfiguration mockSyncConf;
-  @Mock RocksDbConfiguration.Builder mockRocksDbConfBuilder;
-  @Mock RocksDbConfiguration mockRocksDbConf;
-  @Mock PantheonController<Object> mockController;
-  @Mock BlockImporter mockBlockImporter;
-  @Mock Logger mockLogger;
-  @Mock PantheonPluginContextImpl mockPantheonPluginContext;
+  protected @Mock PantheonControllerBuilder<Void> mockControllerBuilder;
+  protected @Mock EthProtocolManager mockEthProtocolManager;
+  protected @Mock ProtocolSchedule<Object> mockProtocolSchedule;
+  protected @Mock ProtocolContext<Object> mockProtocolContext;
+  protected @Mock BlockBroadcaster mockBlockBroadcaster;
+  protected @Mock EthereumWireProtocolConfiguration.Builder
+      mockEthereumWireProtocolConfigurationBuilder;
+  protected @Mock SynchronizerConfiguration mockSyncConf;
+  protected @Mock RocksDbConfiguration.Builder mockRocksDbConfBuilder;
+  protected @Mock RocksDbConfiguration mockRocksDbConf;
+  protected @Mock PantheonController<Object> mockController;
+  protected @Mock BlockImporter mockBlockImporter;
+  protected @Mock Logger mockLogger;
+  protected @Mock PantheonPluginContextImpl mockPantheonPluginContext;
 
-  @Captor ArgumentCaptor<Collection<BytesValue>> bytesValueCollectionCollector;
-  @Captor ArgumentCaptor<Collection<String>> stringListArgumentCaptor;
-  @Captor ArgumentCaptor<Path> pathArgumentCaptor;
-  @Captor ArgumentCaptor<File> fileArgumentCaptor;
-  @Captor ArgumentCaptor<String> stringArgumentCaptor;
-  @Captor ArgumentCaptor<Integer> intArgumentCaptor;
-  @Captor ArgumentCaptor<EthNetworkConfig> ethNetworkConfigArgumentCaptor;
-  @Captor ArgumentCaptor<NetworkingConfiguration> networkingConfigurationArgumentCaptor;
-  @Captor ArgumentCaptor<JsonRpcConfiguration> jsonRpcConfigArgumentCaptor;
-  @Captor ArgumentCaptor<GraphQLConfiguration> graphQLConfigArgumentCaptor;
-  @Captor ArgumentCaptor<WebSocketConfiguration> wsRpcConfigArgumentCaptor;
-  @Captor ArgumentCaptor<MetricsConfiguration> metricsConfigArgumentCaptor;
-  @Captor ArgumentCaptor<PermissioningConfiguration> permissioningConfigurationArgumentCaptor;
+  protected @Captor ArgumentCaptor<Collection<BytesValue>> bytesValueCollectionCollector;
+  protected @Captor ArgumentCaptor<Collection<String>> stringListArgumentCaptor;
+  protected @Captor ArgumentCaptor<Path> pathArgumentCaptor;
+  protected @Captor ArgumentCaptor<File> fileArgumentCaptor;
+  protected @Captor ArgumentCaptor<String> stringArgumentCaptor;
+  protected @Captor ArgumentCaptor<Integer> intArgumentCaptor;
+  protected @Captor ArgumentCaptor<EthNetworkConfig> ethNetworkConfigArgumentCaptor;
+  protected @Captor ArgumentCaptor<NetworkingConfiguration> networkingConfigurationArgumentCaptor;
+  protected @Captor ArgumentCaptor<SynchronizerConfiguration> syncConfigurationCaptor;
+  protected @Captor ArgumentCaptor<JsonRpcConfiguration> jsonRpcConfigArgumentCaptor;
+  protected @Captor ArgumentCaptor<GraphQLConfiguration> graphQLConfigArgumentCaptor;
+  protected @Captor ArgumentCaptor<WebSocketConfiguration> wsRpcConfigArgumentCaptor;
+  protected @Captor ArgumentCaptor<MetricsConfiguration> metricsConfigArgumentCaptor;
+  protected @Captor ArgumentCaptor<PermissioningConfiguration>
+      permissioningConfigurationArgumentCaptor;
 
   @Rule public final TemporaryFolder temp = new TemporaryFolder();
 
@@ -148,12 +150,6 @@ public abstract class CommandTestAbstract {
     lenient().when(mockController.getProtocolContext()).thenReturn(mockProtocolContext);
 
     when(mockEthProtocolManager.getBlockBroadcaster()).thenReturn(mockBlockBroadcaster);
-
-    when(mockSyncConfBuilder.syncMode(any())).thenReturn(mockSyncConfBuilder);
-    when(mockSyncConfBuilder.maxTrailingPeers(anyInt())).thenReturn(mockSyncConfBuilder);
-    when(mockSyncConfBuilder.fastSyncMinimumPeerCount(anyInt())).thenReturn(mockSyncConfBuilder);
-    when(mockSyncConfBuilder.build()).thenReturn(mockSyncConf);
-
     when(mockEthereumWireProtocolConfigurationBuilder.build())
         .thenReturn(EthereumWireProtocolConfiguration.defaultConfig());
 
@@ -221,7 +217,6 @@ public abstract class CommandTestAbstract {
             mockBlockImporter,
             mockRunnerBuilder,
             mockControllerBuilderFactory,
-            mockSyncConfBuilder,
             mockEthereumWireProtocolConfigurationBuilder,
             mockRocksDbConfBuilder,
             keyLoader,
@@ -252,7 +247,6 @@ public abstract class CommandTestAbstract {
         final BlockImporter mockBlockImporter,
         final RunnerBuilder mockRunnerBuilder,
         final PantheonController.Builder controllerBuilderFactory,
-        final SynchronizerConfiguration.Builder mockSyncConfBuilder,
         final EthereumWireProtocolConfiguration.Builder mockEthereumConfigurationMockBuilder,
         final RocksDbConfiguration.Builder mockRocksDbConfBuilder,
         final KeyLoader keyLoader,
@@ -263,7 +257,6 @@ public abstract class CommandTestAbstract {
           mockBlockImporter,
           mockRunnerBuilder,
           controllerBuilderFactory,
-          mockSyncConfBuilder,
           mockEthereumConfigurationMockBuilder,
           mockRocksDbConfBuilder,
           pantheonPluginContext,

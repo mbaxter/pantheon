@@ -49,8 +49,7 @@ public class NetworkingOptions implements CLIOptions<NetworkingConfiguration> {
     return new NetworkingOptions();
   }
 
-  public static CLIOptions<NetworkingConfiguration> fromConfig(
-      final NetworkingConfiguration networkingConfig) {
+  public static NetworkingOptions fromConfig(final NetworkingConfiguration networkingConfig) {
     final NetworkingOptions cliOptions = new NetworkingOptions();
     cliOptions.checkMaintainedConnectionsFrequencySec =
         networkingConfig.getCheckMaintainedConnectionsFrequencySec();
@@ -71,8 +70,8 @@ public class NetworkingOptions implements CLIOptions<NetworkingConfiguration> {
   public List<String> getCLIOptions() {
     return Arrays.asList(
         CHECK_MAINTAINED_CONNECTIONS_FREQUENCY_FLAG,
-        Integer.toString(checkMaintainedConnectionsFrequencySec, 10),
+        OptionParser.format(checkMaintainedConnectionsFrequencySec),
         INITIATE_CONNECTIONS_FREQUENCY_FLAG,
-        Integer.toString(initiateConnectionsFrequencySec, 10));
+        OptionParser.format(initiateConnectionsFrequencySec));
   }
 }
