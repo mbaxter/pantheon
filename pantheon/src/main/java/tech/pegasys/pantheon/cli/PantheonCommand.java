@@ -39,6 +39,7 @@ import tech.pegasys.pantheon.cli.custom.JsonRPCWhitelistHostsProperty;
 import tech.pegasys.pantheon.cli.custom.RpcAuthFileValidator;
 import tech.pegasys.pantheon.cli.operator.OperatorSubCommand;
 import tech.pegasys.pantheon.cli.options.CLIOptions;
+import tech.pegasys.pantheon.cli.options.EthProtocolOptions;
 import tech.pegasys.pantheon.cli.options.NetworkingOptions;
 import tech.pegasys.pantheon.cli.options.SynchronizerOptions;
 import tech.pegasys.pantheon.cli.rlp.RLPSubCommand;
@@ -49,7 +50,6 @@ import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.MiningParameters;
 import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Wei;
-import tech.pegasys.pantheon.ethereum.eth.EthereumWireProtocolConfiguration;
 import tech.pegasys.pantheon.ethereum.eth.sync.SyncMode;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
 import tech.pegasys.pantheon.ethereum.eth.transactions.PendingTransactions;
@@ -145,7 +145,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
 
   private final CLIOptions<NetworkingConfiguration> networkingOptions = NetworkingOptions.create();
   private final SynchronizerOptions synchronizerOptions = SynchronizerOptions.create();
-  private final EthereumWireProtocolConfiguration.Builder ethereumWireConfigurationBuilder;
+  private final EthProtocolOptions ethProtocolOptions = EthProtocolOptions.create();
   private final RocksDbConfiguration.Builder rocksDbConfigurationBuilder;
   private final RunnerBuilder runnerBuilder;
   private final PantheonController.Builder controllerBuilderFactory;
@@ -610,7 +610,6 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       final BlockImporter blockImporter,
       final RunnerBuilder runnerBuilder,
       final PantheonController.Builder controllerBuilderFactory,
-      final EthereumWireProtocolConfiguration.Builder ethereumWireConfigurationBuilder,
       final RocksDbConfiguration.Builder rocksDbConfigurationBuilder,
       final PantheonPluginContextImpl pantheonPluginContext,
       final Map<String, String> environment) {
@@ -618,7 +617,6 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
     this.blockImporter = blockImporter;
     this.runnerBuilder = runnerBuilder;
     this.controllerBuilderFactory = controllerBuilderFactory;
-    this.ethereumWireConfigurationBuilder = ethereumWireConfigurationBuilder;
     this.rocksDbConfigurationBuilder = rocksDbConfigurationBuilder;
     this.pantheonPluginContext = pantheonPluginContext;
     this.environment = environment;
@@ -678,7 +676,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
             "RocksDB",
             rocksDbConfigurationBuilder,
             "Ethereum Wire Protocol",
-            ethereumWireConfigurationBuilder));
+            ethProtocolOptions));
 
     pantheonPluginContext.addService(PicoCLIOptions.class, new PicoCLIOptionsImpl(commandLine));
     pantheonPluginContext.registerPlugins(pluginsDir());
@@ -814,7 +812,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       return controllerBuilderFactory
           .fromEthNetworkConfig(updateNetworkConfig(getNetwork()))
           .synchronizerConfiguration(buildSyncConfig())
-          .ethereumWireProtocolConfiguration(ethereumWireConfigurationBuilder.build())
+          .ethProtocolConfiguration(ethProtocolOptions.toDomainObject())
           .rocksDbConfiguration(buildRocksDbConfiguration())
           .dataDirectory(dataDir())
           .miningParameters(

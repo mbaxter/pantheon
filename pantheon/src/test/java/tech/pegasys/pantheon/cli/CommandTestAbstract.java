@@ -27,7 +27,7 @@ import tech.pegasys.pantheon.controller.PantheonController;
 import tech.pegasys.pantheon.controller.PantheonControllerBuilder;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
-import tech.pegasys.pantheon.ethereum.eth.EthereumWireProtocolConfiguration;
+import tech.pegasys.pantheon.ethereum.eth.EthProtocolConfiguration;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManager;
 import tech.pegasys.pantheon.ethereum.eth.sync.BlockBroadcaster;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
@@ -90,9 +90,6 @@ public abstract class CommandTestAbstract {
   protected @Mock ProtocolSchedule<Object> mockProtocolSchedule;
   protected @Mock ProtocolContext<Object> mockProtocolContext;
   protected @Mock BlockBroadcaster mockBlockBroadcaster;
-  protected @Mock EthereumWireProtocolConfiguration.Builder
-      mockEthereumWireProtocolConfigurationBuilder;
-  protected @Mock SynchronizerConfiguration mockSyncConf;
   protected @Mock RocksDbConfiguration.Builder mockRocksDbConfBuilder;
   protected @Mock RocksDbConfiguration mockRocksDbConf;
   protected @Mock PantheonController<Object> mockController;
@@ -108,6 +105,7 @@ public abstract class CommandTestAbstract {
   protected @Captor ArgumentCaptor<Integer> intArgumentCaptor;
   protected @Captor ArgumentCaptor<EthNetworkConfig> ethNetworkConfigArgumentCaptor;
   protected @Captor ArgumentCaptor<NetworkingConfiguration> networkingConfigurationArgumentCaptor;
+  protected @Captor ArgumentCaptor<EthProtocolConfiguration> ethProtocolConfigurationCaptor;
   protected @Captor ArgumentCaptor<SynchronizerConfiguration> syncConfigurationCaptor;
   protected @Captor ArgumentCaptor<JsonRpcConfiguration> jsonRpcConfigArgumentCaptor;
   protected @Captor ArgumentCaptor<GraphQLConfiguration> graphQLConfigArgumentCaptor;
@@ -130,8 +128,7 @@ public abstract class CommandTestAbstract {
     // doReturn used because of generic PantheonController
     doReturn(mockControllerBuilder).when(mockControllerBuilderFactory).fromEthNetworkConfig(any());
     when(mockControllerBuilder.synchronizerConfiguration(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.ethereumWireProtocolConfiguration(any()))
-        .thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.ethProtocolConfiguration(any())).thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.rocksDbConfiguration(any())).thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.dataDirectory(any())).thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.miningParameters(any())).thenReturn(mockControllerBuilder);
@@ -150,8 +147,6 @@ public abstract class CommandTestAbstract {
     lenient().when(mockController.getProtocolContext()).thenReturn(mockProtocolContext);
 
     when(mockEthProtocolManager.getBlockBroadcaster()).thenReturn(mockBlockBroadcaster);
-    when(mockEthereumWireProtocolConfigurationBuilder.build())
-        .thenReturn(EthereumWireProtocolConfiguration.defaultConfig());
 
     when(mockRocksDbConfBuilder.databaseDir(any())).thenReturn(mockRocksDbConfBuilder);
     when(mockRocksDbConfBuilder.build()).thenReturn(mockRocksDbConf);
@@ -217,7 +212,6 @@ public abstract class CommandTestAbstract {
             mockBlockImporter,
             mockRunnerBuilder,
             mockControllerBuilderFactory,
-            mockEthereumWireProtocolConfigurationBuilder,
             mockRocksDbConfBuilder,
             keyLoader,
             mockPantheonPluginContext,
@@ -247,7 +241,6 @@ public abstract class CommandTestAbstract {
         final BlockImporter mockBlockImporter,
         final RunnerBuilder mockRunnerBuilder,
         final PantheonController.Builder controllerBuilderFactory,
-        final EthereumWireProtocolConfiguration.Builder mockEthereumConfigurationMockBuilder,
         final RocksDbConfiguration.Builder mockRocksDbConfBuilder,
         final KeyLoader keyLoader,
         final PantheonPluginContextImpl pantheonPluginContext,
@@ -257,7 +250,6 @@ public abstract class CommandTestAbstract {
           mockBlockImporter,
           mockRunnerBuilder,
           controllerBuilderFactory,
-          mockEthereumConfigurationMockBuilder,
           mockRocksDbConfBuilder,
           pantheonPluginContext,
           environment);
