@@ -12,51 +12,74 @@
  */
 package tech.pegasys.pantheon.cli.options;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
-import tech.pegasys.pantheon.cli.CommandTestAbstract;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
 
-import org.junit.Test;
+import com.google.common.collect.Range;
 
-public class SynchronizerOptionsTest extends CommandTestAbstract {
+public class SynchronizerOptionsTest
+    extends AbstractCLIOptionsTest<SynchronizerConfiguration, SynchronizerOptions> {
 
-  @Test
-  public void fromConfig() {
-    final SynchronizerConfiguration config = SynchronizerConfiguration.builder().build();
-    SynchronizerOptions options = SynchronizerOptions.fromConfig(config);
-    final SynchronizerConfiguration.Builder builderFromOptions = options.toDomainObject();
-    assertThat(builderFromOptions).isEqualToComparingFieldByField(config);
+  @Override
+  SynchronizerConfiguration createDefaultDomainObject() {
+    return SynchronizerConfiguration.builder().build();
   }
 
-  @Test
-  public void getCLIOptions() {
-    SynchronizerOptions options = SynchronizerOptions.create();
-    final String[] cliOptions = options.getCLIOptions().toArray(new String[0]);
-    final SynchronizerConfiguration actualSyncConfig = options.toDomainObject().build();
-
-    parseCommand(cliOptions);
-    verify(mockControllerBuilder).synchronizerConfiguration(syncConfigurationCaptor.capture());
-    final SynchronizerConfiguration syncConfig = syncConfigurationCaptor.getValue();
-    assertThat(actualSyncConfig).isEqualToComparingFieldByField(syncConfig);
-
-    assertThat(commandOutput.toString()).isEmpty();
-    assertThat(commandErrorOutput.toString()).isEmpty();
+  @Override
+  SynchronizerConfiguration createCustomizedDomainObject() {
+    return SynchronizerConfiguration.builder()
+        .fastSyncPivotDistance(SynchronizerConfiguration.DEFAULT_PIVOT_DISTANCE_FROM_HEAD + 10)
+        .fastSyncFullValidationRate(SynchronizerConfiguration.DEFAULT_FULL_VALIDATION_RATE / 2)
+        // Min peers are currently handled outside of SynchronizerOptions
+        //      .fastSyncMinimumPeerCount(SynchronizerConfiguration.DEFAULT_FAST_SYNC_MINIMUM_PEERS
+        // + 2)
+        .worldStateHashCountPerRequest(
+            SynchronizerConfiguration.DEFAULT_WORLD_STATE_HASH_COUNT_PER_REQUEST + 2)
+        .worldStateRequestParallelism(
+            SynchronizerConfiguration.DEFAULT_WORLD_STATE_REQUEST_PARALLELISM * 2)
+        .worldStateMaxRequestsWithoutProgress(
+            SynchronizerConfiguration.DEFAULT_WORLD_STATE_MAX_REQUESTS_WITHOUT_PROGRESS * 2)
+        .worldStateMinMillisBeforeStalling(
+            SynchronizerConfiguration.DEFAULT_WORLD_STATE_MIN_MILLIS_BEFORE_STALLING * 2)
+        .blockPropagationRange(
+            Range.closed(
+                SynchronizerConfiguration.DEFAULT_BLOCK_PROPAGATION_RANGE.lowerEndpoint() - 2,
+                SynchronizerConfiguration.DEFAULT_BLOCK_PROPAGATION_RANGE.upperEndpoint() + 2))
+        .downloaderChangeTargetThresholdByHeight(
+            SynchronizerConfiguration.DEFAULT_DOWNLOADER_CHANGE_TARGET_THRESHOLD_BY_HEIGHT + 2)
+        .downloaderChangeTargetThresholdByTd(
+            SynchronizerConfiguration.DEFAULT_DOWNLOADER_CHANGE_TARGET_THRESHOLD_BY_TD.plus(2L))
+        .downloaderHeadersRequestSize(
+            SynchronizerConfiguration.DEFAULT_DOWNLOADER_HEADER_REQUEST_SIZE + 2)
+        .downloaderCheckpointTimeoutsPermitted(
+            SynchronizerConfiguration.DEFAULT_DOWNLOADER_CHECKPOINT_TIMEOUTS_PERMITTED + 2)
+        .downloaderChainSegmentSize(
+            SynchronizerConfiguration.DEFAULT_DOWNLOADER_CHAIN_SEGMENT_SIZE + 2)
+        .downloaderParallelism(SynchronizerConfiguration.DEFAULT_DOWNLOADER_PARALLELISM + 2)
+        .transactionsParallelism(SynchronizerConfiguration.DEFAULT_TRANSACTIONS_PARALLELISM + 2)
+        .computationParallelism(SynchronizerConfiguration.DEFAULT_COMPUTATION_PARALLELISM + 2)
+        .build();
   }
 
-  @Test
-  public void defaultValues() {
-    parseCommand();
+  @Override
+  protected String[] getFieldsWithComputedDefaults() {
+    return new String[] {"maxTrailingPeers", "computationParallelism"};
+  }
 
-    // Check default values supplied by CLI match default SynchronizerConfiguration
-    final SynchronizerConfiguration defaultConfig = SynchronizerConfiguration.builder().build();
+  @Override
+  SynchronizerOptions optionsFromDomainObject(final SynchronizerConfiguration domainObject) {
+    return SynchronizerOptions.fromConfig(domainObject);
+  }
+
+  @Override
+  SynchronizerConfiguration optionsToDomainObject(final SynchronizerOptions options) {
+    return options.toDomainObject().build();
+  }
+
+  @Override
+  SynchronizerConfiguration getDomainObjectFromPantheonCommand() {
     verify(mockControllerBuilder).synchronizerConfiguration(syncConfigurationCaptor.capture());
-    final SynchronizerConfiguration syncConfig = syncConfigurationCaptor.getValue();
-
-    // Ignore fields that are initialized in a special way
-    final String[] ignoredDefaults = {"maxTrailingPeers", "computationParallelism"};
-
-    assertThat(syncConfig).isEqualToIgnoringGivenFields(defaultConfig, ignoredDefaults);
+    return syncConfigurationCaptor.getValue();
   }
 }

@@ -32,7 +32,8 @@ public class NetworkingOptions implements CLIOptions<NetworkingConfiguration> {
       paramLabel = "<INTEGER>",
       description =
           "The frequency (in seconds) at which to initiate new outgoing connections (default: ${DEFAULT-VALUE})")
-  private int initiateConnectionsFrequencySec = 30;
+  private int initiateConnectionsFrequencySec =
+      NetworkingConfiguration.DEFAULT_INITIATE_CONNECTIONS_FREQUENCY_SEC;
 
   @CommandLine.Option(
       names = CHECK_MAINTAINED_CONNECTIONS_FREQUENCY_FLAG,
@@ -41,7 +42,8 @@ public class NetworkingOptions implements CLIOptions<NetworkingConfiguration> {
       paramLabel = "<INTEGER>",
       description =
           "The frequency (in seconds) at which to check maintained connections (default: ${DEFAULT-VALUE})")
-  private int checkMaintainedConnectionsFrequencySec = 60;
+  private int checkMaintainedConnectionsFrequencySec =
+      NetworkingConfiguration.DEFAULT_CHECK_MAINTAINED_CONNECTSION_FREQUENCY_SEC;
 
   private NetworkingOptions() {}
 

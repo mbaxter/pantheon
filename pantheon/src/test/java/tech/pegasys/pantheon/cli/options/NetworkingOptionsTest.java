@@ -12,53 +12,42 @@
  */
 package tech.pegasys.pantheon.cli.options;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
-import tech.pegasys.pantheon.cli.CommandTestAbstract;
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 
-import org.junit.Test;
+public class NetworkingOptionsTest
+    extends AbstractCLIOptionsTest<NetworkingConfiguration, NetworkingOptions> {
 
-public class NetworkingOptionsTest extends CommandTestAbstract {
+  @Override
+  NetworkingConfiguration createDefaultDomainObject() {
+    return NetworkingConfiguration.create();
+  }
 
-  @Test
-  public void fromConfig() {
+  @Override
+  NetworkingConfiguration createCustomizedDomainObject() {
     final NetworkingConfiguration config = NetworkingConfiguration.create();
-    NetworkingOptions options = NetworkingOptions.fromConfig(config);
-
-    final NetworkingConfiguration configFromOptions = options.toDomainObject();
-    assertThat(configFromOptions).isEqualToComparingFieldByField(config);
+    config.setInitiateConnectionsFrequency(
+        NetworkingConfiguration.DEFAULT_INITIATE_CONNECTIONS_FREQUENCY_SEC + 10);
+    config.setCheckMaintainedConnectionsFrequency(
+        NetworkingConfiguration.DEFAULT_CHECK_MAINTAINED_CONNECTSION_FREQUENCY_SEC + 10);
+    return config;
   }
 
-  @Test
-  public void getCLIOptions() {
-    NetworkingOptions options = NetworkingOptions.create();
-    final String[] cliOptions = options.getCLIOptions().toArray(new String[0]);
-    final NetworkingConfiguration actualConfig = options.toDomainObject();
-
-    parseCommand(cliOptions);
-    verify(mockRunnerBuilder)
-        .networkingConfiguration(networkingConfigurationArgumentCaptor.capture());
-    final NetworkingConfiguration networkingConfiguration =
-        networkingConfigurationArgumentCaptor.getValue();
-    assertThat(actualConfig).isEqualToComparingFieldByField(networkingConfiguration);
-
-    assertThat(commandOutput.toString()).isEmpty();
-    assertThat(commandErrorOutput.toString()).isEmpty();
+  @Override
+  NetworkingOptions optionsFromDomainObject(final NetworkingConfiguration domainObject) {
+    return NetworkingOptions.fromConfig(domainObject);
   }
 
-  @Test
-  public void defaultValues() {
-    parseCommand();
+  @Override
+  NetworkingConfiguration optionsToDomainObject(final NetworkingOptions options) {
+    return options.toDomainObject();
+  }
 
-    // Check default values supplied by CLI match default config
-    final NetworkingConfiguration defaultConfig = NetworkingConfiguration.create();
+  @Override
+  NetworkingConfiguration getDomainObjectFromPantheonCommand() {
     verify(mockRunnerBuilder)
         .networkingConfiguration(networkingConfigurationArgumentCaptor.capture());
-    final NetworkingConfiguration networkingConfiguration =
-        networkingConfigurationArgumentCaptor.getValue();
-
-    assertThat(networkingConfiguration).isEqualToComparingFieldByField(defaultConfig);
+    return networkingConfigurationArgumentCaptor.getValue();
   }
 }
