@@ -59,6 +59,6 @@ public class RocksDBOptionsTest
 
   @Override
   protected List<String> getFieldsToIgnore() {
-    return Arrays.asList("databaseDir");
+    return Arrays.asList("databaseDir", "useColumns");
   }
 }

@@ -31,6 +31,7 @@ import tech.pegasys.pantheon.ethereum.eth.EthProtocolConfiguration;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManager;
 import tech.pegasys.pantheon.ethereum.eth.sync.BlockBroadcaster;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
+import tech.pegasys.pantheon.ethereum.eth.transactions.TransactionPoolConfiguration;
 import tech.pegasys.pantheon.ethereum.graphql.GraphQLConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.JsonRpcConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketConfiguration;
@@ -110,6 +111,8 @@ public abstract class CommandTestAbstract {
   protected @Captor ArgumentCaptor<MetricsConfiguration> metricsConfigArgumentCaptor;
   protected @Captor ArgumentCaptor<PermissioningConfiguration>
       permissioningConfigurationArgumentCaptor;
+  protected @Captor ArgumentCaptor<TransactionPoolConfiguration>
+      transactionPoolConfigurationArgumentCaptor;
 
   @Rule public final TemporaryFolder temp = new TemporaryFolder();
 
@@ -129,8 +132,8 @@ public abstract class CommandTestAbstract {
     when(mockControllerBuilder.rocksDbConfiguration(any())).thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.dataDirectory(any())).thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.miningParameters(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.maxPendingTransactions(anyInt())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.pendingTransactionRetentionPeriod(anyInt()))
+    when(mockControllerBuilder.transactionPoolConfiguration(
+            any(TransactionPoolConfiguration.class)))
         .thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.nodePrivateKeyFile(any())).thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.metricsSystem(any())).thenReturn(mockControllerBuilder);
