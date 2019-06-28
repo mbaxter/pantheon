@@ -39,7 +39,6 @@ import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.services.PantheonPluginContextImpl;
-import tech.pegasys.pantheon.services.kvstore.RocksDbConfiguration;
 import tech.pegasys.pantheon.util.BlockImporter;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
@@ -90,8 +89,6 @@ public abstract class CommandTestAbstract {
   protected @Mock ProtocolSchedule<Object> mockProtocolSchedule;
   protected @Mock ProtocolContext<Object> mockProtocolContext;
   protected @Mock BlockBroadcaster mockBlockBroadcaster;
-  protected @Mock RocksDbConfiguration.Builder mockRocksDbConfBuilder;
-  protected @Mock RocksDbConfiguration mockRocksDbConf;
   protected @Mock PantheonController<Object> mockController;
   protected @Mock BlockImporter mockBlockImporter;
   protected @Mock Logger mockLogger;
@@ -147,9 +144,6 @@ public abstract class CommandTestAbstract {
     lenient().when(mockController.getProtocolContext()).thenReturn(mockProtocolContext);
 
     when(mockEthProtocolManager.getBlockBroadcaster()).thenReturn(mockBlockBroadcaster);
-
-    when(mockRocksDbConfBuilder.databaseDir(any())).thenReturn(mockRocksDbConfBuilder);
-    when(mockRocksDbConfBuilder.build()).thenReturn(mockRocksDbConf);
 
     when(mockRunnerBuilder.vertx(any())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.pantheonController(any())).thenReturn(mockRunnerBuilder);
@@ -212,7 +206,6 @@ public abstract class CommandTestAbstract {
             mockBlockImporter,
             mockRunnerBuilder,
             mockControllerBuilderFactory,
-            mockRocksDbConfBuilder,
             keyLoader,
             mockPantheonPluginContext,
             environment);
@@ -241,7 +234,6 @@ public abstract class CommandTestAbstract {
         final BlockImporter mockBlockImporter,
         final RunnerBuilder mockRunnerBuilder,
         final PantheonController.Builder controllerBuilderFactory,
-        final RocksDbConfiguration.Builder mockRocksDbConfBuilder,
         final KeyLoader keyLoader,
         final PantheonPluginContextImpl pantheonPluginContext,
         final Map<String, String> environment) {
@@ -250,7 +242,6 @@ public abstract class CommandTestAbstract {
           mockBlockImporter,
           mockRunnerBuilder,
           controllerBuilderFactory,
-          mockRocksDbConfBuilder,
           pantheonPluginContext,
           environment);
       this.keyLoader = keyLoader;

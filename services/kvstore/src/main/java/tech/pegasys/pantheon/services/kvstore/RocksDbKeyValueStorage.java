@@ -27,6 +27,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.rocksdb.BlockBasedTableConfig;
+import org.rocksdb.LRUCache;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.Statistics;
@@ -65,7 +67,7 @@ public class RocksDbKeyValueStorage implements KeyValueStorage, Closeable {
           new Options()
               .setCreateIfMissing(true)
               .setMaxOpenFiles(rocksDbConfiguration.getMaxOpenFiles())
-              .setTableFormatConfig(rocksDbConfiguration.getBlockBasedTableConfig())
+              .setTableFormatConfig(createBlockBasedTableConfig(rocksDbConfiguration))
               .setMaxBackgroundCompactions(rocksDbConfiguration.getMaxBackgroundCompactions())
               .setStatistics(stats);
       options.getEnv().setBackgroundThreads(rocksDbConfiguration.getBackgroundThreadCount());
@@ -134,6 +136,11 @@ public class RocksDbKeyValueStorage implements KeyValueStorage, Closeable {
     } catch (final RocksDBException e) {
       throw new StorageException(e);
     }
+  }
+
+  private BlockBasedTableConfig createBlockBasedTableConfig(final RocksDbConfiguration config) {
+    final LRUCache cache = new LRUCache(config.getCacheCapacity());
+    return new BlockBasedTableConfig().setBlockCache(cache);
   }
 
   @Override

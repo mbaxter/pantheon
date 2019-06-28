@@ -41,6 +41,7 @@ import tech.pegasys.pantheon.cli.operator.OperatorSubCommand;
 import tech.pegasys.pantheon.cli.options.CLIOptions;
 import tech.pegasys.pantheon.cli.options.EthProtocolOptions;
 import tech.pegasys.pantheon.cli.options.NetworkingOptions;
+import tech.pegasys.pantheon.cli.options.RocksDBOptions;
 import tech.pegasys.pantheon.cli.options.SynchronizerOptions;
 import tech.pegasys.pantheon.cli.rlp.RLPSubCommand;
 import tech.pegasys.pantheon.config.GenesisConfigFile;
@@ -146,7 +147,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   private final CLIOptions<NetworkingConfiguration> networkingOptions = NetworkingOptions.create();
   private final SynchronizerOptions synchronizerOptions = SynchronizerOptions.create();
   private final EthProtocolOptions ethProtocolOptions = EthProtocolOptions.create();
-  private final RocksDbConfiguration.Builder rocksDbConfigurationBuilder;
+  private final RocksDBOptions rocksDBOptions = RocksDBOptions.create();
   private final RunnerBuilder runnerBuilder;
   private final PantheonController.Builder controllerBuilderFactory;
   private final PantheonPluginContextImpl pantheonPluginContext;
@@ -610,14 +611,12 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       final BlockImporter blockImporter,
       final RunnerBuilder runnerBuilder,
       final PantheonController.Builder controllerBuilderFactory,
-      final RocksDbConfiguration.Builder rocksDbConfigurationBuilder,
       final PantheonPluginContextImpl pantheonPluginContext,
       final Map<String, String> environment) {
     this.logger = logger;
     this.blockImporter = blockImporter;
     this.runnerBuilder = runnerBuilder;
     this.controllerBuilderFactory = controllerBuilderFactory;
-    this.rocksDbConfigurationBuilder = rocksDbConfigurationBuilder;
     this.pantheonPluginContext = pantheonPluginContext;
     this.environment = environment;
   }
@@ -674,7 +673,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
             "Synchronizer",
             synchronizerOptions,
             "RocksDB",
-            rocksDbConfigurationBuilder,
+            rocksDBOptions,
             "Ethereum Wire Protocol",
             ethProtocolOptions));
 
@@ -1082,7 +1081,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   }
 
   private RocksDbConfiguration buildRocksDbConfiguration() {
-    return rocksDbConfigurationBuilder.databaseDir(dataDir().resolve(DATABASE_PATH)).build();
+    return rocksDBOptions.toDomainObject().databaseDir(dataDir().resolve(DATABASE_PATH)).build();
   }
 
   // Blockchain synchronisation from peers.

@@ -16,6 +16,9 @@ import static org.mockito.Mockito.verify;
 
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
 
+import java.util.Arrays;
+import java.util.List;
+
 import com.google.common.collect.Range;
 
 public class SynchronizerOptionsTest
@@ -63,8 +66,8 @@ public class SynchronizerOptionsTest
   }
 
   @Override
-  protected String[] getFieldsWithComputedDefaults() {
-    return new String[] {"maxTrailingPeers", "computationParallelism"};
+  protected List<String> getFieldsWithComputedDefaults() {
+    return Arrays.asList("maxTrailingPeers", "computationParallelism");
   }
 
   @Override

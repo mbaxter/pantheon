@@ -333,7 +333,7 @@ public final class RunnerTest {
 
   private StorageProvider createKeyValueStorageProvider(final Path dbAhead) throws IOException {
     return RocksDbStorageProvider.create(
-        new RocksDbConfiguration.Builder().databaseDir(dbAhead).build(), new NoOpMetricsSystem());
+        RocksDbConfiguration.builder().databaseDir(dbAhead).build(), new NoOpMetricsSystem());
   }
 
   private JsonRpcConfiguration jsonRpcConfiguration() {

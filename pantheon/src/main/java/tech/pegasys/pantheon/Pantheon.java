@@ -17,7 +17,6 @@ import static org.apache.logging.log4j.LogManager.getLogger;
 import tech.pegasys.pantheon.cli.PantheonCommand;
 import tech.pegasys.pantheon.controller.PantheonController;
 import tech.pegasys.pantheon.services.PantheonPluginContextImpl;
-import tech.pegasys.pantheon.services.kvstore.RocksDbConfiguration;
 import tech.pegasys.pantheon.util.BlockImporter;
 
 import org.apache.logging.log4j.Logger;
@@ -38,7 +37,6 @@ public final class Pantheon {
             new BlockImporter(),
             new RunnerBuilder(),
             new PantheonController.Builder(),
-            new RocksDbConfiguration.Builder(),
             new PantheonPluginContextImpl(),
             System.getenv());
 

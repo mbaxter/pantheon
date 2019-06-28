@@ -91,7 +91,7 @@ public class WorldStateDownloaderBenchmark {
     final EthContext ethContext = ethProtocolManager.ethContext();
     storageProvider =
         RocksDbStorageProvider.create(
-            new RocksDbConfiguration.Builder().databaseDir(tempDir.resolve("database")).build(),
+            RocksDbConfiguration.builder().databaseDir(tempDir.resolve("database")).build(),
             metricsSystem);
     worldStateStorage = storageProvider.createWorldStateStorage();
 

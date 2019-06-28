@@ -16,6 +16,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import tech.pegasys.pantheon.cli.CommandTestAbstract;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import org.junit.Test;
 
 public abstract class AbstractCLIOptionsTest<D, T extends CLIOptions<?>>
@@ -52,7 +56,10 @@ public abstract class AbstractCLIOptionsTest<D, T extends CLIOptions<?>>
 
     parseCommand(cliOptions);
     final D actualDomainObject = getDomainObjectFromPantheonCommand();
-    assertThat(actualDomainObject).isEqualToComparingFieldByField(domainObject);
+
+    final List<String> fieldsToIgnore = getFieldsToIgnore();
+    final String[] ignored = fieldsToIgnore.toArray(new String[0]);
+    assertThat(actualDomainObject).isEqualToIgnoringGivenFields(domainObject, ignored);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -66,7 +73,10 @@ public abstract class AbstractCLIOptionsTest<D, T extends CLIOptions<?>>
     final D actualDomainObject = getDomainObjectFromPantheonCommand();
 
     // Check default values supplied by CLI match expected default values
-    final String[] ignoredDefaults = getFieldsWithComputedDefaults();
+    final List<String> fieldsToIgnore = new ArrayList<>();
+    fieldsToIgnore.addAll(getFieldsToIgnore());
+    fieldsToIgnore.addAll(getFieldsWithComputedDefaults());
+    final String[] ignoredDefaults = fieldsToIgnore.toArray(new String[0]);
     assertThat(actualDomainObject)
         .isEqualToIgnoringGivenFields(defaultDomainObject, ignoredDefaults);
   }
@@ -75,8 +85,12 @@ public abstract class AbstractCLIOptionsTest<D, T extends CLIOptions<?>>
 
   abstract D createCustomizedDomainObject();
 
-  protected String[] getFieldsWithComputedDefaults() {
-    return new String[] {};
+  protected List<String> getFieldsWithComputedDefaults() {
+    return Collections.emptyList();
+  }
+
+  protected List<String> getFieldsToIgnore() {
+    return Collections.emptyList();
   }
 
   abstract T optionsFromDomainObject(D domainObject);
