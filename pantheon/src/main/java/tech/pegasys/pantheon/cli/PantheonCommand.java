@@ -39,7 +39,6 @@ import tech.pegasys.pantheon.cli.custom.JsonRPCWhitelistHostsProperty;
 import tech.pegasys.pantheon.cli.custom.RpcAuthFileValidator;
 import tech.pegasys.pantheon.cli.operator.OperatorSubCommand;
 import tech.pegasys.pantheon.cli.options.EthProtocolOptions;
-import tech.pegasys.pantheon.cli.options.NetworkingOptions;
 import tech.pegasys.pantheon.cli.options.RocksDBOptions;
 import tech.pegasys.pantheon.cli.options.SynchronizerOptions;
 import tech.pegasys.pantheon.cli.options.TransactionPoolOptions;
@@ -143,7 +142,6 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
 
   private final BlockImporter blockImporter;
 
-  final NetworkingOptions networkingOptions = NetworkingOptions.create();
   final SynchronizerOptions synchronizerOptions = SynchronizerOptions.create();
   final EthProtocolOptions ethProtocolOptions = EthProtocolOptions.create();
   final RocksDBOptions rocksDBOptions = RocksDBOptions.create();
@@ -702,8 +700,6 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
     UnstableOptionsSubCommand.createUnstableOptions(
         commandLine,
         ImmutableMap.of(
-            "P2P Network",
-            networkingOptions,
             "Synchronizer",
             synchronizerOptions,
             "RocksDB",
@@ -1171,7 +1167,6 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
             .p2pAdvertisedHost(p2pAdvertisedHost)
             .p2pListenPort(p2pListenPort)
             .maxPeers(maxPeers)
-            .networkingConfiguration(networkingOptions.toDomainObject())
             .graphQLConfiguration(graphQLConfiguration)
             .jsonRpcConfiguration(jsonRpcConfiguration)
             .webSocketConfiguration(webSocketConfiguration)

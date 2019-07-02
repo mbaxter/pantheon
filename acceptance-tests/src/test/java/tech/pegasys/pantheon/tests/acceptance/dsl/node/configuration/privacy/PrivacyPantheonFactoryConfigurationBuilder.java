@@ -44,7 +44,6 @@ public class PrivacyPantheonFactoryConfigurationBuilder {
         config.isDevMode(),
         config.getGenesisConfigProvider(),
         config.isP2pEnabled(),
-        config.getNetworkingConfiguration(),
         config.isDiscoveryEnabled(),
         config.isBootnodeEligible(),
         config.getPlugins(),

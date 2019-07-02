@@ -24,7 +24,6 @@ import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Util;
 import tech.pegasys.pantheon.ethereum.jsonrpc.JsonRpcConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketConfiguration;
-import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.tests.acceptance.dsl.condition.Condition;
@@ -79,7 +78,6 @@ public class PantheonNode implements NodeConfiguration, RunnableNode, AutoClosea
   private final KeyPair keyPair;
   private final Properties portsProperties = new Properties();
   private final Boolean p2pEnabled;
-  private final NetworkingConfiguration networkingConfiguration;
 
   private final String name;
   private final MiningParameters miningParameters;
@@ -114,7 +112,6 @@ public class PantheonNode implements NodeConfiguration, RunnableNode, AutoClosea
       final boolean devMode,
       final GenesisConfigurationProvider genesisConfigProvider,
       final boolean p2pEnabled,
-      final NetworkingConfiguration networkingConfiguration,
       final boolean discoveryEnabled,
       final boolean bootnodeEligible,
       final List<String> plugins,
@@ -142,7 +139,6 @@ public class PantheonNode implements NodeConfiguration, RunnableNode, AutoClosea
     this.genesisConfigProvider = genesisConfigProvider;
     this.devMode = devMode;
     this.p2pEnabled = p2pEnabled;
-    this.networkingConfiguration = networkingConfiguration;
     this.discoveryEnabled = discoveryEnabled;
     plugins.forEach(
         pluginName -> {
@@ -474,10 +470,6 @@ public class PantheonNode implements NodeConfiguration, RunnableNode, AutoClosea
   @Override
   public boolean isP2pEnabled() {
     return p2pEnabled;
-  }
-
-  public NetworkingConfiguration getNetworkingConfiguration() {
-    return networkingConfiguration;
   }
 
   @Override

@@ -22,7 +22,6 @@ import tech.pegasys.pantheon.ethereum.core.MiningParameters;
 import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.jsonrpc.JsonRpcConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketConfiguration;
-import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.tests.acceptance.dsl.node.PantheonNode;
@@ -56,7 +55,6 @@ public class PrivacyNode extends PantheonNode {
       final boolean devMode,
       final GenesisConfigurationProvider genesisConfigProvider,
       final boolean p2pEnabled,
-      final NetworkingConfiguration networkingConfiguration,
       final boolean discoveryEnabled,
       final boolean bootnodeEligible,
       final List<String> plugins,
@@ -75,7 +73,6 @@ public class PrivacyNode extends PantheonNode {
         devMode,
         genesisConfigProvider,
         p2pEnabled,
-        networkingConfiguration,
         discoveryEnabled,
         bootnodeEligible,
         plugins,
