@@ -43,6 +43,7 @@ import tech.pegasys.pantheon.cli.options.EthProtocolOptions;
 import tech.pegasys.pantheon.cli.options.NetworkingOptions;
 import tech.pegasys.pantheon.cli.options.RocksDBOptions;
 import tech.pegasys.pantheon.cli.options.SynchronizerOptions;
+import tech.pegasys.pantheon.cli.options.TransactionPoolOptions;
 import tech.pegasys.pantheon.cli.rlp.RLPSubCommand;
 import tech.pegasys.pantheon.config.GenesisConfigFile;
 import tech.pegasys.pantheon.controller.KeyPairUtil;
@@ -53,7 +54,6 @@ import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Wei;
 import tech.pegasys.pantheon.ethereum.eth.sync.SyncMode;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
-import tech.pegasys.pantheon.ethereum.eth.transactions.PendingTransactions;
 import tech.pegasys.pantheon.ethereum.eth.transactions.TransactionPoolConfiguration;
 import tech.pegasys.pantheon.ethereum.graphql.GraphQLConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.JsonRpcConfiguration;
@@ -149,7 +149,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   private final SynchronizerOptions synchronizerOptions = SynchronizerOptions.create();
   private final EthProtocolOptions ethProtocolOptions = EthProtocolOptions.create();
   private final RocksDBOptions rocksDBOptions = RocksDBOptions.create();
-  private final TransactionPoolConfiguration.Builder transactionPoolConfigurationBuilder;
+  private final TransactionPoolOptions transactionPoolOptions = TransactionPoolOptions.create();
   private final RunnerBuilder runnerBuilder;
   private final PantheonController.Builder controllerBuilderFactory;
   private final PantheonPluginContextImpl pantheonPluginContext;
@@ -563,7 +563,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       description =
           "Maximum number of pending transactions that will be kept in the transaction pool (default: ${DEFAULT-VALUE})",
       arity = "1")
-  private final Integer txPoolMaxSize = PendingTransactions.MAX_PENDING_TRANSACTIONS;
+  private final Integer txPoolMaxSize = TransactionPoolConfiguration.MAX_PENDING_TRANSACTIONS;
 
   @Option(
       names = {"--tx-pool-retention-hours"},
@@ -571,7 +571,8 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       description =
           "Maximum retention period of pending transactions in hours (default: ${DEFAULT-VALUE})",
       arity = "1")
-  private final Integer pendingTxRetentionPeriod = PendingTransactions.DEFAULT_TX_RETENTION_HOURS;
+  private final Integer pendingTxRetentionPeriod =
+      TransactionPoolConfiguration.DEFAULT_TX_RETENTION_HOURS;
 
   private EthNetworkConfig ethNetworkConfig;
   private JsonRpcConfiguration jsonRpcConfiguration;
@@ -622,14 +623,12 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       final BlockImporter blockImporter,
       final RunnerBuilder runnerBuilder,
       final PantheonController.Builder controllerBuilderFactory,
-      final TransactionPoolConfiguration.Builder transactionPoolConfigurationBuilder,
       final PantheonPluginContextImpl pantheonPluginContext,
       final Map<String, String> environment) {
     this.logger = logger;
     this.blockImporter = blockImporter;
     this.runnerBuilder = runnerBuilder;
     this.controllerBuilderFactory = controllerBuilderFactory;
-    this.transactionPoolConfigurationBuilder = transactionPoolConfigurationBuilder;
     this.pantheonPluginContext = pantheonPluginContext;
     this.environment = environment;
   }
@@ -714,7 +713,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
             "Ethereum Wire Protocol",
             ethProtocolOptions,
             "TransactionPool",
-            transactionPoolConfigurationBuilder));
+            transactionPoolOptions));
     return this;
   }
 
@@ -1136,7 +1135,8 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   }
 
   private TransactionPoolConfiguration buildTransactionPoolConfiguration() {
-    return transactionPoolConfigurationBuilder
+    return transactionPoolOptions
+        .toDomainObject()
         .txPoolMaxSize(txPoolMaxSize)
         .pendingTxRetentionPeriod(pendingTxRetentionPeriod)
         .build();

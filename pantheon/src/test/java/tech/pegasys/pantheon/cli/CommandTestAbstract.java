@@ -94,12 +94,8 @@ public abstract class CommandTestAbstract {
   protected @Mock BlockImporter mockBlockImporter;
   protected @Mock Logger mockLogger;
   protected @Mock PantheonPluginContextImpl mockPantheonPluginContext;
-  protected TransactionPoolConfiguration.Builder mockTransactionPoolConfigurationBuilder =
-      TransactionPoolConfiguration.builder();
-  @Mock TransactionPoolConfiguration mockTransactionPoolConfiguration;
 
   protected @Captor ArgumentCaptor<Collection<BytesValue>> bytesValueCollectionCollector;
-  protected @Captor ArgumentCaptor<Collection<String>> stringListArgumentCaptor;
   protected @Captor ArgumentCaptor<Path> pathArgumentCaptor;
   protected @Captor ArgumentCaptor<File> fileArgumentCaptor;
   protected @Captor ArgumentCaptor<String> stringArgumentCaptor;
@@ -114,8 +110,7 @@ public abstract class CommandTestAbstract {
   protected @Captor ArgumentCaptor<MetricsConfiguration> metricsConfigArgumentCaptor;
   protected @Captor ArgumentCaptor<PermissioningConfiguration>
       permissioningConfigurationArgumentCaptor;
-  protected @Captor ArgumentCaptor<TransactionPoolConfiguration>
-      transactionPoolConfigurationArgumentCaptor;
+  protected @Captor ArgumentCaptor<TransactionPoolConfiguration> transactionPoolConfigCaptor;
 
   @Rule public final TemporaryFolder temp = new TemporaryFolder();
 
@@ -211,7 +206,6 @@ public abstract class CommandTestAbstract {
             mockBlockImporter,
             mockRunnerBuilder,
             mockControllerBuilderFactory,
-            mockTransactionPoolConfigurationBuilder,
             keyLoader,
             mockPantheonPluginContext,
             environment);
@@ -240,7 +234,6 @@ public abstract class CommandTestAbstract {
         final BlockImporter mockBlockImporter,
         final RunnerBuilder mockRunnerBuilder,
         final PantheonController.Builder controllerBuilderFactory,
-        final TransactionPoolConfiguration.Builder mockTransactionPoolConfigurationBuilder,
         final KeyLoader keyLoader,
         final PantheonPluginContextImpl pantheonPluginContext,
         final Map<String, String> environment) {
@@ -249,7 +242,6 @@ public abstract class CommandTestAbstract {
           mockBlockImporter,
           mockRunnerBuilder,
           controllerBuilderFactory,
-          mockTransactionPoolConfigurationBuilder,
           pantheonPluginContext,
           environment);
       this.keyLoader = keyLoader;

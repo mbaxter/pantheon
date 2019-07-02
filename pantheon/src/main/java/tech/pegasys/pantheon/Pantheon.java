@@ -16,7 +16,6 @@ import static org.apache.logging.log4j.LogManager.getLogger;
 
 import tech.pegasys.pantheon.cli.PantheonCommand;
 import tech.pegasys.pantheon.controller.PantheonController;
-import tech.pegasys.pantheon.ethereum.eth.transactions.TransactionPoolConfiguration;
 import tech.pegasys.pantheon.services.PantheonPluginContextImpl;
 import tech.pegasys.pantheon.util.BlockImporter;
 
@@ -38,7 +37,6 @@ public final class Pantheon {
             new BlockImporter(),
             new RunnerBuilder(),
             new PantheonController.Builder(),
-            TransactionPoolConfiguration.builder(),
             new PantheonPluginContextImpl(),
             System.getenv());
 

@@ -2542,22 +2542,9 @@ public class PantheonCommandTest extends CommandTestAbstract {
     final int pendingTxRetentionHours = 999;
     parseCommand("--tx-pool-retention-hours", String.valueOf(pendingTxRetentionHours));
     verify(mockControllerBuilder)
-        .transactionPoolConfiguration(transactionPoolConfigurationArgumentCaptor.capture());
-    assertThat(transactionPoolConfigurationArgumentCaptor.getValue().getPendingTxRetentionPeriod())
+        .transactionPoolConfiguration(transactionPoolConfigCaptor.capture());
+    assertThat(transactionPoolConfigCaptor.getValue().getPendingTxRetentionPeriod())
         .isEqualTo(pendingTxRetentionHours);
-    assertThat(commandOutput.toString()).isEmpty();
-    assertThat(commandErrorOutput.toString()).isEmpty();
-  }
-
-  @Test
-  public void txMessageKeepAliveSeconds() {
-    final int txMessageKeepAliveSeconds = 999;
-    parseCommand(
-        "--Xincoming-tx-messages-keep-alive-seconds", String.valueOf(txMessageKeepAliveSeconds));
-    verify(mockControllerBuilder)
-        .transactionPoolConfiguration(transactionPoolConfigurationArgumentCaptor.capture());
-    assertThat(transactionPoolConfigurationArgumentCaptor.getValue().getTxMessageKeepAliveSeconds())
-        .isEqualTo(txMessageKeepAliveSeconds);
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
   }
