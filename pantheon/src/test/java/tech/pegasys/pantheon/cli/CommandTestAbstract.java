@@ -80,37 +80,39 @@ public abstract class CommandTestAbstract {
   private final PrintStream errPrintStream = new PrintStream(commandErrorOutput);
   private final HashMap<String, String> environment = new HashMap<>();
 
-  protected @Mock RunnerBuilder mockRunnerBuilder;
-  protected @Mock Runner mockRunner;
+  @Mock protected RunnerBuilder mockRunnerBuilder;
+  @Mock protected Runner mockRunner;
 
-  protected @Mock PantheonController.Builder mockControllerBuilderFactory;
+  @Mock protected PantheonController.Builder mockControllerBuilderFactory;
 
-  protected @Mock PantheonControllerBuilder<Void> mockControllerBuilder;
-  protected @Mock EthProtocolManager mockEthProtocolManager;
-  protected @Mock ProtocolSchedule<Object> mockProtocolSchedule;
-  protected @Mock ProtocolContext<Object> mockProtocolContext;
-  protected @Mock BlockBroadcaster mockBlockBroadcaster;
-  protected @Mock PantheonController<Object> mockController;
-  protected @Mock BlockImporter mockBlockImporter;
-  protected @Mock Logger mockLogger;
-  protected @Mock PantheonPluginContextImpl mockPantheonPluginContext;
+  @Mock protected PantheonControllerBuilder<Void> mockControllerBuilder;
+  @Mock protected EthProtocolManager mockEthProtocolManager;
+  @Mock protected ProtocolSchedule<Object> mockProtocolSchedule;
+  @Mock protected ProtocolContext<Object> mockProtocolContext;
+  @Mock protected BlockBroadcaster mockBlockBroadcaster;
+  @Mock protected PantheonController<Object> mockController;
+  @Mock protected BlockImporter mockBlockImporter;
+  @Mock protected Logger mockLogger;
+  @Mock protected PantheonPluginContextImpl mockPantheonPluginContext;
 
-  protected @Captor ArgumentCaptor<Collection<BytesValue>> bytesValueCollectionCollector;
-  protected @Captor ArgumentCaptor<Path> pathArgumentCaptor;
-  protected @Captor ArgumentCaptor<File> fileArgumentCaptor;
-  protected @Captor ArgumentCaptor<String> stringArgumentCaptor;
-  protected @Captor ArgumentCaptor<Integer> intArgumentCaptor;
-  protected @Captor ArgumentCaptor<EthNetworkConfig> ethNetworkConfigArgumentCaptor;
-  protected @Captor ArgumentCaptor<NetworkingConfiguration> networkingConfigurationArgumentCaptor;
-  protected @Captor ArgumentCaptor<EthProtocolConfiguration> ethProtocolConfigurationCaptor;
-  protected @Captor ArgumentCaptor<SynchronizerConfiguration> syncConfigurationCaptor;
-  protected @Captor ArgumentCaptor<JsonRpcConfiguration> jsonRpcConfigArgumentCaptor;
-  protected @Captor ArgumentCaptor<GraphQLConfiguration> graphQLConfigArgumentCaptor;
-  protected @Captor ArgumentCaptor<WebSocketConfiguration> wsRpcConfigArgumentCaptor;
-  protected @Captor ArgumentCaptor<MetricsConfiguration> metricsConfigArgumentCaptor;
-  protected @Captor ArgumentCaptor<PermissioningConfiguration>
-      permissioningConfigurationArgumentCaptor;
-  protected @Captor ArgumentCaptor<TransactionPoolConfiguration> transactionPoolConfigCaptor;
+  @Captor protected ArgumentCaptor<Collection<BytesValue>> bytesValueCollectionCollector;
+  @Captor protected ArgumentCaptor<Path> pathArgumentCaptor;
+  @Captor protected ArgumentCaptor<File> fileArgumentCaptor;
+  @Captor protected ArgumentCaptor<String> stringArgumentCaptor;
+  @Captor protected ArgumentCaptor<Integer> intArgumentCaptor;
+  @Captor protected ArgumentCaptor<EthNetworkConfig> ethNetworkConfigArgumentCaptor;
+  @Captor protected ArgumentCaptor<NetworkingConfiguration> networkingConfigurationArgumentCaptor;
+  @Captor protected ArgumentCaptor<EthProtocolConfiguration> ethProtocolConfigurationCaptor;
+  @Captor protected ArgumentCaptor<SynchronizerConfiguration> syncConfigurationCaptor;
+  @Captor protected ArgumentCaptor<JsonRpcConfiguration> jsonRpcConfigArgumentCaptor;
+  @Captor protected ArgumentCaptor<GraphQLConfiguration> graphQLConfigArgumentCaptor;
+  @Captor protected ArgumentCaptor<WebSocketConfiguration> wsRpcConfigArgumentCaptor;
+  @Captor protected ArgumentCaptor<MetricsConfiguration> metricsConfigArgumentCaptor;
+
+  @Captor
+  protected ArgumentCaptor<PermissioningConfiguration> permissioningConfigurationArgumentCaptor;
+
+  @Captor protected ArgumentCaptor<TransactionPoolConfiguration> transactionPoolConfigCaptor;
 
   @Rule public final TemporaryFolder temp = new TemporaryFolder();
 
