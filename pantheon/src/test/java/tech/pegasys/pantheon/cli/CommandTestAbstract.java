@@ -23,11 +23,15 @@ import static org.mockito.Mockito.when;
 import tech.pegasys.pantheon.Runner;
 import tech.pegasys.pantheon.RunnerBuilder;
 import tech.pegasys.pantheon.cli.PublicKeySubCommand.KeyLoader;
+import tech.pegasys.pantheon.cli.options.EthProtocolOptions;
+import tech.pegasys.pantheon.cli.options.NetworkingOptions;
+import tech.pegasys.pantheon.cli.options.RocksDBOptions;
+import tech.pegasys.pantheon.cli.options.SynchronizerOptions;
+import tech.pegasys.pantheon.cli.options.TransactionPoolOptions;
 import tech.pegasys.pantheon.controller.PantheonController;
 import tech.pegasys.pantheon.controller.PantheonControllerBuilder;
 import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
-import tech.pegasys.pantheon.ethereum.eth.EthProtocolConfiguration;
 import tech.pegasys.pantheon.ethereum.eth.manager.EthProtocolManager;
 import tech.pegasys.pantheon.ethereum.eth.sync.BlockBroadcaster;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
@@ -36,7 +40,6 @@ import tech.pegasys.pantheon.ethereum.graphql.GraphQLConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.JsonRpcConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketConfiguration;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
-import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.services.PantheonPluginContextImpl;
@@ -66,6 +69,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 import picocli.CommandLine;
 import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.RunLast;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -101,8 +105,6 @@ public abstract class CommandTestAbstract {
   @Captor protected ArgumentCaptor<String> stringArgumentCaptor;
   @Captor protected ArgumentCaptor<Integer> intArgumentCaptor;
   @Captor protected ArgumentCaptor<EthNetworkConfig> ethNetworkConfigArgumentCaptor;
-  @Captor protected ArgumentCaptor<NetworkingConfiguration> networkingConfigurationArgumentCaptor;
-  @Captor protected ArgumentCaptor<EthProtocolConfiguration> ethProtocolConfigurationCaptor;
   @Captor protected ArgumentCaptor<SynchronizerConfiguration> syncConfigurationCaptor;
   @Captor protected ArgumentCaptor<JsonRpcConfiguration> jsonRpcConfigArgumentCaptor;
   @Captor protected ArgumentCaptor<GraphQLConfiguration> graphQLConfigArgumentCaptor;
@@ -184,20 +186,19 @@ public abstract class CommandTestAbstract {
     environment.put(name, value);
   }
 
-  protected CommandLine.Model.CommandSpec parseCommand(final String... args) {
+  protected TestPantheonCommand parseCommand(final String... args) {
     return parseCommand(System.in, args);
   }
 
-  protected CommandLine.Model.CommandSpec parseCommand(
-      final KeyLoader keyLoader, final String... args) {
+  protected TestPantheonCommand parseCommand(final KeyLoader keyLoader, final String... args) {
     return parseCommand(keyLoader, System.in, args);
   }
 
-  protected CommandLine.Model.CommandSpec parseCommand(final InputStream in, final String... args) {
+  protected TestPantheonCommand parseCommand(final InputStream in, final String... args) {
     return parseCommand(f -> KeyPair.generate(), in, args);
   }
 
-  private CommandLine.Model.CommandSpec parseCommand(
+  private TestPantheonCommand parseCommand(
       final KeyLoader keyLoader, final InputStream in, final String... args) {
     // turn off ansi usage globally in picocli
     System.setProperty("picocli.ansi", "false");
@@ -218,11 +219,11 @@ public abstract class CommandTestAbstract {
         pantheonCommand.exceptionHandler().useErr(errPrintStream).useAnsi(Ansi.OFF),
         in,
         args);
-    return pantheonCommand.spec;
+    return pantheonCommand;
   }
 
   @CommandLine.Command
-  static class TestPantheonCommand extends PantheonCommand {
+  public static class TestPantheonCommand extends PantheonCommand {
     @CommandLine.Spec CommandLine.Model.CommandSpec spec;
     private final KeyLoader keyLoader;
 
@@ -247,6 +248,30 @@ public abstract class CommandTestAbstract {
           pantheonPluginContext,
           environment);
       this.keyLoader = keyLoader;
+    }
+
+    public CommandSpec getSpec() {
+      return spec;
+    }
+
+    public RocksDBOptions getRocksDBOptions() {
+      return rocksDBOptions;
+    }
+
+    public NetworkingOptions getNetworkingOptions() {
+      return networkingOptions;
+    }
+
+    public SynchronizerOptions getSynchronizerOptions() {
+      return synchronizerOptions;
+    }
+
+    public EthProtocolOptions getEthProtocolOptions() {
+      return ethProtocolOptions;
+    }
+
+    public TransactionPoolOptions getTransactionPoolOptions() {
+      return transactionPoolOptions;
     }
   }
 }

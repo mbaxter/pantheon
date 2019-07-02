@@ -12,49 +12,36 @@
  */
 package tech.pegasys.pantheon.cli.options;
 
-import static org.mockito.Mockito.verify;
-
 import tech.pegasys.pantheon.services.kvstore.RocksDbConfiguration;
 
 import java.util.Arrays;
 import java.util.List;
 
-import org.mockito.ArgumentCaptor;
-
 public class RocksDBOptionsTest
-    extends AbstractCLIOptionsTest<RocksDbConfiguration, RocksDBOptions> {
+    extends AbstractCLIOptionsTest<RocksDbConfiguration.Builder, RocksDBOptions> {
 
   @Override
-  RocksDbConfiguration createDefaultDomainObject() {
-    return RocksDbConfiguration.builder().build();
+  RocksDbConfiguration.Builder createDefaultDomainObject() {
+    return RocksDbConfiguration.builder();
   }
 
   @Override
-  RocksDbConfiguration createCustomizedDomainObject() {
+  RocksDbConfiguration.Builder createCustomizedDomainObject() {
     return RocksDbConfiguration.builder()
         .maxOpenFiles(RocksDbConfiguration.DEFAULT_MAX_OPEN_FILES + 1)
         .cacheCapacity(RocksDbConfiguration.DEFAULT_CACHE_CAPACITY + 1)
         .maxBackgroundCompactions(RocksDbConfiguration.DEFAULT_MAX_BACKGROUND_COMPACTIONS + 1)
-        .backgroundThreadCount(RocksDbConfiguration.DEFAULT_BACKGROUND_THREAD_COUNT + 1)
-        .build();
+        .backgroundThreadCount(RocksDbConfiguration.DEFAULT_BACKGROUND_THREAD_COUNT + 1);
   }
 
   @Override
-  RocksDBOptions optionsFromDomainObject(final RocksDbConfiguration domainObject) {
-    return RocksDBOptions.fromConfig(domainObject);
+  RocksDBOptions optionsFromDomainObject(final RocksDbConfiguration.Builder domainObject) {
+    return RocksDBOptions.fromConfig(domainObject.build());
   }
 
   @Override
-  RocksDbConfiguration optionsToDomainObject(final RocksDBOptions options) {
-    return options.toDomainObject().build();
-  }
-
-  @Override
-  RocksDbConfiguration getDomainObjectFromPantheonCommand() {
-    final ArgumentCaptor<RocksDbConfiguration> captor =
-        ArgumentCaptor.forClass(RocksDbConfiguration.class);
-    verify(mockControllerBuilder).rocksDbConfiguration(captor.capture());
-    return captor.getValue();
+  RocksDBOptions getOptionsFromPantheonCommand(final TestPantheonCommand command) {
+    return command.getRocksDBOptions();
   }
 
   @Override

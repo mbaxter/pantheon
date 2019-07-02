@@ -38,7 +38,6 @@ import tech.pegasys.pantheon.cli.custom.CorsAllowedOriginsProperty;
 import tech.pegasys.pantheon.cli.custom.JsonRPCWhitelistHostsProperty;
 import tech.pegasys.pantheon.cli.custom.RpcAuthFileValidator;
 import tech.pegasys.pantheon.cli.operator.OperatorSubCommand;
-import tech.pegasys.pantheon.cli.options.CLIOptions;
 import tech.pegasys.pantheon.cli.options.EthProtocolOptions;
 import tech.pegasys.pantheon.cli.options.NetworkingOptions;
 import tech.pegasys.pantheon.cli.options.RocksDBOptions;
@@ -61,7 +60,6 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApi;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcApis;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.config.DiscoveryConfiguration;
-import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 import tech.pegasys.pantheon.ethereum.p2p.peers.EnodeURL;
 import tech.pegasys.pantheon.ethereum.p2p.peers.StaticNodesParser;
 import tech.pegasys.pantheon.ethereum.permissioning.LocalPermissioningConfiguration;
@@ -145,11 +143,11 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
 
   private final BlockImporter blockImporter;
 
-  private final CLIOptions<NetworkingConfiguration> networkingOptions = NetworkingOptions.create();
-  private final SynchronizerOptions synchronizerOptions = SynchronizerOptions.create();
-  private final EthProtocolOptions ethProtocolOptions = EthProtocolOptions.create();
-  private final RocksDBOptions rocksDBOptions = RocksDBOptions.create();
-  private final TransactionPoolOptions transactionPoolOptions = TransactionPoolOptions.create();
+  final NetworkingOptions networkingOptions = NetworkingOptions.create();
+  final SynchronizerOptions synchronizerOptions = SynchronizerOptions.create();
+  final EthProtocolOptions ethProtocolOptions = EthProtocolOptions.create();
+  final RocksDBOptions rocksDBOptions = RocksDBOptions.create();
+  final TransactionPoolOptions transactionPoolOptions = TransactionPoolOptions.create();
   private final RunnerBuilder runnerBuilder;
   private final PantheonController.Builder controllerBuilderFactory;
   private final PantheonPluginContextImpl pantheonPluginContext;

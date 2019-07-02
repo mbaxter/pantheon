@@ -13,7 +13,6 @@
 package tech.pegasys.pantheon.cli.options;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
 
 import tech.pegasys.pantheon.ethereum.p2p.config.NetworkingConfiguration;
 
@@ -24,9 +23,11 @@ public class NetworkingOptionsTest
 
   @Test
   public void checkMaintainedConnectionsFrequencyFlag_isSet() {
-    parseCommand("--Xp2p-check-maintained-connections-frequency", "2");
+    final TestPantheonCommand cmd =
+        parseCommand("--Xp2p-check-maintained-connections-frequency", "2");
 
-    final NetworkingConfiguration networkingConfig = getDomainObjectFromPantheonCommand();
+    final NetworkingOptions options = cmd.getNetworkingOptions();
+    final NetworkingConfiguration networkingConfig = options.toDomainObject();
     assertThat(networkingConfig.getCheckMaintainedConnectionsFrequencySec()).isEqualTo(2);
 
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -35,9 +36,10 @@ public class NetworkingOptionsTest
 
   @Test
   public void checkMaintainedFrequencyConnectionsFlag_isNotSet() {
-    parseCommand();
+    final TestPantheonCommand cmd = parseCommand();
 
-    final NetworkingConfiguration networkingConfig = getDomainObjectFromPantheonCommand();
+    final NetworkingOptions options = cmd.getNetworkingOptions();
+    final NetworkingConfiguration networkingConfig = options.toDomainObject();
     assertThat(networkingConfig.getCheckMaintainedConnectionsFrequencySec()).isEqualTo(60);
 
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -46,9 +48,10 @@ public class NetworkingOptionsTest
 
   @Test
   public void initiateConnectionsFrequencyFlag_isSet() {
-    parseCommand("--Xp2p-initiate-connections-frequency", "2");
+    final TestPantheonCommand cmd = parseCommand("--Xp2p-initiate-connections-frequency", "2");
 
-    final NetworkingConfiguration networkingConfig = getDomainObjectFromPantheonCommand();
+    final NetworkingOptions options = cmd.getNetworkingOptions();
+    final NetworkingConfiguration networkingConfig = options.toDomainObject();
     assertThat(networkingConfig.getInitiateConnectionsFrequencySec()).isEqualTo(2);
 
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -57,8 +60,10 @@ public class NetworkingOptionsTest
 
   @Test
   public void initiateConnectionsFrequencyFlag_isNotSet() {
-    parseCommand();
-    final NetworkingConfiguration networkingConfig = getDomainObjectFromPantheonCommand();
+    final TestPantheonCommand cmd = parseCommand();
+
+    final NetworkingOptions options = cmd.getNetworkingOptions();
+    final NetworkingConfiguration networkingConfig = options.toDomainObject();
     assertThat(networkingConfig.getInitiateConnectionsFrequencySec()).isEqualTo(30);
 
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -86,14 +91,7 @@ public class NetworkingOptionsTest
   }
 
   @Override
-  NetworkingConfiguration optionsToDomainObject(final NetworkingOptions options) {
-    return options.toDomainObject();
-  }
-
-  @Override
-  NetworkingConfiguration getDomainObjectFromPantheonCommand() {
-    verify(mockRunnerBuilder)
-        .networkingConfiguration(networkingConfigurationArgumentCaptor.capture());
-    return networkingConfigurationArgumentCaptor.getValue();
+  NetworkingOptions getOptionsFromPantheonCommand(final TestPantheonCommand pantheonCommand) {
+    return pantheonCommand.getNetworkingOptions();
   }
 }

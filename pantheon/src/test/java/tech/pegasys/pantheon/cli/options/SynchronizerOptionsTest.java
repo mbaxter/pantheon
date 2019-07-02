@@ -12,8 +12,6 @@
  */
 package tech.pegasys.pantheon.cli.options;
 
-import static org.mockito.Mockito.verify;
-
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
 
 import java.util.Arrays;
@@ -22,15 +20,15 @@ import java.util.List;
 import com.google.common.collect.Range;
 
 public class SynchronizerOptionsTest
-    extends AbstractCLIOptionsTest<SynchronizerConfiguration, SynchronizerOptions> {
+    extends AbstractCLIOptionsTest<SynchronizerConfiguration.Builder, SynchronizerOptions> {
 
   @Override
-  SynchronizerConfiguration createDefaultDomainObject() {
-    return SynchronizerConfiguration.builder().build();
+  SynchronizerConfiguration.Builder createDefaultDomainObject() {
+    return SynchronizerConfiguration.builder();
   }
 
   @Override
-  SynchronizerConfiguration createCustomizedDomainObject() {
+  SynchronizerConfiguration.Builder createCustomizedDomainObject() {
     return SynchronizerConfiguration.builder()
         .fastSyncPivotDistance(SynchronizerConfiguration.DEFAULT_PIVOT_DISTANCE_FROM_HEAD + 10)
         .fastSyncFullValidationRate(SynchronizerConfiguration.DEFAULT_FULL_VALIDATION_RATE / 2)
@@ -59,8 +57,7 @@ public class SynchronizerOptionsTest
             SynchronizerConfiguration.DEFAULT_DOWNLOADER_CHAIN_SEGMENT_SIZE + 2)
         .downloaderParallelism(SynchronizerConfiguration.DEFAULT_DOWNLOADER_PARALLELISM + 2)
         .transactionsParallelism(SynchronizerConfiguration.DEFAULT_TRANSACTIONS_PARALLELISM + 2)
-        .computationParallelism(SynchronizerConfiguration.DEFAULT_COMPUTATION_PARALLELISM + 2)
-        .build();
+        .computationParallelism(SynchronizerConfiguration.DEFAULT_COMPUTATION_PARALLELISM + 2);
   }
 
   @Override
@@ -69,23 +66,18 @@ public class SynchronizerOptionsTest
   }
 
   @Override
-  SynchronizerOptions optionsFromDomainObject(final SynchronizerConfiguration domainObject) {
-    return SynchronizerOptions.fromConfig(domainObject);
-  }
-
-  @Override
-  SynchronizerConfiguration optionsToDomainObject(final SynchronizerOptions options) {
-    return options.toDomainObject().build();
-  }
-
-  @Override
-  SynchronizerConfiguration getDomainObjectFromPantheonCommand() {
-    verify(mockControllerBuilder).synchronizerConfiguration(syncConfigurationCaptor.capture());
-    return syncConfigurationCaptor.getValue();
+  SynchronizerOptions getOptionsFromPantheonCommand(final TestPantheonCommand pantheonCommand) {
+    return pantheonCommand.getSynchronizerOptions();
   }
 
   @Override
   protected List<String> getFieldsToIgnore() {
     return Arrays.asList("fastSyncMinimumPeerCount");
+  }
+
+  @Override
+  SynchronizerOptions optionsFromDomainObject(
+      final SynchronizerConfiguration.Builder domainObject) {
+    return SynchronizerOptions.fromConfig(domainObject.build());
   }
 }

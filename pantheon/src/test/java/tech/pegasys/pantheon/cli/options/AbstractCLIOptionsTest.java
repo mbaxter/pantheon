@@ -16,13 +16,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import tech.pegasys.pantheon.cli.CommandTestAbstract;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import org.junit.Test;
 
-public abstract class AbstractCLIOptionsTest<D, T extends CLIOptions<?>>
+public abstract class AbstractCLIOptionsTest<D, T extends CLIOptions<D>>
     extends CommandTestAbstract {
   @Test
   public void fromDomainObject_default() {
@@ -36,7 +35,7 @@ public abstract class AbstractCLIOptionsTest<D, T extends CLIOptions<?>>
 
   private void fromDomainObject(final D domainObject) {
     final T options = optionsFromDomainObject(domainObject);
-    final D domainObjectFromOptions = optionsToDomainObject(options);
+    final D domainObjectFromOptions = options.toDomainObject();
 
     final List<String> fieldsToIgnore = getFieldsToIgnore();
     final String[] ignored = fieldsToIgnore.toArray(new String[0]);
@@ -57,12 +56,10 @@ public abstract class AbstractCLIOptionsTest<D, T extends CLIOptions<?>>
     T options = optionsFromDomainObject(domainObject);
     final String[] cliOptions = options.getCLIOptions().toArray(new String[0]);
 
-    parseCommand(cliOptions);
-    final D actualDomainObject = getDomainObjectFromPantheonCommand();
+    final TestPantheonCommand cmd = parseCommand(cliOptions);
+    final T optionsFromCommand = getOptionsFromPantheonCommand(cmd);
 
-    final List<String> fieldsToIgnore = getFieldsToIgnore();
-    final String[] ignored = fieldsToIgnore.toArray(new String[0]);
-    assertThat(actualDomainObject).isEqualToIgnoringGivenFields(domainObject, ignored);
+    assertThat(optionsFromCommand).isEqualToComparingFieldByField(options);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
@@ -70,18 +67,15 @@ public abstract class AbstractCLIOptionsTest<D, T extends CLIOptions<?>>
 
   @Test
   public void defaultValues() {
-    parseCommand();
+    final TestPantheonCommand cmd = parseCommand();
 
     final D defaultDomainObject = createDefaultDomainObject();
-    final D actualDomainObject = getDomainObjectFromPantheonCommand();
+    final T defaultOptions = optionsFromDomainObject(defaultDomainObject);
+    final T optionsFromCommand = getOptionsFromPantheonCommand(cmd);
 
     // Check default values supplied by CLI match expected default values
-    final List<String> fieldsToIgnore = new ArrayList<>();
-    fieldsToIgnore.addAll(getFieldsToIgnore());
-    fieldsToIgnore.addAll(getFieldsWithComputedDefaults());
-    final String[] ignoredDefaults = fieldsToIgnore.toArray(new String[0]);
-    assertThat(actualDomainObject)
-        .isEqualToIgnoringGivenFields(defaultDomainObject, ignoredDefaults);
+    final String[] fieldsToIgnore = getFieldsWithComputedDefaults().toArray(new String[0]);
+    assertThat(optionsFromCommand).isEqualToIgnoringGivenFields(defaultOptions, fieldsToIgnore);
   }
 
   abstract D createDefaultDomainObject();
@@ -98,7 +92,5 @@ public abstract class AbstractCLIOptionsTest<D, T extends CLIOptions<?>>
 
   abstract T optionsFromDomainObject(D domainObject);
 
-  abstract D optionsToDomainObject(T options);
-
-  abstract D getDomainObjectFromPantheonCommand();
+  abstract T getOptionsFromPantheonCommand(final TestPantheonCommand pantheonCommand);
 }

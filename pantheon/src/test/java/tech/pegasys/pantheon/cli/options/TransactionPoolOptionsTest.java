@@ -13,22 +13,24 @@
 package tech.pegasys.pantheon.cli.options;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
 
 import tech.pegasys.pantheon.ethereum.eth.transactions.TransactionPoolConfiguration;
 
 import org.junit.Test;
 
 public class TransactionPoolOptionsTest
-    extends AbstractCLIOptionsTest<TransactionPoolConfiguration, TransactionPoolOptions> {
+    extends AbstractCLIOptionsTest<TransactionPoolConfiguration.Builder, TransactionPoolOptions> {
 
   @Test
   public void txMessageKeepAliveSeconds() {
     final int txMessageKeepAliveSeconds = 999;
-    parseCommand(
-        "--Xincoming-tx-messages-keep-alive-seconds", String.valueOf(txMessageKeepAliveSeconds));
+    final TestPantheonCommand cmd =
+        parseCommand(
+            "--Xincoming-tx-messages-keep-alive-seconds",
+            String.valueOf(txMessageKeepAliveSeconds));
 
-    final TransactionPoolConfiguration config = getDomainObjectFromPantheonCommand();
+    final TransactionPoolOptions options = getOptionsFromPantheonCommand(cmd);
+    final TransactionPoolConfiguration config = options.toDomainObject().build();
     assertThat(config.getTxMessageKeepAliveSeconds()).isEqualTo(txMessageKeepAliveSeconds);
 
     assertThat(commandOutput.toString()).isEmpty();
@@ -36,31 +38,24 @@ public class TransactionPoolOptionsTest
   }
 
   @Override
-  TransactionPoolConfiguration createDefaultDomainObject() {
-    return TransactionPoolConfiguration.builder().build();
+  TransactionPoolConfiguration.Builder createDefaultDomainObject() {
+    return TransactionPoolConfiguration.builder();
   }
 
   @Override
-  TransactionPoolConfiguration createCustomizedDomainObject() {
+  TransactionPoolConfiguration.Builder createCustomizedDomainObject() {
     return TransactionPoolConfiguration.builder()
-        .txMessageKeepAliveSeconds(TransactionPoolConfiguration.DEFAULT_TX_MSG_KEEP_ALIVE + 1)
-        .build();
+        .txMessageKeepAliveSeconds(TransactionPoolConfiguration.DEFAULT_TX_MSG_KEEP_ALIVE + 1);
   }
 
   @Override
-  TransactionPoolOptions optionsFromDomainObject(final TransactionPoolConfiguration domainObject) {
-    return TransactionPoolOptions.fromConfig(domainObject);
+  TransactionPoolOptions optionsFromDomainObject(
+      final TransactionPoolConfiguration.Builder domainObject) {
+    return TransactionPoolOptions.fromConfig(domainObject.build());
   }
 
   @Override
-  TransactionPoolConfiguration optionsToDomainObject(final TransactionPoolOptions options) {
-    return options.toDomainObject().build();
-  }
-
-  @Override
-  TransactionPoolConfiguration getDomainObjectFromPantheonCommand() {
-    verify(mockControllerBuilder)
-        .transactionPoolConfiguration(transactionPoolConfigCaptor.capture());
-    return transactionPoolConfigCaptor.getValue();
+  TransactionPoolOptions getOptionsFromPantheonCommand(final TestPantheonCommand pantheonCommand) {
+    return pantheonCommand.getTransactionPoolOptions();
   }
 }

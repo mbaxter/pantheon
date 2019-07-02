@@ -651,7 +651,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
     final Path toml = createTempFile("toml", Resources.toByteArray(configFile));
 
     // Parse it.
-    final CommandLine.Model.CommandSpec spec = parseCommand("--config-file", toml.toString());
+    final CommandLine.Model.CommandSpec spec = parseCommand("--config-file", toml.toString()).spec;
     final TomlParseResult tomlResult = Toml.parse(toml);
 
     // Verify we configured everything
