@@ -54,7 +54,6 @@ import tech.pegasys.pantheon.ethereum.core.Wei;
 import tech.pegasys.pantheon.ethereum.eth.sync.SyncMode;
 import tech.pegasys.pantheon.ethereum.eth.sync.SynchronizerConfiguration;
 import tech.pegasys.pantheon.ethereum.eth.transactions.PendingTransactions;
-import tech.pegasys.pantheon.ethereum.eth.transactions.TransactionPool;
 import tech.pegasys.pantheon.ethereum.eth.transactions.TransactionPoolConfiguration;
 import tech.pegasys.pantheon.ethereum.graphql.GraphQLConfiguration;
 import tech.pegasys.pantheon.ethereum.jsonrpc.JsonRpcConfiguration;
@@ -150,6 +149,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   private final SynchronizerOptions synchronizerOptions = SynchronizerOptions.create();
   private final EthProtocolOptions ethProtocolOptions = EthProtocolOptions.create();
   private final RocksDBOptions rocksDBOptions = RocksDBOptions.create();
+  private final TransactionPoolConfiguration.Builder transactionPoolConfigurationBuilder;
   private final RunnerBuilder runnerBuilder;
   private final PantheonController.Builder controllerBuilderFactory;
   private final PantheonPluginContextImpl pantheonPluginContext;
@@ -573,13 +573,6 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       arity = "1")
   private final Integer pendingTxRetentionPeriod = PendingTransactions.DEFAULT_TX_RETENTION_HOURS;
 
-  @Option(
-      names = {"--tx-pool-keep-alive-seconds"},
-      paramLabel = MANDATORY_INTEGER_FORMAT_HELP,
-      description = "Keep alive of transactions in seconds (default: ${DEFAULT-VALUE})",
-      arity = "1")
-  private final Integer txMessageKeepAliveSeconds = TransactionPool.DEFAULT_TX_MSG_KEEP_ALIVE;
-
   // Inner class so we can get to loggingLevel.
   public class PantheonExceptionHandler
       extends CommandLine.AbstractHandler<List<Object>, PantheonExceptionHandler>
@@ -620,12 +613,14 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       final BlockImporter blockImporter,
       final RunnerBuilder runnerBuilder,
       final PantheonController.Builder controllerBuilderFactory,
+      final TransactionPoolConfiguration.Builder transactionPoolConfigurationBuilder,
       final PantheonPluginContextImpl pantheonPluginContext,
       final Map<String, String> environment) {
     this.logger = logger;
     this.blockImporter = blockImporter;
     this.runnerBuilder = runnerBuilder;
     this.controllerBuilderFactory = controllerBuilderFactory;
+    this.transactionPoolConfigurationBuilder = transactionPoolConfigurationBuilder;
     this.pantheonPluginContext = pantheonPluginContext;
     this.environment = environment;
   }
@@ -684,7 +679,9 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
             "RocksDB",
             rocksDBOptions,
             "Ethereum Wire Protocol",
-            ethProtocolOptions));
+            ethProtocolOptions,
+            "TransactionPool",
+            transactionPoolConfigurationBuilder));
 
     pantheonPluginContext.addService(PicoCLIOptions.class, new PicoCLIOptionsImpl(commandLine));
     pantheonPluginContext.registerPlugins(pluginsDir());
@@ -825,12 +822,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
           .dataDirectory(dataDir())
           .miningParameters(
               new MiningParameters(coinbase, minTransactionGasPrice, extraData, isMiningEnabled))
-          .transactionPoolConfiguration(
-              TransactionPoolConfiguration.builder()
-                  .txPoolMaxSize(txPoolMaxSize)
-                  .pendingTxRetentionPeriod(pendingTxRetentionPeriod)
-                  .txMessageKeepAliveSeconds(txMessageKeepAliveSeconds)
-                  .build())
+          .transactionPoolConfiguration(buildTransactionPoolConfiguration())
           .nodePrivateKeyFile(nodePrivateKeyFile())
           .metricsSystem(metricsSystem.get())
           .privacyParameters(privacyParameters())
@@ -1095,6 +1087,13 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
 
   private RocksDbConfiguration buildRocksDbConfiguration() {
     return rocksDBOptions.toDomainObject().databaseDir(dataDir().resolve(DATABASE_PATH)).build();
+  }
+
+  private TransactionPoolConfiguration buildTransactionPoolConfiguration() {
+    return transactionPoolConfigurationBuilder
+        .txPoolMaxSize(txPoolMaxSize)
+        .pendingTxRetentionPeriod(pendingTxRetentionPeriod)
+        .build();
   }
 
   // Blockchain synchronisation from peers.

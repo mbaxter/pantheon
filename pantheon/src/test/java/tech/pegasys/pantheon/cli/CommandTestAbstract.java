@@ -94,6 +94,9 @@ public abstract class CommandTestAbstract {
   protected @Mock BlockImporter mockBlockImporter;
   protected @Mock Logger mockLogger;
   protected @Mock PantheonPluginContextImpl mockPantheonPluginContext;
+  protected TransactionPoolConfiguration.Builder mockTransactionPoolConfigurationBuilder =
+      TransactionPoolConfiguration.builder();
+  @Mock TransactionPoolConfiguration mockTransactionPoolConfiguration;
 
   protected @Captor ArgumentCaptor<Collection<BytesValue>> bytesValueCollectionCollector;
   protected @Captor ArgumentCaptor<Collection<String>> stringListArgumentCaptor;
@@ -130,11 +133,10 @@ public abstract class CommandTestAbstract {
     when(mockControllerBuilder.synchronizerConfiguration(any())).thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.ethProtocolConfiguration(any())).thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.rocksDbConfiguration(any())).thenReturn(mockControllerBuilder);
+    when(mockControllerBuilder.transactionPoolConfiguration(any()))
+        .thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.dataDirectory(any())).thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.miningParameters(any())).thenReturn(mockControllerBuilder);
-    when(mockControllerBuilder.transactionPoolConfiguration(
-            any(TransactionPoolConfiguration.class)))
-        .thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.nodePrivateKeyFile(any())).thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.metricsSystem(any())).thenReturn(mockControllerBuilder);
     when(mockControllerBuilder.privacyParameters(any())).thenReturn(mockControllerBuilder);
@@ -209,6 +211,7 @@ public abstract class CommandTestAbstract {
             mockBlockImporter,
             mockRunnerBuilder,
             mockControllerBuilderFactory,
+            mockTransactionPoolConfigurationBuilder,
             keyLoader,
             mockPantheonPluginContext,
             environment);
@@ -237,6 +240,7 @@ public abstract class CommandTestAbstract {
         final BlockImporter mockBlockImporter,
         final RunnerBuilder mockRunnerBuilder,
         final PantheonController.Builder controllerBuilderFactory,
+        final TransactionPoolConfiguration.Builder mockTransactionPoolConfigurationBuilder,
         final KeyLoader keyLoader,
         final PantheonPluginContextImpl pantheonPluginContext,
         final Map<String, String> environment) {
@@ -245,6 +249,7 @@ public abstract class CommandTestAbstract {
           mockBlockImporter,
           mockRunnerBuilder,
           controllerBuilderFactory,
+          mockTransactionPoolConfigurationBuilder,
           pantheonPluginContext,
           environment);
       this.keyLoader = keyLoader;
