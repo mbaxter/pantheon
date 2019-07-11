@@ -396,7 +396,7 @@ public class RlpxAgentTest {
     config.setFractionRemoteWireConnectionsAllowed(maxRemotePeersFraction);
     startAgentWithMaxPeers(maxPeers);
 
-    // Connect max remote peers
+    // Connect max peers locally
     for (int i = 0; i < maxPeers; i++) {
       final Peer peer = createPeer();
       final CompletableFuture<PeerConnection> connection = agent.connect(peer);
