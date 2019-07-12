@@ -59,19 +59,17 @@ public class RlpxAgent {
   private static final Logger LOG = LogManager.getLogger();
 
   private final LocalNode localNode;
-  private final PeerRlpxPermissions peerPermissions;
   private final PeerConnectionEvents connectionEvents;
-  private final Subscribers<ConnectCallback> connectSubscribers = Subscribers.create();
   private final ConnectionInitializer connectionInitializer;
-  private final boolean limitRemoteWireConnectionsEnabled;
-  private final double fractionRemoteConnectionsAllowed;
+  private final Subscribers<ConnectCallback> connectSubscribers = Subscribers.create();
 
+  private final PeerRlpxPermissions peerPermissions;
+  private final PeerPrivileges peerPrivileges;
   private final int maxPeers;
+  private final int maxRemotelyInitiatedConnections;
 
   @VisibleForTesting
   final Map<BytesValue, RlpxConnection> connectionsById = new ConcurrentHashMap<>();
-
-  private final PeerPrivileges peerPrivileges;
 
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final AtomicBoolean stopped = new AtomicBoolean(false);
@@ -80,22 +78,20 @@ public class RlpxAgent {
 
   private RlpxAgent(
       final LocalNode localNode,
-      final PeerRlpxPermissions peerPermissions,
       final PeerConnectionEvents connectionEvents,
       final ConnectionInitializer connectionInitializer,
-      final int maxPeers,
+      final PeerRlpxPermissions peerPermissions,
       final PeerPrivileges peerPrivileges,
-      final MetricsSystem metricsSystem,
-      final boolean limitRemoteWireConnectionsEnabled,
-      final double fractionRemoteConnectionsAllowed) {
-    this.maxPeers = maxPeers;
-    this.peerPrivileges = peerPrivileges;
+      final int maxPeers,
+      final int maxRemotelyInitiatedConnections,
+      final MetricsSystem metricsSystem) {
     this.localNode = localNode;
-    this.peerPermissions = peerPermissions;
     this.connectionEvents = connectionEvents;
     this.connectionInitializer = connectionInitializer;
-    this.limitRemoteWireConnectionsEnabled = limitRemoteWireConnectionsEnabled;
-    this.fractionRemoteConnectionsAllowed = fractionRemoteConnectionsAllowed;
+    this.peerPermissions = peerPermissions;
+    this.peerPrivileges = peerPrivileges;
+    this.maxPeers = maxPeers;
+    this.maxRemotelyInitiatedConnections = Math.min(maxPeers, maxRemotelyInitiatedConnections);
 
     // Setup metrics
     connectedPeersCounter =
@@ -329,19 +325,14 @@ public class RlpxAgent {
       peerConnection.disconnect(DisconnectReason.TOO_MANY_PEERS);
       return;
     }
+    // Disconnect if too many remotely-initiated connections
+    if (!peerPrivileges.canExceedRemoteConnectionLimits(peer) && remoteConnectionLimitReached()) {
+      peerConnection.disconnect(DisconnectReason.TOO_MANY_PEERS);
+      return;
+    }
     // Disconnect if not permitted
     if (!peerPermissions.allowNewInboundConnectionFrom(peer)) {
       peerConnection.disconnect(DisconnectReason.UNKNOWN);
-      return;
-    }
-
-    // Disconnect if the fraction of wire connections initiated by peers is too high to protect
-    // against eclipse attacks
-    if (limitRemoteWireConnectionsEnabled && remoteConnectionExceedsLimit()) {
-      LOG.warn(
-          "Fraction of remotely initiated connection is too high, rejecting incoming connection. (max ratio allowed: {})",
-          fractionRemoteConnectionsAllowed);
-      peerConnection.disconnect(DisconnectReason.TOO_MANY_PEERS);
       return;
     }
 
@@ -387,28 +378,58 @@ public class RlpxAgent {
     if (newConnectionAccepted.get()) {
       dispatchConnect(peerConnection);
     }
+    // Check remote connections again to control for race conditions
+    enforceRemoteConnectionLimits();
     enforceConnectionLimits();
   }
 
-  private boolean remoteConnectionExceedsLimit() {
-    final int remotelyInitiatedConnectionsCount =
-        Math.toIntExact(
-            connectionsById.values().stream()
-                .filter(RlpxConnection::isActive)
-                .filter(RlpxConnection::initiatedRemotely)
-                .count());
-    final double fractionRemoteConnections =
-        (double) (remotelyInitiatedConnectionsCount + 1) / (double) maxPeers;
-    return fractionRemoteConnections > fractionRemoteConnectionsAllowed;
+  private boolean limitRemoteWireConnectionsEnabled() {
+    return maxRemotelyInitiatedConnections < maxPeers;
+  }
+
+  private boolean remoteConnectionLimitReached() {
+    return limitRemoteWireConnectionsEnabled()
+        && countUntrustedRemotelyInitiatedConnections() >= maxRemotelyInitiatedConnections;
+  }
+
+  private long countUntrustedRemotelyInitiatedConnections() {
+    return connectionsById.values().stream()
+        .filter(RlpxConnection::isActive)
+        .filter(RlpxConnection::initiatedRemotely)
+        .filter(conn -> !peerPrivileges.canExceedRemoteConnectionLimits(conn.getPeer()))
+        .count();
+  }
+
+  private void enforceRemoteConnectionLimits() {
+    if (!limitRemoteWireConnectionsEnabled()
+        || connectionsById.size() < maxRemotelyInitiatedConnections) {
+      // Nothing to do
+      return;
+    }
+
+    getActivePrioritizedConnections()
+        .filter(RlpxConnection::initiatedRemotely)
+        .filter(conn -> !peerPrivileges.canExceedRemoteConnectionLimits(conn.getPeer()))
+        .skip(maxRemotelyInitiatedConnections)
+        .forEach(c -> c.disconnect(DisconnectReason.TOO_MANY_PEERS));
   }
 
   private void enforceConnectionLimits() {
-    connectionsById.values().stream()
-        .filter(RlpxConnection::isActive)
-        .sorted(this::prioritizeConnections)
+    if (connectionsById.size() < maxPeers) {
+      // Nothing to do - we're under our limits
+      return;
+    }
+
+    getActivePrioritizedConnections()
         .skip(maxPeers)
         .filter(c -> !peerPrivileges.canExceedMaxPeerLimits(c.getPeer()))
         .forEach(c -> c.disconnect(DisconnectReason.TOO_MANY_PEERS));
+  }
+
+  private Stream<RlpxConnection> getActivePrioritizedConnections() {
+    return connectionsById.values().stream()
+        .filter(RlpxConnection::isActive)
+        .sorted(this::prioritizeConnections);
   }
 
   private int prioritizeConnections(final RlpxConnection a, final RlpxConnection b) {
@@ -500,14 +521,13 @@ public class RlpxAgent {
           new PeerRlpxPermissions(localNode, peerPermissions);
       return new RlpxAgent(
           localNode,
-          rlpxPermissions,
           connectionEvents,
           connectionInitializer,
-          config.getMaxPeers(),
+          rlpxPermissions,
           peerPrivileges,
-          metricsSystem,
-          config.isLimitRemoteWireConnectionsEnabled(),
-          config.getFractionRemoteWireConnectionsAllowed());
+          config.getMaxPeers(),
+          config.getMaxRemotelyInitiatedConnections(),
+          metricsSystem);
     }
 
     private void validate() {

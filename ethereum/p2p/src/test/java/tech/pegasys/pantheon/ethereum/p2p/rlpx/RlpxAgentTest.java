@@ -61,7 +61,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class RlpxAgentTest {
@@ -441,6 +440,43 @@ public class RlpxAgentTest {
   }
 
   @Test
+  public void incomingConnection_succeedsForPrivilegedPeerWhenMaxRemoteConnectionsExceeded() {
+    final int maxPeers = 5;
+    final int maxRemotePeers = 3;
+    final double maxRemotePeersFraction = (double) maxRemotePeers / (double) maxPeers;
+    config.setLimitRemoteWireConnectionsEnabled(true);
+    config.setFractionRemoteWireConnectionsAllowed(maxRemotePeersFraction);
+    startAgentWithMaxPeers(maxPeers);
+
+    // Connect max remote peers
+    for (int i = 0; i < maxRemotePeers; i++) {
+      final Peer remotelyInitiatedPeer = createPeer();
+      final MockPeerConnection incomingConnection = connection(remotelyInitiatedPeer);
+      connectionInitializer.simulateIncomingConnection(incomingConnection);
+      assertThat(incomingConnection.getDisconnectReason()).isEmpty();
+    }
+    // Sanity check
+    assertThat(agent.getConnectionCount()).isEqualTo(maxRemotePeers);
+
+    final Peer privilegedPeer = createPeer();
+    when(peerPrivileges.canExceedRemoteConnectionLimits(privilegedPeer)).thenReturn(true);
+    when(peerPrivileges.canExceedMaxPeerLimits(privilegedPeer)).thenReturn(true);
+    final MockPeerConnection privilegedConnection = connection(privilegedPeer);
+    connectionInitializer.simulateIncomingConnection(privilegedConnection);
+    assertThat(privilegedConnection.isDisconnected()).isFalse();
+
+    // No peers should be disconnected - exempt connections are ignored when enforcing this limit
+    assertThat(agent.getConnectionCount()).isEqualTo(maxRemotePeers + 1);
+
+    // The next non-exempt connection should fail
+    final Peer remotelyInitiatedPeer = createPeer();
+    final MockPeerConnection incomingConnection = connection(remotelyInitiatedPeer);
+    connectionInitializer.simulateIncomingConnection(incomingConnection);
+    assertThat(agent.getConnectionCount()).isEqualTo(maxRemotePeers + 1);
+    assertThat(incomingConnection.getDisconnectReason()).contains(DisconnectReason.TOO_MANY_PEERS);
+  }
+
+  @Test
   public void connect_succeedsForExemptPeerWhenMaxPeersConnected()
       throws ExecutionException, InterruptedException {
     // Turn off autocomplete so that each connection is established (completed) after it has been
@@ -499,12 +535,12 @@ public class RlpxAgentTest {
   }
 
   @Test
-  @Ignore("Ignore while PAN-1683 is being reworked")
   public void incomingConnection_maxPeersExceeded_incomingConnectionExemptFromLimits()
       throws ExecutionException, InterruptedException {
     final Peer peerA = createPeer();
     final Peer peerB = createPeer();
     when(peerPrivileges.canExceedMaxPeerLimits(peerB)).thenReturn(true);
+    when(peerPrivileges.canExceedRemoteConnectionLimits(peerB)).thenReturn(true);
 
     // Saturate connections
     startAgentWithMaxPeers(1);
@@ -554,13 +590,13 @@ public class RlpxAgentTest {
   }
 
   @Test
-  @Ignore("Ignore while PAN-1683 is being reworked")
   public void incomingConnection_maxPeersExceeded_allConnectionsExemptFromLimits()
       throws ExecutionException, InterruptedException {
     final Peer peerA = createPeer();
     final Peer peerB = createPeer();
     when(peerPrivileges.canExceedMaxPeerLimits(peerA)).thenReturn(true);
     when(peerPrivileges.canExceedMaxPeerLimits(peerB)).thenReturn(true);
+    when(peerPrivileges.canExceedRemoteConnectionLimits(peerB)).thenReturn(true);
 
     // Saturate connections
     startAgentWithMaxPeers(1);
