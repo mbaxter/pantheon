@@ -22,7 +22,7 @@ import tech.pegasys.pantheon.ethereum.p2p.discovery.DiscoveryPeer;
 import tech.pegasys.pantheon.ethereum.p2p.peers.EnodeURL;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
-import tech.pegasys.pantheon.ethereum.p2p.peers.PeerProperties;
+import tech.pegasys.pantheon.ethereum.p2p.peers.PeerPrivileges;
 import tech.pegasys.pantheon.ethereum.p2p.permissions.PeerPermissions;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.ConnectionInitializer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
@@ -71,7 +71,7 @@ public class RlpxAgent {
   @VisibleForTesting
   final Map<BytesValue, RlpxConnection> connectionsById = new ConcurrentHashMap<>();
 
-  private final PeerProperties peerProperties;
+  private final PeerPrivileges peerPrivileges;
 
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final AtomicBoolean stopped = new AtomicBoolean(false);
@@ -84,12 +84,12 @@ public class RlpxAgent {
       final PeerConnectionEvents connectionEvents,
       final ConnectionInitializer connectionInitializer,
       final int maxPeers,
-      final PeerProperties peerProperties,
+      final PeerPrivileges peerPrivileges,
       final MetricsSystem metricsSystem,
       final boolean limitRemoteWireConnectionsEnabled,
       final double fractionRemoteConnectionsAllowed) {
     this.maxPeers = maxPeers;
-    this.peerProperties = peerProperties;
+    this.peerPrivileges = peerPrivileges;
     this.localNode = localNode;
     this.peerPermissions = peerPermissions;
     this.connectionEvents = connectionEvents;
@@ -207,7 +207,7 @@ public class RlpxAgent {
       return peerConnection.get();
     }
     // Check max peers
-    if (!peerProperties.ignoreMaxPeerLimits(peer) && getConnectionCount() >= maxPeers) {
+    if (!peerPrivileges.canExceedMaxPeerLimits(peer) && getConnectionCount() >= maxPeers) {
       final String errorMsg =
           "Max peer peer connections established ("
               + maxPeers
@@ -325,7 +325,7 @@ public class RlpxAgent {
       return;
     }
     // Disconnect if too many peers
-    if (!peerProperties.ignoreMaxPeerLimits(peer) && getConnectionCount() >= maxPeers) {
+    if (!peerPrivileges.canExceedMaxPeerLimits(peer) && getConnectionCount() >= maxPeers) {
       peerConnection.disconnect(DisconnectReason.TOO_MANY_PEERS);
       return;
     }
@@ -407,13 +407,13 @@ public class RlpxAgent {
         .filter(RlpxConnection::isActive)
         .sorted(this::prioritizeConnections)
         .skip(maxPeers)
-        .filter(c -> !peerProperties.ignoreMaxPeerLimits(c.getPeer()))
+        .filter(c -> !peerPrivileges.canExceedMaxPeerLimits(c.getPeer()))
         .forEach(c -> c.disconnect(DisconnectReason.TOO_MANY_PEERS));
   }
 
   private int prioritizeConnections(final RlpxConnection a, final RlpxConnection b) {
-    final boolean aIgnoresPeerLimits = peerProperties.ignoreMaxPeerLimits(a.getPeer());
-    final boolean bIgnoresPeerLimits = peerProperties.ignoreMaxPeerLimits(b.getPeer());
+    final boolean aIgnoresPeerLimits = peerPrivileges.canExceedMaxPeerLimits(a.getPeer());
+    final boolean bIgnoresPeerLimits = peerPrivileges.canExceedMaxPeerLimits(b.getPeer());
     if (aIgnoresPeerLimits && !bIgnoresPeerLimits) {
       return -1;
     } else if (bIgnoresPeerLimits && !aIgnoresPeerLimits) {
@@ -476,7 +476,7 @@ public class RlpxAgent {
     private KeyPair keyPair;
     private LocalNode localNode;
     private RlpxConfiguration config;
-    private PeerProperties peerProperties;
+    private PeerPrivileges peerPrivileges;
     private PeerPermissions peerPermissions;
     private ConnectionInitializer connectionInitializer;
     private PeerConnectionEvents connectionEvents;
@@ -504,7 +504,7 @@ public class RlpxAgent {
           connectionEvents,
           connectionInitializer,
           config.getMaxPeers(),
-          peerProperties,
+          peerPrivileges,
           metricsSystem,
           config.isLimitRemoteWireConnectionsEnabled(),
           config.getFractionRemoteWireConnectionsAllowed());
@@ -514,7 +514,7 @@ public class RlpxAgent {
       checkState(keyPair != null, "KeyPair must be configured");
       checkState(localNode != null, "LocalNode must be configured");
       checkState(config != null, "RlpxConfiguration must be set");
-      checkState(peerProperties != null, "MaintainedPeers must be configured");
+      checkState(peerPrivileges != null, "PeerPrivileges must be configured");
       checkState(peerPermissions != null, "PeerPermissions must be configured");
       checkState(metricsSystem != null, "MetricsSystem must be configured");
     }
@@ -543,9 +543,9 @@ public class RlpxAgent {
       return this;
     }
 
-    public Builder peerProperties(final PeerProperties peerProperties) {
-      checkNotNull(peerProperties);
-      this.peerProperties = peerProperties;
+    public Builder peerPrivileges(final PeerPrivileges peerPrivileges) {
+      checkNotNull(peerPrivileges);
+      this.peerPrivileges = peerPrivileges;
       return this;
     }
 

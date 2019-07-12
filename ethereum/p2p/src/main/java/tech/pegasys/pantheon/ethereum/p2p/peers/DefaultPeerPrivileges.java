@@ -12,15 +12,20 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.peers;
 
-public class DefaultPeerProperties implements PeerProperties {
-  final MaintainedPeers maintainedPeers;
+public class DefaultPeerPrivileges implements PeerPrivileges {
+  private final MaintainedPeers maintainedPeers;
 
-  public DefaultPeerProperties(final MaintainedPeers maintainedPeers) {
+  public DefaultPeerPrivileges(final MaintainedPeers maintainedPeers) {
     this.maintainedPeers = maintainedPeers;
   }
 
   @Override
-  public boolean ignoreMaxPeerLimits(final Peer peer) {
+  public boolean canExceedMaxPeerLimits(final Peer peer) {
+    return maintainedPeers.contains(peer);
+  }
+
+  @Override
+  public boolean canExceedRemoteConnectionLimits(final Peer peer) {
     return maintainedPeers.contains(peer);
   }
 }
