@@ -384,12 +384,12 @@ public class RlpxAgent {
     enforceConnectionLimits();
   }
 
-  private boolean limitRemoteWireConnectionsEnabled() {
+  private boolean shouldLimitRemoteConnections() {
     return maxRemotelyInitiatedConnections < maxConnections;
   }
 
   private boolean remoteConnectionLimitReached() {
-    return limitRemoteWireConnectionsEnabled()
+    return shouldLimitRemoteConnections()
         && countUntrustedRemotelyInitiatedConnections() >= maxRemotelyInitiatedConnections;
   }
 
@@ -402,7 +402,7 @@ public class RlpxAgent {
   }
 
   private void enforceRemoteConnectionLimits() {
-    if (!limitRemoteWireConnectionsEnabled()
+    if (!shouldLimitRemoteConnections()
         || connectionsById.size() < maxRemotelyInitiatedConnections) {
       // Nothing to do
       return;
