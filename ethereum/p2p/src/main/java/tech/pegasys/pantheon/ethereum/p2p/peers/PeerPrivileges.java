@@ -15,21 +15,11 @@ package tech.pegasys.pantheon.ethereum.p2p.peers;
 public interface PeerPrivileges {
 
   /**
-   * If true, the given peer can connect or remain connected even if the max connection limit has
-   * been reached or exceeded.
+   * If true, the given peer can connect or remain connected even if the max connection limit or the
+   * maximum remote connection limit has been reached or exceeded.
    *
    * @param peer The peer to be checked.
-   * @return {@code true} if the peer should be allowed to connect regardless of max peer limits.
+   * @return {@code true} if the peer should be allowed to connect regardless of connection limits.
    */
-  boolean canExceedMaxPeerLimits(final Peer peer);
-
-  /**
-   * If true, the given peer can initiate an incoming connection even if the remote connection limit
-   * has been reached.
-   *
-   * @param peer The peer to be checked.
-   * @return {@code true} if the peer should be allowed to connect regardless of remote connection
-   *     limits.
-   */
-  boolean canExceedRemoteConnectionLimits(final Peer peer);
+  boolean canExceedConnectionLimits(final Peer peer);
 }

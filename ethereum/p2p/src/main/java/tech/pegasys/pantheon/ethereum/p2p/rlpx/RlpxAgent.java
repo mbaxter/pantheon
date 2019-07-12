@@ -65,7 +65,7 @@ public class RlpxAgent {
 
   private final PeerRlpxPermissions peerPermissions;
   private final PeerPrivileges peerPrivileges;
-  private final int maxPeers;
+  private final int maxConnections;
   private final int maxRemotelyInitiatedConnections;
 
   @VisibleForTesting
@@ -82,7 +82,7 @@ public class RlpxAgent {
       final ConnectionInitializer connectionInitializer,
       final PeerRlpxPermissions peerPermissions,
       final PeerPrivileges peerPrivileges,
-      final int maxPeers,
+      final int maxConnections,
       final int maxRemotelyInitiatedConnections,
       final MetricsSystem metricsSystem) {
     this.localNode = localNode;
@@ -90,8 +90,9 @@ public class RlpxAgent {
     this.connectionInitializer = connectionInitializer;
     this.peerPermissions = peerPermissions;
     this.peerPrivileges = peerPrivileges;
-    this.maxPeers = maxPeers;
-    this.maxRemotelyInitiatedConnections = Math.min(maxPeers, maxRemotelyInitiatedConnections);
+    this.maxConnections = maxConnections;
+    this.maxRemotelyInitiatedConnections =
+        Math.min(maxConnections, maxRemotelyInitiatedConnections);
 
     // Setup metrics
     connectedPeersCounter =
@@ -107,7 +108,7 @@ public class RlpxAgent {
         PantheonMetricCategory.ETHEREUM,
         "peer_limit",
         "The maximum number of peers this node allows to connect",
-        () -> maxPeers);
+        () -> maxConnections);
   }
 
   public static Builder builder() {
@@ -149,7 +150,7 @@ public class RlpxAgent {
     if (!localNode.isReady()) {
       return;
     }
-    final int availablePeerSlots = Math.max(0, maxPeers - getConnectionCount());
+    final int availablePeerSlots = Math.max(0, maxConnections - getConnectionCount());
     peerStream
         .filter(peer -> !connectionsById.containsKey(peer.getId()))
         .filter(peer -> peer.getEnodeURL().isListening())
@@ -203,10 +204,10 @@ public class RlpxAgent {
       return peerConnection.get();
     }
     // Check max peers
-    if (!peerPrivileges.canExceedMaxPeerLimits(peer) && getConnectionCount() >= maxPeers) {
+    if (!peerPrivileges.canExceedConnectionLimits(peer) && getConnectionCount() >= maxConnections) {
       final String errorMsg =
           "Max peer peer connections established ("
-              + maxPeers
+              + maxConnections
               + "). Cannot connect to peer: "
               + peer;
       return FutureUtils.completedExceptionally(new IllegalStateException(errorMsg));
@@ -321,12 +322,12 @@ public class RlpxAgent {
       return;
     }
     // Disconnect if too many peers
-    if (!peerPrivileges.canExceedMaxPeerLimits(peer) && getConnectionCount() >= maxPeers) {
+    if (!peerPrivileges.canExceedConnectionLimits(peer) && getConnectionCount() >= maxConnections) {
       peerConnection.disconnect(DisconnectReason.TOO_MANY_PEERS);
       return;
     }
     // Disconnect if too many remotely-initiated connections
-    if (!peerPrivileges.canExceedRemoteConnectionLimits(peer) && remoteConnectionLimitReached()) {
+    if (!peerPrivileges.canExceedConnectionLimits(peer) && remoteConnectionLimitReached()) {
       peerConnection.disconnect(DisconnectReason.TOO_MANY_PEERS);
       return;
     }
@@ -384,7 +385,7 @@ public class RlpxAgent {
   }
 
   private boolean limitRemoteWireConnectionsEnabled() {
-    return maxRemotelyInitiatedConnections < maxPeers;
+    return maxRemotelyInitiatedConnections < maxConnections;
   }
 
   private boolean remoteConnectionLimitReached() {
@@ -396,7 +397,7 @@ public class RlpxAgent {
     return connectionsById.values().stream()
         .filter(RlpxConnection::isActive)
         .filter(RlpxConnection::initiatedRemotely)
-        .filter(conn -> !peerPrivileges.canExceedRemoteConnectionLimits(conn.getPeer()))
+        .filter(conn -> !peerPrivileges.canExceedConnectionLimits(conn.getPeer()))
         .count();
   }
 
@@ -409,20 +410,20 @@ public class RlpxAgent {
 
     getActivePrioritizedConnections()
         .filter(RlpxConnection::initiatedRemotely)
-        .filter(conn -> !peerPrivileges.canExceedRemoteConnectionLimits(conn.getPeer()))
+        .filter(conn -> !peerPrivileges.canExceedConnectionLimits(conn.getPeer()))
         .skip(maxRemotelyInitiatedConnections)
         .forEach(c -> c.disconnect(DisconnectReason.TOO_MANY_PEERS));
   }
 
   private void enforceConnectionLimits() {
-    if (connectionsById.size() < maxPeers) {
+    if (connectionsById.size() < maxConnections) {
       // Nothing to do - we're under our limits
       return;
     }
 
     getActivePrioritizedConnections()
-        .skip(maxPeers)
-        .filter(c -> !peerPrivileges.canExceedMaxPeerLimits(c.getPeer()))
+        .skip(maxConnections)
+        .filter(c -> !peerPrivileges.canExceedConnectionLimits(c.getPeer()))
         .forEach(c -> c.disconnect(DisconnectReason.TOO_MANY_PEERS));
   }
 
@@ -433,8 +434,8 @@ public class RlpxAgent {
   }
 
   private int prioritizeConnections(final RlpxConnection a, final RlpxConnection b) {
-    final boolean aIgnoresPeerLimits = peerPrivileges.canExceedMaxPeerLimits(a.getPeer());
-    final boolean bIgnoresPeerLimits = peerPrivileges.canExceedMaxPeerLimits(b.getPeer());
+    final boolean aIgnoresPeerLimits = peerPrivileges.canExceedConnectionLimits(a.getPeer());
+    final boolean bIgnoresPeerLimits = peerPrivileges.canExceedConnectionLimits(b.getPeer());
     if (aIgnoresPeerLimits && !bIgnoresPeerLimits) {
       return -1;
     } else if (bIgnoresPeerLimits && !aIgnoresPeerLimits) {

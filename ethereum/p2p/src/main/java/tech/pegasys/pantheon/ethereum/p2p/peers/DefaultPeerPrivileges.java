@@ -20,12 +20,7 @@ public class DefaultPeerPrivileges implements PeerPrivileges {
   }
 
   @Override
-  public boolean canExceedMaxPeerLimits(final Peer peer) {
-    return maintainedPeers.contains(peer);
-  }
-
-  @Override
-  public boolean canExceedRemoteConnectionLimits(final Peer peer) {
+  public boolean canExceedConnectionLimits(final Peer peer) {
     return maintainedPeers.contains(peer);
   }
 }

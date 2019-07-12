@@ -78,8 +78,7 @@ public class RlpxAgentTest {
   @Before
   public void setup() {
     // Set basic defaults
-    when(peerPrivileges.canExceedMaxPeerLimits(any())).thenReturn(false);
-    when(peerPrivileges.canExceedRemoteConnectionLimits(any())).thenReturn(false);
+    when(peerPrivileges.canExceedConnectionLimits(any())).thenReturn(false);
     config.setMaxPeers(5);
   }
 
@@ -459,8 +458,7 @@ public class RlpxAgentTest {
     assertThat(agent.getConnectionCount()).isEqualTo(maxRemotePeers);
 
     final Peer privilegedPeer = createPeer();
-    when(peerPrivileges.canExceedRemoteConnectionLimits(privilegedPeer)).thenReturn(true);
-    when(peerPrivileges.canExceedMaxPeerLimits(privilegedPeer)).thenReturn(true);
+    when(peerPrivileges.canExceedConnectionLimits(privilegedPeer)).thenReturn(true);
     final MockPeerConnection privilegedConnection = connection(privilegedPeer);
     connectionInitializer.simulateIncomingConnection(privilegedConnection);
     assertThat(privilegedConnection.isDisconnected()).isFalse();
@@ -491,7 +489,7 @@ public class RlpxAgentTest {
         (MockPeerConnection) existingConnectionFuture.get();
 
     final Peer peer = createPeer();
-    when(peerPrivileges.canExceedMaxPeerLimits(peer)).thenReturn(true);
+    when(peerPrivileges.canExceedConnectionLimits(peer)).thenReturn(true);
     final CompletableFuture<PeerConnection> connection = agent.connect(peer);
     connectionInitializer.completePendingFutures();
 
@@ -514,8 +512,8 @@ public class RlpxAgentTest {
     startAgentWithMaxPeers(1);
     final Peer peerA = createPeer();
     final Peer peerB = createPeer();
-    when(peerPrivileges.canExceedMaxPeerLimits(peerA)).thenReturn(true);
-    when(peerPrivileges.canExceedMaxPeerLimits(peerB)).thenReturn(true);
+    when(peerPrivileges.canExceedConnectionLimits(peerA)).thenReturn(true);
+    when(peerPrivileges.canExceedConnectionLimits(peerB)).thenReturn(true);
 
     // Saturate connections
     final CompletableFuture<PeerConnection> existingConnection = agent.connect(peerA);
@@ -539,8 +537,7 @@ public class RlpxAgentTest {
       throws ExecutionException, InterruptedException {
     final Peer peerA = createPeer();
     final Peer peerB = createPeer();
-    when(peerPrivileges.canExceedMaxPeerLimits(peerB)).thenReturn(true);
-    when(peerPrivileges.canExceedRemoteConnectionLimits(peerB)).thenReturn(true);
+    when(peerPrivileges.canExceedConnectionLimits(peerB)).thenReturn(true);
 
     // Saturate connections
     startAgentWithMaxPeers(1);
@@ -567,7 +564,7 @@ public class RlpxAgentTest {
       throws ExecutionException, InterruptedException {
     final Peer peerA = createPeer();
     final Peer peerB = createPeer();
-    when(peerPrivileges.canExceedMaxPeerLimits(peerA)).thenReturn(true);
+    when(peerPrivileges.canExceedConnectionLimits(peerA)).thenReturn(true);
 
     // Saturate connections
     startAgentWithMaxPeers(1);
@@ -594,9 +591,8 @@ public class RlpxAgentTest {
       throws ExecutionException, InterruptedException {
     final Peer peerA = createPeer();
     final Peer peerB = createPeer();
-    when(peerPrivileges.canExceedMaxPeerLimits(peerA)).thenReturn(true);
-    when(peerPrivileges.canExceedMaxPeerLimits(peerB)).thenReturn(true);
-    when(peerPrivileges.canExceedRemoteConnectionLimits(peerB)).thenReturn(true);
+    when(peerPrivileges.canExceedConnectionLimits(peerA)).thenReturn(true);
+    when(peerPrivileges.canExceedConnectionLimits(peerB)).thenReturn(true);
 
     // Saturate connections
     startAgentWithMaxPeers(1);
