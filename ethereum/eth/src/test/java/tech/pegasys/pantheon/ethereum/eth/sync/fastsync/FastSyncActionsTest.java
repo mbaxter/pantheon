@@ -207,7 +207,7 @@ public class FastSyncActionsTest {
   }
 
   @Test
-  public void selectPivotBlockRetriesWhileBestPeerLacksHeightEstimate() {
+  public void selectPivotBlockUsesBestPeerWithHeightEstimate() {
     final int minPeers = 3;
     final int peerCount = minPeers + 1;
     syncConfigBuilder.fastSyncMinimumPeerCount(minPeers);
@@ -219,29 +219,30 @@ public class FastSyncActionsTest {
     // Create peers without chain height estimates
     List<RespondingEthPeer> peers = new ArrayList<>();
     for (int i = 0; i < peerCount; i++) {
-      final UInt256 td = UInt256.of(i);
-      final OptionalLong height = OptionalLong.empty();
+      // Best peer by td is the first peer, td decreases as i increases
+      final UInt256 td = UInt256.of(peerCount - i);
+
+      final OptionalLong height;
+      if (i == 0) {
+        // Don't set a height estimate for the best peer
+        height = OptionalLong.empty();
+      } else {
+        // Height increases with i
+        height = OptionalLong.of(minPivotHeight + i);
+      }
       final RespondingEthPeer peer =
           EthProtocolManagerTestUtil.createPeer(ethProtocolManager, td, height);
       peers.add(peer);
     }
-    // Set heights for all peers except the best peer
-    peers
-        .subList(0, minPeers - 1)
-        .forEach(p -> p.getEthPeer().chainState().updateHeightEstimate(minPivotHeight + 10));
 
-    // No pivot should be selected while best peer is missing a height estimate
     final CompletableFuture<FastSyncState> result =
         fastSyncActions.selectPivotBlock(EMPTY_SYNC_STATE);
-    assertThat(result).isNotDone();
     EthProtocolManagerTestUtil.runPendingFutures(ethProtocolManager);
-    assertThat(result).isNotDone();
 
-    // Set best peer height
-    final long bestPeerHeight = minPivotHeight + 1;
-    peers.get(peerCount - 1).getEthPeer().chainState().updateHeightEstimate(bestPeerHeight);
+    final long expectedBestChainHeight =
+        peers.get(1).getEthPeer().chainState().getEstimatedHeight();
     final FastSyncState expected =
-        new FastSyncState(bestPeerHeight - syncConfig.getFastSyncPivotDistance());
+        new FastSyncState(expectedBestChainHeight - syncConfig.getFastSyncPivotDistance());
     EthProtocolManagerTestUtil.runPendingFutures(ethProtocolManager);
     assertThat(result).isCompletedWithValue(expected);
   }
