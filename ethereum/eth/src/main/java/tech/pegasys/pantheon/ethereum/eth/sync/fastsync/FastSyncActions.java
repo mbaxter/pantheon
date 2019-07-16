@@ -115,6 +115,8 @@ public class FastSyncActions<C> {
         .getEthPeers()
         .bestPeer()
         .filter(peer -> peer.chainState().hasEstimatedHeight())
+        // Only select a pivot block number when we have a minimum number of height estimates
+        .filter(peer -> minimumChainHeightEstimatesReached())
         .map(
             peer -> {
               final long pivotBlockNumber =
@@ -131,8 +133,18 @@ public class FastSyncActions<C> {
         .orElseGet(this::retrySelectPivotBlockAfterDelay);
   }
 
+  private boolean minimumChainHeightEstimatesReached() {
+    final long peersWithEstimatedHeight =
+        ethContext
+            .getEthPeers()
+            .streamAvailablePeers()
+            .filter(peer -> peer.chainState().hasEstimatedHeight())
+            .count();
+    return peersWithEstimatedHeight >= syncConfig.getFastSyncMinimumPeerCount();
+  }
+
   private CompletableFuture<FastSyncState> retrySelectPivotBlockAfterDelay() {
-    LOG.info("Waiting for peer with sufficient chain height");
+    LOG.info("Waiting for peers with sufficient chain height");
     return ethContext
         .getScheduler()
         .scheduleFutureTask(
