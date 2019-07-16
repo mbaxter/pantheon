@@ -119,7 +119,7 @@ public class FastSyncActions<C> {
             peer -> {
               final long peerCount = countPeersWithEstimatedHeight();
               final int minPeerCount = syncConfig.getFastSyncMinimumPeerCount();
-              if (peerCount < syncConfig.getFastSyncMinimumPeerCount()) {
+              if (peerCount < minPeerCount) {
                 LOG.info(
                     "Waiting for peers with chain height information.  {} / {} required peers currently available.",
                     peerCount,
