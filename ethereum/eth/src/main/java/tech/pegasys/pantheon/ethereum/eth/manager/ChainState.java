@@ -106,7 +106,8 @@ public class ChainState {
 
   /**
    * Returns true if this chain state represents a chain that is "better" than the chain represented
-   * by the supplied {@link ChainHead}.
+   * by the supplied {@link ChainHead}. "Better" currently means that this chain is longer or
+   * heavier than the supplied {@code chainToCheck}.
    *
    * @param chainToCheck The chain being compared.
    * @return true if this {@link ChainState} represents a better chain than {@code chainToCheck}.

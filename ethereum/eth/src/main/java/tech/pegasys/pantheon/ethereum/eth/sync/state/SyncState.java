@@ -101,8 +101,8 @@ public class SyncState {
     return ethPeers
         .bestPeerWithHeightEstimate()
         .filter(peer -> peer.chainState().chainIsBetterThan(chainHead))
-        .map(
-            peer -> peer.chainState().getEstimatedHeight() - chainHead.getHeight() <= syncTolerance)
+        .map(EthPeer::chainState)
+        .map(chainState -> chainState.getEstimatedHeight() - chainHead.getHeight() <= syncTolerance)
         .orElse(true);
   }
 
