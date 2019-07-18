@@ -13,8 +13,11 @@
 package tech.pegasys.pantheon.ethereum.eth.sync.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -47,15 +50,15 @@ public class SyncStateTest {
   private static final UInt256 OUR_CHAIN_DIFFICULTY = UInt256.of(500);
   private static final long TARGET_CHAIN_DELTA = 100;
   private static final long TARGET_CHAIN_HEIGHT = OUR_CHAIN_HEAD_NUMBER + TARGET_CHAIN_DELTA;
-  private static final UInt256 TARGET_DIFFICULTY = OUR_CHAIN_DIFFICULTY.plus(100L);
+  private static final UInt256 TARGET_DIFFICULTY = OUR_CHAIN_DIFFICULTY.plus(TARGET_CHAIN_DELTA);
 
   private final Blockchain blockchain = mock(Blockchain.class);
   private final EthPeers ethPeers = mock(EthPeers.class);
   private final SyncState.InSyncListener inSyncListener = mock(SyncState.InSyncListener.class);
   private final EthPeer syncTargetPeer = mock(EthPeer.class);
-  private final ChainState syncTargetPeerChainState = new ChainState();
+  private final ChainState syncTargetPeerChainState = spy(new ChainState());
   private final EthPeer otherPeer = mock(EthPeer.class);
-  private final ChainState otherPeerChainState = new ChainState();
+  private final ChainState otherPeerChainState = spy(new ChainState());
   private SyncState syncState;
   private BlockAddedObserver blockAddedObserver;
 
@@ -83,9 +86,33 @@ public class SyncStateTest {
   }
 
   @Test
-  public void isInSync_singlePeerWithWorseHeightBetterTd() {
+  public void isInSync_singlePeerWithWorseChainBetterHeight() {
+    updateChainState(otherPeerChainState, TARGET_CHAIN_HEIGHT, OUR_CHAIN_DIFFICULTY.minus(1L));
+    when(ethPeers.bestPeerWithHeightEstimate()).thenReturn(Optional.of(otherPeer));
+    doReturn(false).when(otherPeerChainState).chainIsBetterThan(any());
+
+    assertThat(syncState.syncTarget()).isEmpty(); // Sanity check
+    assertThat(syncState.isInSync()).isTrue();
+    assertThat(syncState.isInSync(0)).isTrue();
+  }
+
+  @Test
+  public void isInSync_singlePeerWithWorseChainWorseHeight() {
+    updateChainState(
+        otherPeerChainState, OUR_CHAIN_HEAD_NUMBER - 1L, OUR_CHAIN_DIFFICULTY.minus(1L));
+    when(ethPeers.bestPeerWithHeightEstimate()).thenReturn(Optional.of(otherPeer));
+    doReturn(false).when(otherPeerChainState).chainIsBetterThan(any());
+
+    assertThat(syncState.syncTarget()).isEmpty(); // Sanity check
+    assertThat(syncState.isInSync()).isTrue();
+    assertThat(syncState.isInSync(0)).isTrue();
+  }
+
+  @Test
+  public void isInSync_singlePeerWithBetterChainWorseHeight() {
     updateChainState(otherPeerChainState, OUR_CHAIN_HEAD_NUMBER - 1L, TARGET_DIFFICULTY);
     when(ethPeers.bestPeerWithHeightEstimate()).thenReturn(Optional.of(otherPeer));
+    doReturn(true).when(otherPeerChainState).chainIsBetterThan(any());
 
     assertThat(syncState.syncTarget()).isEmpty(); // Sanity check
     assertThat(syncState.isInSync()).isTrue();
@@ -93,19 +120,10 @@ public class SyncStateTest {
   }
 
   @Test
-  public void isInSync_singlePeerWithWorseHeightWorseTd() {
-    updateChainState(otherPeerChainState, OUR_CHAIN_HEAD_NUMBER - 1L, UInt256.ZERO);
-    when(ethPeers.bestPeerWithHeightEstimate()).thenReturn(Optional.of(otherPeer));
-
-    assertThat(syncState.syncTarget()).isEmpty(); // Sanity check
-    assertThat(syncState.isInSync()).isTrue();
-    assertThat(syncState.isInSync(0)).isTrue();
-  }
-
-  @Test
-  public void isInSync_singlePeerWithBetterHeightBetterTd() {
+  public void isInSync_singlePeerWithBetterChainBetterHeight() {
     updateChainState(otherPeerChainState, TARGET_CHAIN_HEIGHT, TARGET_DIFFICULTY);
     when(ethPeers.bestPeerWithHeightEstimate()).thenReturn(Optional.of(otherPeer));
+    doReturn(true).when(otherPeerChainState).chainIsBetterThan(any());
 
     assertThat(syncState.syncTarget()).isEmpty(); // Sanity check
     assertThat(syncState.isInSync()).isFalse();
@@ -115,11 +133,11 @@ public class SyncStateTest {
   }
 
   @Test
-  public void isInSync_singlePeerWithBetterHeightWorseTd() {
-    updateChainState(otherPeerChainState, TARGET_CHAIN_HEIGHT, UInt256.ZERO);
-    when(ethPeers.bestPeerWithHeightEstimate()).thenReturn(Optional.of(otherPeer));
+  public void isInSync_syncTargetWithBetterHeight() {
+    updateChainState(syncTargetPeerChainState, TARGET_CHAIN_HEIGHT, TARGET_DIFFICULTY);
+    syncState.setSyncTarget(syncTargetPeer, blockHeaderAt(0L));
 
-    assertThat(syncState.syncTarget()).isEmpty(); // Sanity check
+    assertThat(syncState.syncTarget()).isPresent(); // Sanity check
     assertThat(syncState.isInSync()).isFalse();
     assertThat(syncState.isInSync(TARGET_CHAIN_DELTA - 1)).isFalse();
     assertThat(syncState.isInSync(TARGET_CHAIN_DELTA)).isTrue();
@@ -127,7 +145,7 @@ public class SyncStateTest {
   }
 
   @Test
-  public void isInSync_syncTargetWithWorseHeightBetterTd() {
+  public void isInSync_syncTargetWithWorseHeight() {
     updateChainState(syncTargetPeerChainState, OUR_CHAIN_HEAD_NUMBER - 1L, TARGET_DIFFICULTY);
     syncState.setSyncTarget(syncTargetPeer, blockHeaderAt(0L));
 
@@ -137,45 +155,12 @@ public class SyncStateTest {
   }
 
   @Test
-  public void isInSync_syncTargetWithWorseHeightWorseTd() {
-    updateChainState(syncTargetPeerChainState, OUR_CHAIN_HEAD_NUMBER - 1L, UInt256.ZERO);
-    syncState.setSyncTarget(syncTargetPeer, blockHeaderAt(0L));
-
-    assertThat(syncState.syncTarget()).isPresent(); // Sanity check
-    assertThat(syncState.isInSync()).isTrue();
-    assertThat(syncState.isInSync(0)).isTrue();
-  }
-
-  @Test
-  public void isInSync_syncTargetWithBetterHeightBetterTd() {
-    updateChainState(syncTargetPeerChainState, TARGET_CHAIN_HEIGHT, TARGET_DIFFICULTY);
-    syncState.setSyncTarget(syncTargetPeer, blockHeaderAt(0L));
-
-    assertThat(syncState.syncTarget()).isPresent(); // Sanity check
-    assertThat(syncState.isInSync()).isFalse();
-    assertThat(syncState.isInSync(TARGET_CHAIN_DELTA - 1)).isFalse();
-    assertThat(syncState.isInSync(TARGET_CHAIN_DELTA)).isTrue();
-    assertThat(syncState.isInSync(TARGET_CHAIN_DELTA + 1)).isTrue();
-  }
-
-  @Test
-  public void isInSync_syncTargetWithBetterHeightWorseTd() {
-    updateChainState(syncTargetPeerChainState, TARGET_CHAIN_HEIGHT, UInt256.ZERO);
-    syncState.setSyncTarget(syncTargetPeer, blockHeaderAt(0L));
-
-    assertThat(syncState.syncTarget()).isPresent(); // Sanity check
-    assertThat(syncState.isInSync()).isFalse();
-    assertThat(syncState.isInSync(TARGET_CHAIN_DELTA - 1)).isFalse();
-    assertThat(syncState.isInSync(TARGET_CHAIN_DELTA)).isTrue();
-    assertThat(syncState.isInSync(TARGET_CHAIN_DELTA + 1)).isTrue();
-  }
-
-  @Test
   public void isInSync_outOfSyncWithTargetAndOutOfSyncWithBestPeer() {
     updateChainState(syncTargetPeerChainState, TARGET_CHAIN_HEIGHT, TARGET_DIFFICULTY);
     syncState.setSyncTarget(syncTargetPeer, blockHeaderAt(0L));
     updateChainState(otherPeerChainState, TARGET_CHAIN_HEIGHT, TARGET_DIFFICULTY);
     when(ethPeers.bestPeerWithHeightEstimate()).thenReturn(Optional.of(otherPeer));
+    doReturn(true).when(otherPeerChainState).chainIsBetterThan(any());
 
     assertThat(syncState.isInSync()).isFalse();
     assertThat(syncState.isInSync(0)).isFalse();
@@ -191,12 +176,27 @@ public class SyncStateTest {
     syncState.setSyncTarget(syncTargetPeer, blockHeaderAt(0L));
     updateChainState(otherPeerChainState, TARGET_CHAIN_HEIGHT, TARGET_DIFFICULTY);
     when(ethPeers.bestPeerWithHeightEstimate()).thenReturn(Optional.of(otherPeer));
+    doReturn(true).when(otherPeerChainState).chainIsBetterThan(any());
 
     assertThat(syncState.isInSync()).isFalse();
     assertThat(syncState.isInSync(0)).isFalse();
     assertThat(syncState.isInSync(TARGET_CHAIN_DELTA - 1)).isFalse();
     assertThat(syncState.isInSync(TARGET_CHAIN_DELTA)).isTrue();
     assertThat(syncState.isInSync(TARGET_CHAIN_DELTA + 1)).isTrue();
+  }
+
+  @Test
+  public void isInSync_inSyncWithTargetInSyncWithBestPeer() {
+    updateChainState(
+        syncTargetPeerChainState, OUR_CHAIN_HEAD_NUMBER - 1L, OUR_CHAIN_DIFFICULTY.minus(1L));
+    syncState.setSyncTarget(syncTargetPeer, blockHeaderAt(0L));
+    updateChainState(
+        otherPeerChainState, OUR_CHAIN_HEAD_NUMBER - 1L, OUR_CHAIN_DIFFICULTY.minus(1L));
+    when(ethPeers.bestPeerWithHeightEstimate()).thenReturn(Optional.of(otherPeer));
+    doReturn(false).when(otherPeerChainState).chainIsBetterThan(any());
+
+    assertThat(syncState.isInSync()).isTrue();
+    assertThat(syncState.isInSync(0)).isTrue();
   }
 
   @Test
