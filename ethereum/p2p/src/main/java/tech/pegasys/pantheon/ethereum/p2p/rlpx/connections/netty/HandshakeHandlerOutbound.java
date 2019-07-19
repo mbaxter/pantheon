@@ -34,8 +34,6 @@ final class HandshakeHandlerOutbound extends AbstractHandshakeHandler {
 
   private static final Logger LOG = LogManager.getLogger();
 
-  private final ByteBuf first;
-
   public HandshakeHandlerOutbound(
       final SECP256K1.KeyPair kp,
       final Peer peer,
@@ -51,8 +49,7 @@ final class HandshakeHandlerOutbound extends AbstractHandshakeHandler {
         connectionFuture,
         connectionEventDispatcher,
         metricsSystem);
-    handshaker.prepareInitiator(kp, SECP256K1.PublicKey.create(peer.getId()));
-    this.first = handshaker.firstMessage();
+    this.kp = kp;
   }
 
   @Override
@@ -69,6 +66,8 @@ final class HandshakeHandlerOutbound extends AbstractHandshakeHandler {
   @Override
   public void channelActive(final ChannelHandlerContext ctx) throws Exception {
     super.channelActive(ctx);
+    handshaker.prepareInitiator(kp, SECP256K1.PublicKey.create(expectedPeer.get().getId()));
+    final ByteBuf first = handshaker.firstMessage();
     ctx.writeAndFlush(first)
         .addListener(
             f -> {

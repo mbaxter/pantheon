@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.ecies;
 
+import com.google.common.base.MoreObjects;
 import tech.pegasys.pantheon.crypto.Hash;
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.rlp.BytesValueRLPInput;
@@ -109,5 +110,16 @@ public final class InitiatorHandshakeMessageV4 implements InitiatorHandshakeMess
   @Override
   public Bytes32 getEphPubKeyHash() {
     return ephPubKeyHash;
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+      .add("pubKey", pubKey.getEncodedBytes())
+      .add("signature", signature.encodedBytes())
+      .add("ephPubKey", ephPubKey.getEncodedBytes())
+      .add("ephPubKeyHash", ephPubKeyHash)
+      .add("nonce", nonce)
+      .toString();
   }
 }

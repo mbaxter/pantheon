@@ -81,6 +81,8 @@ public class ECIESHandshaker implements Handshaker {
   private HandshakeSecrets secrets;
 
   private boolean version4 = true;
+  private String pan2929Prefix;
+  private String connectionId;
 
   @Override
   public void prepareInitiator(final SECP256K1.KeyPair ourKeypair, final PublicKey theirPubKey) {
@@ -94,9 +96,31 @@ public class ECIESHandshaker implements Handshaker {
     this.ephKeyPair = SECP256K1.KeyPair.generate();
     this.partyPubKey = theirPubKey;
     this.initiatorNonce = Bytes32.wrap(random(32), 0);
-    LOG.trace(
-        "Prepared ECIES handshake with node {}... under INITIATOR role",
-        theirPubKey.getEncodedBytes().slice(0, 16));
+    LogPan2929("prepareInitiator | identityKeyPair (priv): {}, identityKeyPair (pub): {}", identityKeyPair.getPrivateKey().getEncodedBytes(), identityKeyPair.getPublicKey().getEncodedBytes());
+    LogPan2929(
+        "Prepared ECIES handshake with node under INITIATOR role. partyPubKey: {}, initiatorNonce: {}, ephKeyPair (priv): {}, ephKeyPair(pub): {}",
+        theirPubKey.getEncodedBytes(), initiatorNonce, ephKeyPair.getPrivateKey().getEncodedBytes(), ephKeyPair.getPublicKey().getEncodedBytes());
+  }
+
+  private String pan2929Prefix() {
+    if (pan2929Prefix == null) {
+      final String typeLabel = initiator ? "initiator" : "responder";
+      String prefix = "[PAN-2929] (";
+      if (connectionId != null) {
+        prefix += "connId: " + connectionId;
+      }
+      prefix += " type: " + typeLabel;
+      if (partyPubKey != null) {
+        prefix += " partyPubKey: " + partyPubKey.getEncodedBytes().toUnprefixedString().substring(0, 6);
+      }
+      prefix += ") ";
+      pan2929Prefix = prefix;
+    }
+    return pan2929Prefix;
+  }
+
+  private void LogPan2929(final String message, final Object... args) {
+    LOG.info(pan2929Prefix() + message, args);
   }
 
   @Override
@@ -110,7 +134,8 @@ public class ECIESHandshaker implements Handshaker {
     this.identityKeyPair = ourKeypair;
     this.ephKeyPair = SECP256K1.KeyPair.generate();
     this.responderNonce = Bytes32.wrap(random(32), 0);
-    LOG.trace("Prepared ECIES handshake under RESPONDER role");
+    LogPan2929("prepareResponder | identityKeyPair (priv): {}, identityKeyPair (pub): {}", identityKeyPair.getPrivateKey().getEncodedBytes(), identityKeyPair.getPublicKey().getEncodedBytes());
+    LogPan2929("Prepared ECIES handshake under RESPONDER role. responderNonce: {}, ephKeyPair (priv): {}, ephKeyPair (pub): {}", responderNonce, ephKeyPair.getPrivateKey().getEncodedBytes(), ephKeyPair.getPublicKey().getEncodedBytes());
   }
 
   @Override
@@ -147,7 +172,7 @@ public class ECIESHandshaker implements Handshaker {
       throw new HandshakeException("Encrypting the first handshake message failed", e);
     }
 
-    LOG.trace("First ECIES handshake message under INITIATOR role: {}", initiatorMsg);
+    LogPan2929("First ECIES handshake message under INITIATOR role. initiatorMsg: {}", initiatorMsg);
 
     return Unpooled.wrappedBuffer(initiatorMsgEnc.extractArray());
   }
@@ -205,6 +230,7 @@ public class ECIESHandshaker implements Handshaker {
       }
     } catch (final InvalidCipherTextException e) {
       status.set(Handshaker.HandshakeStatus.FAILED);
+      LogPan2929("Failed to decrypt handshake message: encryptedMsg: {}", encryptedBytes);
       throw new HandshakeException("Decrypting an incoming handshake message failed", e);
     }
 
@@ -230,8 +256,8 @@ public class ECIESHandshaker implements Handshaker {
       responderNonce = responderMsg.getNonce();
       partyEphPubKey = responderMsg.getEphPublicKey();
 
-      LOG.trace(
-          "Received responder's ECIES handshake message from node {}...: {}",
+      LogPan2929(
+          "Received responder's ECIES handshake message from node {}...: responderMsg: {}",
           partyPubKey.getEncodedBytes().slice(0, 16),
           responderMsg);
 
@@ -251,10 +277,8 @@ public class ECIESHandshaker implements Handshaker {
         initiatorMsg = InitiatorHandshakeMessageV1.decode(bytes, identityKeyPair);
       }
 
-      LOG.trace(
-          "[{}] Received initiator's ECIES handshake message: {}",
-          identityKeyPair.getPublicKey().getEncodedBytes(),
-          initiatorMsg);
+      LogPan2929(
+          "Received initiator's ECIES handshake message: {}", initiatorMsg);
 
       // Extract the initiator's data.
       initiatorNonce = initiatorMsg.getNonce();
@@ -274,7 +298,7 @@ public class ECIESHandshaker implements Handshaker {
             ResponderHandshakeMessageV1.create(ephKeyPair.getPublicKey(), responderNonce, false);
       }
 
-      LOG.trace(
+      LogPan2929(
           "Generated responder's ECIES handshake message against peer {}...: {}",
           partyPubKey.getEncodedBytes().slice(0, 16),
           responderMsg);
@@ -296,7 +320,7 @@ public class ECIESHandshaker implements Handshaker {
     computeSecrets();
 
     status.set(Handshaker.HandshakeStatus.SUCCESS);
-    LOG.trace("Handshake status set to {}", status.get());
+    LogPan2929("Handshake status set to {}", status.get());
     return nextMsg.map(bv -> Unpooled.wrappedBuffer(bv.extractArray()));
   }
 
@@ -424,5 +448,9 @@ public class ECIESHandshaker implements Handshaker {
   @VisibleForTesting
   void setResponderMsgEnc(final BytesValue responderMsgEnc) {
     this.responderMsgEnc = responderMsgEnc;
+  }
+
+  public void setConnectionId(final String id) {
+    this.connectionId = id;
   }
 }

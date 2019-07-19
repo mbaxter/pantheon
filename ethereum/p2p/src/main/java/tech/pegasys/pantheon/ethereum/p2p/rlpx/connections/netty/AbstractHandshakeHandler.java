@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty;
 
+import tech.pegasys.pantheon.crypto.SECP256K1.KeyPair;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.peers.Peer;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
@@ -43,10 +44,10 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
 
   private static final Logger LOG = LogManager.getLogger();
 
-  protected final Handshaker handshaker = new ECIESHandshaker();
+  protected final ECIESHandshaker handshaker = new ECIESHandshaker();
 
   // The peer we are expecting to connect to, if such a peer is known
-  private final Optional<Peer> expectedPeer;
+  protected final Optional<Peer> expectedPeer;
   private final LocalNode localNode;
 
   private final PeerConnectionEventDispatcher connectionEventDispatcher;
@@ -55,6 +56,7 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
   private final List<SubProtocol> subProtocols;
 
   private final MetricsSystem metricsSystem;
+  protected KeyPair kp;
 
   AbstractHandshakeHandler(
       final List<SubProtocol> subProtocols,
@@ -69,6 +71,12 @@ abstract class AbstractHandshakeHandler extends SimpleChannelInboundHandler<Byte
     this.connectionFuture = connectionFuture;
     this.connectionEventDispatcher = connectionEventDispatcher;
     this.metricsSystem = metricsSystem;
+  }
+
+  @Override
+  public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+    super.channelActive(ctx);
+    handshaker.setConnectionId(ctx.channel().id().toString());
   }
 
   /**

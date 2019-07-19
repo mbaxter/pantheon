@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.ecies;
 
+import com.google.common.base.MoreObjects;
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.rlp.BytesValueRLPInput;
 import tech.pegasys.pantheon.ethereum.rlp.BytesValueRLPOutput;
@@ -61,5 +62,13 @@ public class ResponderHandshakeMessageV4 implements ResponderHandshakeMessage {
     temp.writeIntScalar(InitiatorHandshakeMessageV4.VERSION);
     temp.endList();
     return temp.encoded();
+  }
+
+  @Override
+  public String toString() {
+    return MoreObjects.toStringHelper(this)
+      .add("ephPublicKey", ephPublicKey.getEncodedBytes())
+      .add("nonce", nonce)
+      .toString();
   }
 }

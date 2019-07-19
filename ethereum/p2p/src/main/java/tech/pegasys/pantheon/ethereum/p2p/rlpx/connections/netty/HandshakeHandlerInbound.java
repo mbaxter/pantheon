@@ -12,6 +12,11 @@
  */
 package tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.netty;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.ethereum.p2p.peers.LocalNode;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnection;
@@ -19,12 +24,6 @@ import tech.pegasys.pantheon.ethereum.p2p.rlpx.connections.PeerConnectionEventDi
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.Handshaker;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.SubProtocol;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-
-import io.netty.buffer.ByteBuf;
 
 final class HandshakeHandlerInbound extends AbstractHandshakeHandler {
 
@@ -42,6 +41,12 @@ final class HandshakeHandlerInbound extends AbstractHandshakeHandler {
         connectionFuture,
         connectionEventDispatcher,
         metricsSystem);
+    this.kp = kp;
+  }
+
+  @Override
+  public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+    super.channelActive(ctx);
     handshaker.prepareResponder(kp);
   }
 

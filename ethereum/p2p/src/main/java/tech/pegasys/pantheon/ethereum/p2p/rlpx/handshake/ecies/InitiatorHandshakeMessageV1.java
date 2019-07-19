@@ -20,6 +20,7 @@ import static tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.ecies.ECIESHands
 import static tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.ecies.ECIESHandshaker.SIGNATURE_LENGTH;
 import static tech.pegasys.pantheon.ethereum.p2p.rlpx.handshake.ecies.ECIESHandshaker.TOKEN_FLAG_LENGTH;
 
+import com.google.common.base.MoreObjects;
 import tech.pegasys.pantheon.crypto.Hash;
 import tech.pegasys.pantheon.crypto.SECP256K1;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
@@ -157,19 +158,13 @@ public final class InitiatorHandshakeMessageV1 implements InitiatorHandshakeMess
 
   @Override
   public String toString() {
-    return "InitiatorHandshakeMessage{"
-        + "pubKey="
-        + pubKey
-        + ", signature="
-        + signature
-        + ", ephPubKey="
-        + ephPubKey
-        + ", ephPubKeyHash="
-        + ephPubKeyHash
-        + ", nonce="
-        + nonce
-        + ", token="
-        + token
-        + '}';
+    return MoreObjects.toStringHelper(this)
+      .add("pubKey", pubKey.getEncodedBytes())
+      .add("signature", signature.encodedBytes())
+      .add("ephPubKey", ephPubKey.getEncodedBytes())
+      .add("ephPubKeyHash", ephPubKeyHash)
+      .add("nonce", nonce)
+      .add("token", token)
+      .toString();
   }
 }
