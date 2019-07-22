@@ -13,7 +13,7 @@
 package tech.pegasys.pantheon.ethereum.eth.sync.fastsync;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static tech.pegasys.pantheon.ethereum.eth.sync.fastsync.PivotBlockRetriever.MAX_PIVOT_BLOCK_RETRIES;
+import static tech.pegasys.pantheon.ethereum.eth.sync.fastsync.PivotBlockRetriever.MAX_QUERY_RETRIES_PER_PEER;
 
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
@@ -81,7 +81,7 @@ class FastSyncTargetManager<C> extends SyncTargetManager<C> {
             ethContext,
             metricsSystem,
             pivotBlockHeader.getNumber(),
-            MAX_PIVOT_BLOCK_RETRIES);
+            MAX_QUERY_RETRIES_PER_PEER);
     task.assignPeer(bestPeer);
     return ethContext
         .getScheduler()
