@@ -48,7 +48,9 @@ public class InMemoryStorageProvider implements StorageProvider {
   }
 
   public static WorldStateArchive createInMemoryWorldStateArchive() {
-    return new WorldStateArchive(new WorldStateKeyValueStorage(new InMemoryKeyValueStorage()));
+    return new WorldStateArchive(
+        new WorldStateKeyValueStorage(new InMemoryKeyValueStorage()),
+        new WorldStatePreImageKeyValueStorage(new InMemoryKeyValueStorage()));
   }
 
   @Override

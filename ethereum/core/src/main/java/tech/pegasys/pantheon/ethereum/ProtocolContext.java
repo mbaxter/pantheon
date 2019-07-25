@@ -20,6 +20,7 @@ import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.storage.StorageProvider;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
+import tech.pegasys.pantheon.ethereum.worldstate.WorldStatePreImageStorage;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 
@@ -55,11 +56,14 @@ public class ProtocolContext<C> {
     final BlockchainStorage blockchainStorage =
         storageProvider.createBlockchainStorage(protocolSchedule);
     final WorldStateStorage worldStateStorage = storageProvider.createWorldStateStorage();
+    final WorldStatePreImageStorage preImageStorage =
+        storageProvider.createWorldStatePreImageStorage();
 
     final MutableBlockchain blockchain =
         new DefaultMutableBlockchain(genesisState.getBlock(), blockchainStorage, metricsSystem);
 
-    final WorldStateArchive worldStateArchive = new WorldStateArchive(worldStateStorage);
+    final WorldStateArchive worldStateArchive =
+        new WorldStateArchive(worldStateStorage, preImageStorage);
     genesisState.writeStateTo(worldStateArchive.getMutable());
 
     return new ProtocolContext<>(

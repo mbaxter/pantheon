@@ -12,20 +12,25 @@
  */
 package tech.pegasys.pantheon.ethereum.worldstate;
 
+import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
 import tech.pegasys.pantheon.ethereum.core.WorldState;
 import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
+import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Optional;
 
 public class WorldStateArchive {
-  private final WorldStateStorage storage;
+  private final WorldStateStorage worldStateStorage;
+  private final WorldStatePreImageStorage preImageStorage;
   private static final Hash EMPTY_ROOT_HASH = Hash.wrap(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH);
 
-  public WorldStateArchive(final WorldStateStorage storage) {
-    this.storage = storage;
+  public WorldStateArchive(
+      final WorldStateStorage worldStateStorage, final WorldStatePreImageStorage preImageStorage) {
+    this.worldStateStorage = worldStateStorage;
+    this.preImageStorage = preImageStorage;
   }
 
   public Optional<WorldState> get(final Hash rootHash) {
@@ -33,14 +38,14 @@ public class WorldStateArchive {
   }
 
   public boolean isWorldStateAvailable(final Hash rootHash) {
-    return storage.isWorldStateAvailable(rootHash);
+    return worldStateStorage.isWorldStateAvailable(rootHash);
   }
 
   public Optional<MutableWorldState> getMutable(final Hash rootHash) {
-    if (!storage.isWorldStateAvailable(rootHash)) {
+    if (!worldStateStorage.isWorldStateAvailable(rootHash)) {
       return Optional.empty();
     }
-    return Optional.of(new DefaultMutableWorldState(rootHash, storage));
+    return Optional.of(new DefaultMutableWorldState(rootHash, worldStateStorage));
   }
 
   public WorldState get() {
@@ -52,10 +57,19 @@ public class WorldStateArchive {
   }
 
   public Optional<BytesValue> getNodeData(final Hash hash) {
-    return storage.getNodeData(hash);
+    return worldStateStorage.getNodeData(hash);
   }
 
-  public WorldStateStorage getStorage() {
-    return storage;
+  // TODO: move these API's to WorldState / Account?
+  public Optional<Bytes32> getStorageTrieKeyPreImage(final Bytes32 trieKey) {
+    return preImageStorage.getStorageTrieKeyPreImage(trieKey);
+  }
+
+  public Optional<Address> getAccountTrieKeyPreImage(final Bytes32 trieKey) {
+    return preImageStorage.getAccountTrieKeyPreImage(trieKey);
+  }
+
+  public WorldStateStorage getWorldStateStorage() {
+    return worldStateStorage;
   }
 }
