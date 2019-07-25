@@ -20,6 +20,7 @@ import tech.pegasys.pantheon.ethereum.privacy.PrivateStateStorage;
 import tech.pegasys.pantheon.ethereum.privacy.PrivateTransactionKeyValueStorage;
 import tech.pegasys.pantheon.ethereum.privacy.PrivateTransactionStorage;
 import tech.pegasys.pantheon.ethereum.storage.StorageProvider;
+import tech.pegasys.pantheon.ethereum.worldstate.WorldStatePreImageStorage;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
 
@@ -29,22 +30,21 @@ public class KeyValueStorageProvider implements StorageProvider {
 
   private final KeyValueStorage blockchainStorage;
   private final KeyValueStorage worldStateStorage;
+  private final KeyValueStorage worldStatePreImageStorage;
   private final KeyValueStorage privateTransactionStorage;
   private final KeyValueStorage privateStateStorage;
   private final KeyValueStorage pruningStorage;
 
-  public KeyValueStorageProvider(final KeyValueStorage keyValueStorage) {
-    this(keyValueStorage, keyValueStorage, keyValueStorage, keyValueStorage, keyValueStorage);
-  }
-
   public KeyValueStorageProvider(
       final KeyValueStorage blockchainStorage,
       final KeyValueStorage worldStateStorage,
+      final KeyValueStorage worldStatePreImageStorage,
       final KeyValueStorage privateTransactionStorage,
       final KeyValueStorage privateStateStorage,
       final KeyValueStorage pruningStorage) {
     this.blockchainStorage = blockchainStorage;
     this.worldStateStorage = worldStateStorage;
+    this.worldStatePreImageStorage = worldStatePreImageStorage;
     this.privateTransactionStorage = privateTransactionStorage;
     this.privateStateStorage = privateStateStorage;
     this.pruningStorage = pruningStorage;
@@ -59,6 +59,11 @@ public class KeyValueStorageProvider implements StorageProvider {
   @Override
   public WorldStateStorage createWorldStateStorage() {
     return new WorldStateKeyValueStorage(worldStateStorage);
+  }
+
+  @Override
+  public WorldStatePreImageStorage createWorldStatePreImageStorage() {
+    return new WorldStatePreImageKeyValueStorage(worldStatePreImageStorage);
   }
 
   @Override
