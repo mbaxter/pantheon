@@ -28,7 +28,7 @@ import tech.pegasys.pantheon.ethereum.core.Wei;
 import tech.pegasys.pantheon.ethereum.core.WorldState;
 import tech.pegasys.pantheon.ethereum.core.WorldUpdater;
 import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStateKeyValueStorage;
-import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStatePreImageKeyValueStorage;
+import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStatePreimageKeyValueStorage;
 import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
@@ -51,8 +51,8 @@ public class DefaultMutableWorldStateTest {
       Address.fromHexString("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b");
 
   private static MutableWorldState createEmpty(final WorldStateKeyValueStorage storage) {
-    final WorldStatePreImageKeyValueStorage preimageStorage =
-        new WorldStatePreImageKeyValueStorage(new InMemoryKeyValueStorage());
+    final WorldStatePreimageKeyValueStorage preimageStorage =
+        new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage());
     return new DefaultMutableWorldState(storage, preimageStorage);
   }
 
@@ -196,7 +196,7 @@ public class DefaultMutableWorldStateTest {
         new DefaultMutableWorldState(
             expectedRootHash,
             new WorldStateKeyValueStorage(storage),
-            new WorldStatePreImageKeyValueStorage(new InMemoryKeyValueStorage()));
+            new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()));
     assertEquals(expectedRootHash, newWorldState.rootHash());
     assertNotNull(newWorldState.get(ADDRESS));
     assertEquals(newBalance, newWorldState.get(ADDRESS).getBalance());

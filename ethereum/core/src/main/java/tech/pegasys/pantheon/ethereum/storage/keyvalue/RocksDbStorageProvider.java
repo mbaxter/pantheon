@@ -44,46 +44,46 @@ public class RocksDbStorageProvider {
   public static StorageProvider create(
       final RocksDbConfiguration rocksDbConfiguration,
       final MetricsSystem metricsSystem,
-      final long worldStatePreImageCacheSize)
+      final long worldStatePreimageCacheSize)
       throws IOException {
     if (rocksDbConfiguration.useColumns()) {
       return createSegmentedProvider(
-          rocksDbConfiguration, metricsSystem, worldStatePreImageCacheSize);
+          rocksDbConfiguration, metricsSystem, worldStatePreimageCacheSize);
     } else {
       return createUnsegmentedProvider(
-          rocksDbConfiguration, metricsSystem, worldStatePreImageCacheSize);
+          rocksDbConfiguration, metricsSystem, worldStatePreimageCacheSize);
     }
   }
 
   private static StorageProvider createUnsegmentedProvider(
       final RocksDbConfiguration rocksDbConfiguration,
       final MetricsSystem metricsSystem,
-      final long worldStatePreImageCacheSize)
+      final long worldStatePreimageCacheSize)
       throws IOException {
     Files.createDirectories(rocksDbConfiguration.getDatabaseDir());
     final KeyValueStorage kv = RocksDbKeyValueStorage.create(rocksDbConfiguration, metricsSystem);
-    final KeyValueStorage preImageKv =
-        new LimitedInMemoryKeyValueStorage(worldStatePreImageCacheSize);
-    return new KeyValueStorageProvider(kv, kv, preImageKv, kv, kv, kv);
+    final KeyValueStorage preimageKv =
+        new LimitedInMemoryKeyValueStorage(worldStatePreimageCacheSize);
+    return new KeyValueStorageProvider(kv, kv, preimageKv, kv, kv, kv);
   }
 
   private static StorageProvider createSegmentedProvider(
       final RocksDbConfiguration rocksDbConfiguration,
       final MetricsSystem metricsSystem,
-      final long worldStatePreImageCacheSize)
+      final long worldStatePreimageCacheSize)
       throws IOException {
     LOG.info("Using RocksDB columns");
     Files.createDirectories(rocksDbConfiguration.getDatabaseDir());
     final SegmentedKeyValueStorage<?> columnarStorage =
         ColumnarRocksDbKeyValueStorage.create(
             rocksDbConfiguration, asList(RocksDbSegment.values()), metricsSystem);
-    final KeyValueStorage preImageStorage =
-        new LimitedInMemoryKeyValueStorage(worldStatePreImageCacheSize);
+    final KeyValueStorage preimageStorage =
+        new LimitedInMemoryKeyValueStorage(worldStatePreimageCacheSize);
 
     return new KeyValueStorageProvider(
         new SegmentedKeyValueStorageAdapter<>(RocksDbSegment.BLOCKCHAIN, columnarStorage),
         new SegmentedKeyValueStorageAdapter<>(RocksDbSegment.WORLD_STATE, columnarStorage),
-        preImageStorage,
+        preimageStorage,
         new SegmentedKeyValueStorageAdapter<>(RocksDbSegment.PRIVATE_TRANSACTIONS, columnarStorage),
         new SegmentedKeyValueStorageAdapter<>(RocksDbSegment.PRIVATE_STATE, columnarStorage),
         new SegmentedKeyValueStorageAdapter<>(RocksDbSegment.PRUNING_STATE, columnarStorage));

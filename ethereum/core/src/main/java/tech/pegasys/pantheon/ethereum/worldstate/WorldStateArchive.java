@@ -22,13 +22,13 @@ import java.util.Optional;
 
 public class WorldStateArchive {
   private final WorldStateStorage worldStateStorage;
-  private final WorldStatePreImageStorage preImageStorage;
+  private final WorldStatePreimageStorage preimageStorage;
   private static final Hash EMPTY_ROOT_HASH = Hash.wrap(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH);
 
   public WorldStateArchive(
-      final WorldStateStorage worldStateStorage, final WorldStatePreImageStorage preImageStorage) {
+      final WorldStateStorage worldStateStorage, final WorldStatePreimageStorage preimageStorage) {
     this.worldStateStorage = worldStateStorage;
-    this.preImageStorage = preImageStorage;
+    this.preimageStorage = preimageStorage;
   }
 
   public Optional<WorldState> get(final Hash rootHash) {
@@ -43,7 +43,7 @@ public class WorldStateArchive {
     if (!worldStateStorage.isWorldStateAvailable(rootHash)) {
       return Optional.empty();
     }
-    return Optional.of(new DefaultMutableWorldState(rootHash, worldStateStorage, preImageStorage));
+    return Optional.of(new DefaultMutableWorldState(rootHash, worldStateStorage, preimageStorage));
   }
 
   public WorldState get() {

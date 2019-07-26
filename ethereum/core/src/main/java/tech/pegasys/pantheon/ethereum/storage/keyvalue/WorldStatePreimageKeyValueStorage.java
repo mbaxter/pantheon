@@ -13,27 +13,27 @@
 package tech.pegasys.pantheon.ethereum.storage.keyvalue;
 
 import tech.pegasys.pantheon.ethereum.core.Address;
-import tech.pegasys.pantheon.ethereum.worldstate.WorldStatePreImageStorage;
+import tech.pegasys.pantheon.ethereum.worldstate.WorldStatePreimageStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage.Transaction;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 
 import java.util.Optional;
 
-public class WorldStatePreImageKeyValueStorage implements WorldStatePreImageStorage {
+public class WorldStatePreimageKeyValueStorage implements WorldStatePreimageStorage {
   private final KeyValueStorage keyValueStorage;
 
-  public WorldStatePreImageKeyValueStorage(final KeyValueStorage keyValueStorage) {
+  public WorldStatePreimageKeyValueStorage(final KeyValueStorage keyValueStorage) {
     this.keyValueStorage = keyValueStorage;
   }
 
   @Override
-  public Optional<Bytes32> getStorageTrieKeyPreImage(final Bytes32 trieKey) {
+  public Optional<Bytes32> getStorageTrieKeyPreimage(final Bytes32 trieKey) {
     return keyValueStorage.get(trieKey).map(Bytes32::wrap);
   }
 
   @Override
-  public Optional<Address> getAccountTrieKeyPreImage(final Bytes32 trieKey) {
+  public Optional<Address> getAccountTrieKeyPreimage(final Bytes32 trieKey) {
     return keyValueStorage.get(trieKey).map(Address::wrap);
   }
 
@@ -42,7 +42,7 @@ public class WorldStatePreImageKeyValueStorage implements WorldStatePreImageStor
     return new Updater(keyValueStorage.startTransaction());
   }
 
-  public static class Updater implements WorldStatePreImageStorage.Updater {
+  public static class Updater implements WorldStatePreimageStorage.Updater {
     private final KeyValueStorage.Transaction transaction;
 
     public Updater(final Transaction transaction) {
@@ -50,16 +50,16 @@ public class WorldStatePreImageKeyValueStorage implements WorldStatePreImageStor
     }
 
     @Override
-    public WorldStatePreImageStorage.Updater putStorageTrieKeyPreImage(
-        final Bytes32 trieKey, final Bytes32 preImage) {
-      transaction.put(trieKey, preImage);
+    public WorldStatePreimageStorage.Updater putStorageTrieKeyPreimage(
+        final Bytes32 trieKey, final Bytes32 preimage) {
+      transaction.put(trieKey, preimage);
       return this;
     }
 
     @Override
-    public WorldStatePreImageStorage.Updater putAccountTrieKeyPreImage(
-        final Bytes32 trieKey, final Address preImage) {
-      transaction.put(trieKey, preImage);
+    public WorldStatePreimageStorage.Updater putAccountTrieKeyPreimage(
+        final Bytes32 trieKey, final Address preimage) {
+      transaction.put(trieKey, preimage);
       return this;
     }
 

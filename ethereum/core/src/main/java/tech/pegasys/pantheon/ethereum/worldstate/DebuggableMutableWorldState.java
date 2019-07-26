@@ -19,7 +19,7 @@ import tech.pegasys.pantheon.ethereum.core.Wei;
 import tech.pegasys.pantheon.ethereum.core.WorldState;
 import tech.pegasys.pantheon.ethereum.core.WorldUpdater;
 import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStateKeyValueStorage;
-import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStatePreImageKeyValueStorage;
+import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStatePreimageKeyValueStorage;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
 
 import java.util.Collection;
@@ -53,7 +53,7 @@ public class DebuggableMutableWorldState extends DefaultMutableWorldState {
   public DebuggableMutableWorldState() {
     super(
         new WorldStateKeyValueStorage(new InMemoryKeyValueStorage()),
-        new WorldStatePreImageKeyValueStorage(new InMemoryKeyValueStorage()));
+        new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()));
   }
 
   public DebuggableMutableWorldState(final WorldState worldState) {

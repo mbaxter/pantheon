@@ -17,19 +17,19 @@ import tech.pegasys.pantheon.util.bytes.Bytes32;
 
 import java.util.Optional;
 
-public interface WorldStatePreImageStorage {
+public interface WorldStatePreimageStorage {
 
-  Optional<Bytes32> getStorageTrieKeyPreImage(Bytes32 trieKey);
+  Optional<Bytes32> getStorageTrieKeyPreimage(Bytes32 trieKey);
 
-  Optional<Address> getAccountTrieKeyPreImage(Bytes32 trieKey);
+  Optional<Address> getAccountTrieKeyPreimage(Bytes32 trieKey);
 
   Updater updater();
 
   interface Updater {
 
-    Updater putStorageTrieKeyPreImage(Bytes32 trieKey, Bytes32 preImage);
+    Updater putStorageTrieKeyPreimage(Bytes32 trieKey, Bytes32 preimage);
 
-    Updater putAccountTrieKeyPreImage(Bytes32 trieKey, Address preImage);
+    Updater putAccountTrieKeyPreimage(Bytes32 trieKey, Address preimage);
 
     void commit();
 
