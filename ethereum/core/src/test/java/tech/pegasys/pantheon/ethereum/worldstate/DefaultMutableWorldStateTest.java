@@ -553,24 +553,36 @@ public class DefaultMutableWorldStateTest {
     account.setStorageValue(UInt256.of(2), UInt256.of(5));
     updater.commit();
 
+    final List<AccountStorageEntry> initialSetOfEntries = new ArrayList<>();
+    initialSetOfEntries.add(AccountStorageEntry.forKeyAndValue(UInt256.ONE, UInt256.of(2)));
+    initialSetOfEntries.add(AccountStorageEntry.forKeyAndValue(UInt256.of(2), UInt256.of(5)));
+    final Map<Bytes32, AccountStorageEntry> initialEntries = new TreeMap<>();
+    initialSetOfEntries.forEach(entry -> initialEntries.put(entry.getKeyHash(), entry));
+
     updater = worldState.updater();
     account = updater.getMutable(ADDRESS);
     account.setStorageValue(UInt256.ONE, UInt256.of(3));
     account.setStorageValue(UInt256.of(3), UInt256.of(6));
 
-    final Map<Bytes32, AccountStorageEntry> storage = account.storageEntriesFrom(Hash.ZERO, 10);
+    final List<AccountStorageEntry> finalSetOfEntries = new ArrayList<>();
+    finalSetOfEntries.add(AccountStorageEntry.forKeyAndValue(UInt256.ONE, UInt256.of(3)));
+    finalSetOfEntries.add(AccountStorageEntry.forKeyAndValue(UInt256.of(2), UInt256.of(5)));
+    finalSetOfEntries.add(AccountStorageEntry.forKeyAndValue(UInt256.of(3), UInt256.of(6)));
+    final Map<Bytes32, AccountStorageEntry> finalEntries = new TreeMap<>();
+    finalSetOfEntries.forEach(entry -> finalEntries.put(entry.getKeyHash(), entry));
 
-    final List<AccountStorageEntry> expected = new ArrayList<>();
-    expected.add(AccountStorageEntry.create(UInt256.of(3), hash(UInt256.ONE), UInt256.ONE));
-    expected.add(AccountStorageEntry.create(UInt256.of(5), hash(UInt256.of(2)), UInt256.of(2)));
-    expected.add(AccountStorageEntry.create(UInt256.of(6), hash(UInt256.of(3)), UInt256.of(3)));
-    final Map<Bytes32, AccountStorageEntry> expectedMap = new TreeMap<>();
-    expected.forEach(entry -> expectedMap.put(entry.getKeyHash(), entry));
+    assertThat(account.storageEntriesFrom(Hash.ZERO, 10)).isEqualTo(finalEntries);
+    assertThat(updater.get(ADDRESS).storageEntriesFrom(Hash.ZERO, 10)).isEqualTo(finalEntries);
+    assertThat(worldState.get(ADDRESS).storageEntriesFrom(Hash.ZERO, 10)).isEqualTo(initialEntries);
 
-    assertThat(storage).isEqualTo(expectedMap);
-  }
+    worldState.persist();
+    assertThat(updater.get(ADDRESS).storageEntriesFrom(Hash.ZERO, 10)).isEqualTo(finalEntries);
+    assertThat(worldState.get(ADDRESS).storageEntriesFrom(Hash.ZERO, 10)).isEqualTo(initialEntries);
 
-  private Hash hash(final UInt256 key) {
-    return Hash.hash(key.getBytes());
+    updater.commit();
+    assertThat(worldState.get(ADDRESS).storageEntriesFrom(Hash.ZERO, 10)).isEqualTo(finalEntries);
+
+    worldState.persist();
+    assertThat(worldState.get(ADDRESS).storageEntriesFrom(Hash.ZERO, 10)).isEqualTo(finalEntries);
   }
 }
