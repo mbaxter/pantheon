@@ -47,15 +47,20 @@ public class DefaultMutableWorldState implements MutableWorldState {
       new HashMap<>();
   private final Map<Address, BytesValue> updatedAccountCode = new HashMap<>();
   private final WorldStateStorage worldStateStorage;
+  private final WorldStatePreImageStorage preImageStorage;
 
-  public DefaultMutableWorldState(final WorldStateStorage storage) {
-    this(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH, storage);
+  public DefaultMutableWorldState(
+      final WorldStateStorage storage, final WorldStatePreImageStorage preImageStorage) {
+    this(MerklePatriciaTrie.EMPTY_TRIE_NODE_HASH, storage, preImageStorage);
   }
 
   public DefaultMutableWorldState(
-      final Bytes32 rootHash, final WorldStateStorage worldStateStorage) {
+      final Bytes32 rootHash,
+      final WorldStateStorage worldStateStorage,
+      final WorldStatePreImageStorage preImageStorage) {
     this.worldStateStorage = worldStateStorage;
     this.accountStateTrie = newAccountStateTrie(rootHash);
+    this.preImageStorage = preImageStorage;
   }
 
   public DefaultMutableWorldState(final WorldState worldState) {
@@ -68,6 +73,7 @@ public class DefaultMutableWorldState implements MutableWorldState {
 
     final DefaultMutableWorldState other = (DefaultMutableWorldState) worldState;
     this.worldStateStorage = other.worldStateStorage;
+    this.preImageStorage = other.preImageStorage;
     this.accountStateTrie = newAccountStateTrie(other.accountStateTrie.getRootHash());
   }
 
@@ -88,7 +94,7 @@ public class DefaultMutableWorldState implements MutableWorldState {
 
   @Override
   public MutableWorldState copy() {
-    return new DefaultMutableWorldState(rootHash(), worldStateStorage);
+    return new DefaultMutableWorldState(rootHash(), worldStateStorage, preImageStorage);
   }
 
   @Override

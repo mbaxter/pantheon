@@ -12,12 +12,10 @@
  */
 package tech.pegasys.pantheon.ethereum.worldstate;
 
-import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
 import tech.pegasys.pantheon.ethereum.core.WorldState;
 import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
-import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Optional;
@@ -45,7 +43,7 @@ public class WorldStateArchive {
     if (!worldStateStorage.isWorldStateAvailable(rootHash)) {
       return Optional.empty();
     }
-    return Optional.of(new DefaultMutableWorldState(rootHash, worldStateStorage));
+    return Optional.of(new DefaultMutableWorldState(rootHash, worldStateStorage, preImageStorage));
   }
 
   public WorldState get() {
@@ -58,15 +56,6 @@ public class WorldStateArchive {
 
   public Optional<BytesValue> getNodeData(final Hash hash) {
     return worldStateStorage.getNodeData(hash);
-  }
-
-  // TODO: move these API's to WorldState / Account?
-  public Optional<Bytes32> getStorageTrieKeyPreImage(final Bytes32 trieKey) {
-    return preImageStorage.getStorageTrieKeyPreImage(trieKey);
-  }
-
-  public Optional<Address> getAccountTrieKeyPreImage(final Bytes32 trieKey) {
-    return preImageStorage.getAccountTrieKeyPreImage(trieKey);
   }
 
   public WorldStateStorage getWorldStateStorage() {
