@@ -12,7 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.core;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
 
 import tech.pegasys.pantheon.config.GenesisConfigFile;
@@ -29,10 +28,8 @@ import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
-import tech.pegasys.pantheon.testutil.TestClock;
 
 import java.math.BigInteger;
-import java.time.Clock;
 import java.util.function.Function;
 
 public class ExecutionContextTestFixture {
@@ -64,7 +61,7 @@ public class ExecutionContextTestFixture {
   }
 
   public static ExecutionContextTestFixture create() {
-    return new Builder().clock(TestClock.fixed()).build();
+    return new Builder().build();
   }
 
   public static Builder builder() {
@@ -99,7 +96,6 @@ public class ExecutionContextTestFixture {
 
     private KeyValueStorage keyValueStorage;
     private ProtocolSchedule<Void> protocolSchedule;
-    private Clock clock;
 
     public Builder keyValueStorage(final KeyValueStorage keyValueStorage) {
       this.keyValueStorage = keyValueStorage;
@@ -111,14 +107,7 @@ public class ExecutionContextTestFixture {
       return this;
     }
 
-    public Builder clock(final Clock clock) {
-      this.clock = clock;
-      return this;
-    }
-
     public ExecutionContextTestFixture build() {
-      checkNotNull(clock);
-
       if (protocolSchedule == null) {
         protocolSchedule =
             new ProtocolScheduleBuilder<>(
@@ -126,8 +115,7 @@ public class ExecutionContextTestFixture {
                     BigInteger.valueOf(42),
                     Function.identity(),
                     new PrivacyParameters(),
-                    false,
-                    clock)
+                    false)
                 .createProtocolSchedule();
       }
       if (keyValueStorage == null) {
