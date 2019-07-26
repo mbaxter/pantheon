@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.entry;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -21,7 +22,6 @@ import static org.mockito.Mockito.when;
 
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.core.Account;
-import tech.pegasys.pantheon.ethereum.core.AccountStorageEntry;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.Hash;
@@ -34,19 +34,16 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.processor.BlockReplay.Tra
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.queries.BlockchainQueries;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.queries.TransactionWithMetadata;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcSuccessResponse;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.DebugStorageRangeAtResult;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.DebugStorageRangeAtResult.StorageEntry;
 import tech.pegasys.pantheon.ethereum.mainnet.TransactionProcessor;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
-import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.uint.UInt256;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.TreeMap;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -100,34 +97,20 @@ public class DebugStorageRangeAtTest {
     when(worldState.get(accountAddress)).thenReturn(account);
     when(blockReplay.afterTransactionInBlock(eq(blockHash), eq(transactionHash), any()))
         .thenAnswer(this::callAction);
-
-    final List<AccountStorageEntry> entries = new ArrayList<>();
-    entries.add(AccountStorageEntry.forKeyAndValue(UInt256.fromHexString("0x33"), UInt256.of(6)));
-    entries.add(AccountStorageEntry.forKeyAndValue(UInt256.fromHexString("0x44"), UInt256.of(7)));
-    entries.add(
-        AccountStorageEntry.create(
-            UInt256.of(7), Hash.hash(BytesValue.fromHexString("0x44")), Optional.empty()));
-    final NavigableMap<Bytes32, AccountStorageEntry> rawEntries = new TreeMap<>();
-    entries.forEach(e -> rawEntries.put(e.getKeyHash(), e));
+    final NavigableMap<Bytes32, UInt256> rawEntries = new TreeMap<>();
+    rawEntries.put(Bytes32.fromHexString("0x33"), UInt256.of(6));
+    rawEntries.put(Bytes32.fromHexString("0x44"), UInt256.of(7));
     when(account.storageEntriesFrom(START_KEY_HASH, 11)).thenReturn(rawEntries);
-
     final JsonRpcSuccessResponse response =
         (JsonRpcSuccessResponse) debugStorageRangeAt.response(request);
-    final ObjectNode result = (ObjectNode) response.getResult();
+    final DebugStorageRangeAtResult result = (DebugStorageRangeAtResult) response.getResult();
 
     assertThat(result).isNotNull();
-    assertThat(result.get("nextKey").asText()).isEqualTo("null");
-
-    final JsonNode storage = result.get("storage");
-    assertThat(storage).isNotNull();
-    for (AccountStorageEntry rawEntry : entries) {
-      final JsonNode jsonEntry = storage.get(rawEntry.getKeyHash().toString());
-      assertThat(jsonEntry).isNotNull();
-      assertThat(jsonEntry.get("value").asText()).isEqualTo(rawEntry.getValue().toHexString());
-      assertThat(jsonEntry.get("key").asText())
-          .isEqualTo(rawEntry.getKey().map(UInt256::toHexString).orElse("null"));
-    }
-    assertThat(storage.size()).isEqualTo(entries.size());
+    assertThat(result.getNextKey()).isNull();
+    assertThat(result.getStorage())
+        .containsExactly(
+            entry(Bytes32.fromHexString("0x33").toString(), new StorageEntry(UInt256.of(6))),
+            entry(Bytes32.fromHexString("0x44").toString(), new StorageEntry(UInt256.of(7))));
   }
 
   private Object callAction(final InvocationOnMock invocation) {
