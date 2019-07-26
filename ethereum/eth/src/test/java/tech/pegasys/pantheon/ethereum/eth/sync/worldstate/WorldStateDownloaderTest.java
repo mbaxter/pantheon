@@ -26,6 +26,7 @@ import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.create
 
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.core.Account;
+import tech.pegasys.pantheon.ethereum.core.AccountStorageEntry;
 import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator;
 import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator.BlockOptions;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
@@ -66,7 +67,6 @@ import tech.pegasys.pantheon.services.tasks.InMemoryTaskQueue;
 import tech.pegasys.pantheon.testutil.TestClock;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
-import tech.pegasys.pantheon.util.uint.UInt256;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -943,9 +943,9 @@ public class WorldStateDownloaderTest {
       assertThat(actualAccount.getCode()).isEqualTo(expectedAccount.getCode());
       assertThat(actualAccount.getBalance()).isEqualTo(expectedAccount.getBalance());
 
-      final Map<Bytes32, UInt256> actualStorage =
+      final Map<Bytes32, AccountStorageEntry> actualStorage =
           actualAccount.storageEntriesFrom(Bytes32.ZERO, 500);
-      final Map<Bytes32, UInt256> expectedStorage =
+      final Map<Bytes32, AccountStorageEntry> expectedStorage =
           expectedAccount.storageEntriesFrom(Bytes32.ZERO, 500);
       assertThat(actualStorage).isEqualTo(expectedStorage);
     }

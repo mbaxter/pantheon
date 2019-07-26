@@ -14,12 +14,13 @@ package tech.pegasys.pantheon.ethereum.worldstate;
 
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
+import tech.pegasys.pantheon.util.uint.UInt256;
 
 import java.util.Optional;
 
 public interface WorldStatePreimageStorage {
 
-  Optional<Bytes32> getStorageTrieKeyPreimage(Bytes32 trieKey);
+  Optional<UInt256> getStorageTrieKeyPreimage(Bytes32 trieKey);
 
   Optional<Address> getAccountTrieKeyPreimage(Bytes32 trieKey);
 
@@ -27,7 +28,7 @@ public interface WorldStatePreimageStorage {
 
   interface Updater {
 
-    Updater putStorageTrieKeyPreimage(Bytes32 trieKey, Bytes32 preimage);
+    Updater putStorageTrieKeyPreimage(Bytes32 trieKey, UInt256 preimage);
 
     Updater putAccountTrieKeyPreimage(Bytes32 trieKey, Address preimage);
 

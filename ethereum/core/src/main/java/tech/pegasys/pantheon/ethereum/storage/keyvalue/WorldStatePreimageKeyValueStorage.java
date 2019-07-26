@@ -17,6 +17,7 @@ import tech.pegasys.pantheon.ethereum.worldstate.WorldStatePreimageStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage.Transaction;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
+import tech.pegasys.pantheon.util.uint.UInt256;
 
 import java.util.Optional;
 
@@ -28,8 +29,8 @@ public class WorldStatePreimageKeyValueStorage implements WorldStatePreimageStor
   }
 
   @Override
-  public Optional<Bytes32> getStorageTrieKeyPreimage(final Bytes32 trieKey) {
-    return keyValueStorage.get(trieKey).map(Bytes32::wrap);
+  public Optional<UInt256> getStorageTrieKeyPreimage(final Bytes32 trieKey) {
+    return keyValueStorage.get(trieKey).map(Bytes32::wrap).map(UInt256::wrap);
   }
 
   @Override
@@ -51,8 +52,8 @@ public class WorldStatePreimageKeyValueStorage implements WorldStatePreimageStor
 
     @Override
     public WorldStatePreimageStorage.Updater putStorageTrieKeyPreimage(
-        final Bytes32 trieKey, final Bytes32 preimage) {
-      transaction.put(trieKey, preimage);
+        final Bytes32 trieKey, final UInt256 preimage) {
+      transaction.put(trieKey, preimage.getBytes());
       return this;
     }
 

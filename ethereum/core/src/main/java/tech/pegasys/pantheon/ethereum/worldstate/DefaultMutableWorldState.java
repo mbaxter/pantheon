@@ -14,6 +14,7 @@ package tech.pegasys.pantheon.ethereum.worldstate;
 
 import tech.pegasys.pantheon.ethereum.core.AbstractWorldUpdater;
 import tech.pegasys.pantheon.ethereum.core.Account;
+import tech.pegasys.pantheon.ethereum.core.AccountStorageEntry;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
@@ -42,12 +43,14 @@ import java.util.stream.Stream;
 
 public class DefaultMutableWorldState implements MutableWorldState {
 
+  private final WorldStateStorage worldStateStorage;
+  private final WorldStatePreimageStorage preimageStorage;
+
   private final MerklePatriciaTrie<Bytes32, BytesValue> accountStateTrie;
   private final Map<Address, MerklePatriciaTrie<Bytes32, BytesValue>> updatedStorageTries =
       new HashMap<>();
   private final Map<Address, BytesValue> updatedAccountCode = new HashMap<>();
-  private final WorldStateStorage worldStateStorage;
-  private final WorldStatePreimageStorage preimageStorage;
+  private final Map<Bytes32, UInt256> newStorageKeyPreimages = new HashMap<>();
 
   public DefaultMutableWorldState(
       final WorldStateStorage storage, final WorldStatePreimageStorage preimageStorage) {
@@ -153,25 +156,36 @@ public class DefaultMutableWorldState implements MutableWorldState {
 
   @Override
   public void persist() {
-    final WorldStateStorage.Updater updater = worldStateStorage.updater();
+    final WorldStateStorage.Updater stateUpdater = worldStateStorage.updater();
     // Store updated code
     for (final BytesValue code : updatedAccountCode.values()) {
-      updater.putCode(code);
+      stateUpdater.putCode(code);
     }
     // Commit account storage tries
     for (final MerklePatriciaTrie<Bytes32, BytesValue> updatedStorage :
         updatedStorageTries.values()) {
-      updatedStorage.commit(updater::putAccountStorageTrieNode);
+      updatedStorage.commit(stateUpdater::putAccountStorageTrieNode);
     }
     // Commit account updates
-    accountStateTrie.commit(updater::putAccountStateTrieNode);
+    accountStateTrie.commit(stateUpdater::putAccountStateTrieNode);
+
+    // Persist preimages
+    final WorldStatePreimageStorage.Updater preimageUpdater = preimageStorage.updater();
+    newStorageKeyPreimages.forEach(preimageUpdater::putStorageTrieKeyPreimage);
 
     // Clear pending changes that we just flushed
     updatedStorageTries.clear();
     updatedAccountCode.clear();
+    newStorageKeyPreimages.clear();
 
     // Push changes to underlying storage
-    updater.commit();
+    preimageUpdater.commit();
+    stateUpdater.commit();
+  }
+
+  private Optional<UInt256> getStorageTrieKeyPreimage(final Bytes32 trieKey) {
+    return Optional.ofNullable(newStorageKeyPreimages.get(trieKey))
+        .or(() -> preimageStorage.getStorageTrieKeyPreimage(trieKey));
   }
 
   // An immutable class that represents an individual account as stored in
@@ -273,12 +287,18 @@ public class DefaultMutableWorldState implements MutableWorldState {
     }
 
     @Override
-    public NavigableMap<Bytes32, UInt256> storageEntriesFrom(
+    public NavigableMap<Bytes32, AccountStorageEntry> storageEntriesFrom(
         final Bytes32 startKeyHash, final int limit) {
-      final NavigableMap<Bytes32, UInt256> storageEntries = new TreeMap<>();
+      final NavigableMap<Bytes32, AccountStorageEntry> storageEntries = new TreeMap<>();
       storageTrie()
           .entriesFrom(startKeyHash, limit)
-          .forEach((key, value) -> storageEntries.put(key, convertToUInt256(value)));
+          .forEach(
+              (key, value) -> {
+                final AccountStorageEntry entry =
+                    AccountStorageEntry.create(
+                        convertToUInt256(value), key, getStorageTrieKeyPreimage(key));
+                storageEntries.put(key, entry);
+              });
       return storageEntries;
     }
 
@@ -372,6 +392,7 @@ public class DefaultMutableWorldState implements MutableWorldState {
             if (value.isZero()) {
               storageTrie.remove(keyHash);
             } else {
+              wrapped.newStorageKeyPreimages.put(keyHash, entry.getKey());
               storageTrie.put(keyHash, RLP.encode(out -> out.writeUInt256Scalar(entry.getValue())));
             }
           }

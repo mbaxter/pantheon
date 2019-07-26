@@ -20,6 +20,7 @@ import static org.junit.Assert.assertNull;
 import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryWorldState;
 
 import tech.pegasys.pantheon.ethereum.core.Account;
+import tech.pegasys.pantheon.ethereum.core.AccountStorageEntry;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableAccount;
@@ -36,7 +37,9 @@ import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.uint.UInt256;
 
-import java.util.NavigableMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 import org.junit.Test;
@@ -555,13 +558,16 @@ public class DefaultMutableWorldStateTest {
     account.setStorageValue(UInt256.ONE, UInt256.of(3));
     account.setStorageValue(UInt256.of(3), UInt256.of(6));
 
-    final NavigableMap<Bytes32, UInt256> storage = account.storageEntriesFrom(Hash.ZERO, 10);
+    final Map<Bytes32, AccountStorageEntry> storage = account.storageEntriesFrom(Hash.ZERO, 10);
 
-    final NavigableMap<Bytes32, UInt256> expected = new TreeMap<>();
-    expected.put(hash(UInt256.ONE), UInt256.of(3));
-    expected.put(hash(UInt256.of(2)), UInt256.of(5));
-    expected.put(hash(UInt256.of(3)), UInt256.of(6));
-    assertThat(storage).isEqualTo(expected);
+    final List<AccountStorageEntry> expected = new ArrayList<>();
+    expected.add(AccountStorageEntry.create(UInt256.of(3), hash(UInt256.ONE), UInt256.ONE));
+    expected.add(AccountStorageEntry.create(UInt256.of(5), hash(UInt256.of(2)), UInt256.of(2)));
+    expected.add(AccountStorageEntry.create(UInt256.of(6), hash(UInt256.of(3)), UInt256.of(3)));
+    final Map<Bytes32, AccountStorageEntry> expectedMap = new TreeMap<>();
+    expected.forEach(entry -> expectedMap.put(entry.getKeyHash(), entry));
+
+    assertThat(storage).isEqualTo(expectedMap);
   }
 
   private Hash hash(final UInt256 key) {
