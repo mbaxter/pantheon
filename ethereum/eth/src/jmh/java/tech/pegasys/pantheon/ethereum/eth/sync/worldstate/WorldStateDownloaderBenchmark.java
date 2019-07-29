@@ -32,7 +32,6 @@ import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
-import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
 import tech.pegasys.pantheon.services.kvstore.RocksDbConfiguration;
 import tech.pegasys.pantheon.services.tasks.CachingTaskCollection;
 import tech.pegasys.pantheon.services.tasks.FlatFileTaskCollection;
@@ -69,7 +68,6 @@ public class WorldStateDownloaderBenchmark {
   private CachingTaskCollection<NodeDataRequest> pendingRequests;
   private StorageProvider storageProvider;
   private EthProtocolManager ethProtocolManager;
-  private InMemoryKeyValueStorage remoteKeyValueStorage;
 
   @Setup(Level.Invocation)
   public void setUpUnchangedState() throws Exception {
