@@ -328,12 +328,7 @@ public abstract class AbstractWorldUpdater<W extends WorldView, A extends Accoun
         entries = new TreeMap<>();
       }
       updatedStorage.entrySet().stream()
-          .map(
-              entry -> {
-                final UInt256 storageKey = entry.getKey();
-                final Hash hashedKey = Hash.hash(storageKey.getBytes());
-                return AccountStorageEntry.create(entry.getValue(), hashedKey, storageKey);
-              })
+          .map(entry -> AccountStorageEntry.forKeyAndValue(entry.getKey(), entry.getValue()))
           .filter(entry -> entry.getKeyHash().compareTo(startKeyHash) >= 0)
           .forEach(entry -> entries.put(entry.getKeyHash(), entry));
 
