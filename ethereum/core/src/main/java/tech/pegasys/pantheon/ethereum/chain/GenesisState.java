@@ -44,6 +44,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.MoreObjects;
 
 public final class GenesisState {
@@ -237,7 +238,7 @@ public final class GenesisState {
         final String hexNonce,
         final String hexAddress,
         final String balance,
-        final Map<String, Object> storage,
+        final ObjectNode storage,
         final String hexCode,
         final String version) {
       this.nonce = withNiceErrorMessage("nonce", hexNonce, GenesisState::parseUnsignedLong);
@@ -259,14 +260,17 @@ public final class GenesisState {
       return Wei.of(val);
     }
 
-    private Map<UInt256, UInt256> parseStorage(final Map<String, Object> storage) {
+    private Map<UInt256, UInt256> parseStorage(final ObjectNode storage) {
       final Map<UInt256, UInt256> parsedStorage = new HashMap<>();
-      storage.forEach(
-          (key, value) ->
-              parsedStorage.put(
-                  withNiceErrorMessage("storage key", key, UInt256::fromHexString),
-                  withNiceErrorMessage(
-                      "storage value", String.valueOf(value), UInt256::fromHexString)));
+      storage
+          .fields()
+          .forEachRemaining(
+              (entry) -> {
+                parsedStorage.put(
+                    withNiceErrorMessage("storage key", entry.getKey(), UInt256::fromHexString),
+                    withNiceErrorMessage(
+                        "storage value", entry.getValue().asText(), UInt256::fromHexString));
+              });
       return parsedStorage;
     }
 
