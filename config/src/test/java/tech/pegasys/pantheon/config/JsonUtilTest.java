@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.TreeMap;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -124,6 +125,24 @@ public class JsonUtilTest {
     final String jsonStr = "{\"a\":1, \"b\":2}";
 
     final ObjectNode result = JsonUtil.objectNodeFromString(jsonStr);
+    assertThat(result.get("a").asInt()).isEqualTo(1);
+    assertThat(result.get("b").asInt()).isEqualTo(2);
+  }
+
+  @Test
+  public void objectNodeFromString_withComments_commentsDisabled() {
+    final String jsonStr = "// Comment\n{\"a\":1, \"b\":2}";
+
+    assertThatThrownBy(() -> JsonUtil.objectNodeFromString(jsonStr, false))
+        .hasCauseInstanceOf(JsonParseException.class)
+        .hasMessageContaining("Unexpected character ('/'");
+  }
+
+  @Test
+  public void objectNodeFromString_withComments_commentsEnabled() {
+    final String jsonStr = "// Comment\n{\"a\":1, \"b\":2}";
+
+    final ObjectNode result = JsonUtil.objectNodeFromString(jsonStr, true);
     assertThat(result.get("a").asInt()).isEqualTo(1);
     assertThat(result.get("b").asInt()).isEqualTo(2);
   }

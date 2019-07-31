@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.function.Function;
 
+import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,8 +57,15 @@ public class JsonUtil {
   }
 
   public static ObjectNode objectNodeFromString(final String jsonData) {
+    return objectNodeFromString(jsonData, false);
+  }
+
+  public static ObjectNode objectNodeFromString(
+      final String jsonData, final boolean allowComments) {
+    final ObjectMapper objectMapper = new ObjectMapper();
+    objectMapper.configure(Feature.ALLOW_COMMENTS, allowComments);
     try {
-      final JsonNode jsonNode = JsonUtil.getObjectMapper().readTree(jsonData);
+      final JsonNode jsonNode = objectMapper.readTree(jsonData);
       if (!jsonNode.isObject()) {
         throw new IllegalArgumentException(
             "JSON string must represent a json object, but "

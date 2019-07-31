@@ -54,7 +54,9 @@ public class GenesisConfigFile {
   }
 
   public static GenesisConfigFile fromConfig(final String jsonString) {
-    final ObjectNode rootNode = JsonUtil.objectNodeFromString(jsonString);
+    // TODO: Should we disable comments?
+    final boolean allowComments = true;
+    final ObjectNode rootNode = JsonUtil.objectNodeFromString(jsonString, allowComments);
     return fromConfig(rootNode);
   }
 
