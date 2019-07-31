@@ -33,7 +33,7 @@ public class GenesisAllocation {
   }
 
   public String getCode() {
-    return JsonUtil.getValue(data, "code", JsonNode::asText, "");
+    return JsonUtil.getValue(data, "code", JsonNode::asText, null);
   }
 
   public String getNonce() {
@@ -41,7 +41,7 @@ public class GenesisAllocation {
   }
 
   public String getVersion() {
-    return JsonUtil.getValue(data, "version", JsonNode::asText, "");
+    return JsonUtil.getValue(data, "version", JsonNode::asText, null);
   }
 
   public ObjectNode getStorage() {
