@@ -12,6 +12,9 @@
  */
 package tech.pegasys.pantheon.config;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -44,7 +47,15 @@ public class GenesisAllocation {
     return JsonUtil.getValue(data, "version", JsonNode::asText, null);
   }
 
-  public ObjectNode getStorage() {
-    return JsonUtil.getObjectNode(data, "storage").orElse(JsonUtil.createEmptyObjectNode());
+  public Map<String, String> getStorage() {
+    final Map<String, String> map = new HashMap<>();
+    JsonUtil.getObjectNode(data, "storage")
+        .orElse(JsonUtil.createEmptyObjectNode())
+        .fields()
+        .forEachRemaining(
+            (entry) -> {
+              map.put(entry.getKey(), entry.getValue().asText());
+            });
+    return map;
   }
 }
