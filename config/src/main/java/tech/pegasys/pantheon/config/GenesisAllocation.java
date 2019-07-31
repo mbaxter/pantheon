@@ -31,19 +31,19 @@ public class GenesisAllocation {
   }
 
   public String getBalance() {
-    return JsonUtil.getString(data, "balance", "0");
+    return JsonUtil.getValueAsString(data, "balance", "0");
   }
 
   public String getCode() {
-    return JsonUtil.getString(data, "code", null);
+    return JsonUtil.getText(data, "code", null);
   }
 
   public String getNonce() {
-    return JsonUtil.getString(data, "nonce", "0");
+    return JsonUtil.getValueAsString(data, "nonce", "0");
   }
 
   public String getVersion() {
-    return JsonUtil.getString(data, "version", null);
+    return JsonUtil.getValueAsString(data, "version", null);
   }
 
   public Map<String, String> getStorage() {

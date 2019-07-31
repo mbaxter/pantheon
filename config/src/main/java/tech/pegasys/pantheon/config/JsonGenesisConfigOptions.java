@@ -133,7 +133,7 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
 
   @Override
   public Optional<BigInteger> getChainId() {
-    return JsonUtil.getString(configRoot, "chainid").map(BigInteger::new);
+    return JsonUtil.getValueAsString(configRoot, "chainid").map(BigInteger::new);
   }
 
   @Override

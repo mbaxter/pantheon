@@ -212,71 +212,127 @@ public class JsonUtilTest {
   }
 
   @Test
-  public void getString_nonExistentKey() {
+  public void getText_nonExistentKey() {
     final ObjectNode node = mapper.createObjectNode();
-    final Optional<String> result = JsonUtil.getString(node, "test");
+    final Optional<String> result = JsonUtil.getText(node, "test");
     assertThat(result).isEmpty();
   }
 
   @Test
-  public void getString_nullValue() {
+  public void getText_nullValue() {
     final ObjectNode node = mapper.createObjectNode();
     node.set("test", null);
-    final Optional<String> result = JsonUtil.getString(node, "test");
+    final Optional<String> result = JsonUtil.getText(node, "test");
     assertThat(result).isEmpty();
   }
 
   @Test
-  public void getString_validValue() {
+  public void getText_validValue() {
     final ObjectNode node = mapper.createObjectNode();
     node.put("test", "bla");
-    final Optional<String> result = JsonUtil.getString(node, "test");
+    final Optional<String> result = JsonUtil.getText(node, "test");
     assertThat(result).hasValue("bla");
   }
 
   @Test
-  public void getString_wrongType() {
+  public void getText_wrongType() {
     final String jsonStr = "{\"test\": 123 }";
     final ObjectNode rootNode = JsonUtil.objectNodeFromString(jsonStr);
 
-    assertThatThrownBy(() -> JsonUtil.getString(rootNode, "test"))
+    assertThatThrownBy(() -> JsonUtil.getText(rootNode, "test"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Expected string value but got number");
   }
 
   @Test
-  public void getString_nullValue_withDefault() {
+  public void getText_nullValue_withDefault() {
     final String defaultValue = "bla";
     final ObjectNode node = mapper.createObjectNode();
     node.set("test", null);
-    final String result = JsonUtil.getString(node, "test", defaultValue);
+    final String result = JsonUtil.getText(node, "test", defaultValue);
     assertThat(result).isEqualTo(defaultValue);
   }
 
   @Test
-  public void getString_nonExistentKey_withDefault() {
+  public void getText_nonExistentKey_withDefault() {
     final String defaultValue = "bla";
     final ObjectNode node = mapper.createObjectNode();
-    final String result = JsonUtil.getString(node, "test", defaultValue);
+    final String result = JsonUtil.getText(node, "test", defaultValue);
     assertThat(result).isEqualTo(defaultValue);
   }
 
   @Test
-  public void getString_validValue_withDefault() {
+  public void getText_validValue_withDefault() {
     final ObjectNode node = mapper.createObjectNode();
     node.put("test", "bla");
-    final String result = JsonUtil.getString(node, "test", "11");
+    final String result = JsonUtil.getText(node, "test", "11");
     assertThat(result).isEqualTo("bla");
   }
 
   @Test
-  public void getString_wrongType_withDefault() {
+  public void getValueAsString_nonExistentKey() {
+    final ObjectNode node = mapper.createObjectNode();
+    final Optional<String> result = JsonUtil.getValueAsString(node, "test");
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  public void getValueAsString_nullValue() {
+    final ObjectNode node = mapper.createObjectNode();
+    node.set("test", null);
+    final Optional<String> result = JsonUtil.getValueAsString(node, "test");
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  public void getValueAsString_stringValue() {
+    final ObjectNode node = mapper.createObjectNode();
+    node.put("test", "bla");
+    final Optional<String> result = JsonUtil.getValueAsString(node, "test");
+    assertThat(result).hasValue("bla");
+  }
+
+  @Test
+  public void getValueAsString_nonStringValue() {
     final String jsonStr = "{\"test\": 123 }";
     final ObjectNode rootNode = JsonUtil.objectNodeFromString(jsonStr);
 
-    assertThatThrownBy(() -> JsonUtil.getString(rootNode, "test", "11"))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Expected string value but got number");
+    final Optional<String> result = JsonUtil.getValueAsString(rootNode, "test");
+    assertThat(result).hasValue("123");
+  }
+
+  @Test
+  public void getValueAsString_nullValue_withDefault() {
+    final String defaultValue = "bla";
+    final ObjectNode node = mapper.createObjectNode();
+    node.set("test", null);
+    final String result = JsonUtil.getValueAsString(node, "test", defaultValue);
+    assertThat(result).isEqualTo(defaultValue);
+  }
+
+  @Test
+  public void getValueAsString_nonExistentKey_withDefault() {
+    final String defaultValue = "bla";
+    final ObjectNode node = mapper.createObjectNode();
+    final String result = JsonUtil.getValueAsString(node, "test", defaultValue);
+    assertThat(result).isEqualTo(defaultValue);
+  }
+
+  @Test
+  public void getValueAsString_stringValue_withDefault() {
+    final ObjectNode node = mapper.createObjectNode();
+    node.put("test", "bla");
+    final String result = JsonUtil.getValueAsString(node, "test", "11");
+    assertThat(result).isEqualTo("bla");
+  }
+
+  @Test
+  public void getValueAsString_nonStringValue_withDefault() {
+    final String jsonStr = "{\"test\": 123 }";
+    final ObjectNode rootNode = JsonUtil.objectNodeFromString(jsonStr);
+
+    final String result = JsonUtil.getValueAsString(rootNode, "test", "11");
+    assertThat(result).isEqualTo("123");
   }
 
   // Boolean
