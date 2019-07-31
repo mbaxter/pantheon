@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.config;
 
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 
@@ -41,45 +40,37 @@ public class IbftConfigOptions {
   }
 
   public long getEpochLength() {
-    return JsonUtil.getValue(ibftConfigRoot, "epochlength", JsonNode::asLong, DEFAULT_EPOCH_LENGTH);
+    return JsonUtil.getLong(ibftConfigRoot, "epochlength", DEFAULT_EPOCH_LENGTH);
   }
 
   public int getBlockPeriodSeconds() {
-    return JsonUtil.getValue(
-        ibftConfigRoot, "blockperiodseconds", JsonNode::asInt, DEFAULT_BLOCK_PERIOD_SECONDS);
+    return JsonUtil.getInt(ibftConfigRoot, "blockperiodseconds", DEFAULT_BLOCK_PERIOD_SECONDS);
   }
 
   public int getRequestTimeoutSeconds() {
-    return JsonUtil.getValue(
-        ibftConfigRoot, "requesttimeoutseconds", JsonNode::asInt, DEFAULT_ROUND_EXPIRY_SECONDS);
+    return JsonUtil.getInt(ibftConfigRoot, "requesttimeoutseconds", DEFAULT_ROUND_EXPIRY_SECONDS);
   }
 
   public int getGossipedHistoryLimit() {
-    return JsonUtil.getValue(
-        ibftConfigRoot, "gossipedhistorylimit", JsonNode::asInt, DEFAULT_GOSSIPED_HISTORY_LIMIT);
+    return JsonUtil.getInt(ibftConfigRoot, "gossipedhistorylimit", DEFAULT_GOSSIPED_HISTORY_LIMIT);
   }
 
   public int getMessageQueueLimit() {
-    return JsonUtil.getValue(
-        ibftConfigRoot, "messagequeuelimit", JsonNode::asInt, DEFAULT_MESSAGE_QUEUE_LIMIT);
+    return JsonUtil.getInt(ibftConfigRoot, "messagequeuelimit", DEFAULT_MESSAGE_QUEUE_LIMIT);
   }
 
   public int getDuplicateMessageLimit() {
-    return JsonUtil.getValue(
-        ibftConfigRoot, "duplicatemessagelimit", JsonNode::asInt, DEFAULT_DUPLICATE_MESSAGE_LIMIT);
+    return JsonUtil.getInt(
+        ibftConfigRoot, "duplicatemessagelimit", DEFAULT_DUPLICATE_MESSAGE_LIMIT);
   }
 
   public int getFutureMessagesLimit() {
-    return JsonUtil.getValue(
-        ibftConfigRoot, "futuremessageslimit", JsonNode::asInt, DEFAULT_FUTURE_MESSAGES_LIMIT);
+    return JsonUtil.getInt(ibftConfigRoot, "futuremessageslimit", DEFAULT_FUTURE_MESSAGES_LIMIT);
   }
 
   public int getFutureMessagesMaxDistance() {
-    return JsonUtil.getValue(
-        ibftConfigRoot,
-        "futuremessagesmaxdistance",
-        JsonNode::asInt,
-        DEFAULT_FUTURE_MESSAGES_MAX_DISTANCE);
+    return JsonUtil.getInt(
+        ibftConfigRoot, "futuremessagesmaxdistance", DEFAULT_FUTURE_MESSAGES_MAX_DISTANCE);
   }
 
   Map<String, Object> asMap() {

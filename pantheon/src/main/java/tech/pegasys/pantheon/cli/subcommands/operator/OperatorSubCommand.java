@@ -201,7 +201,7 @@ public class OperatorSubCommand implements Runnable {
 
     /** Generates nodes keypairs. */
     private void generateNodesKeys() {
-      final int nodesCount = JsonUtil.getValue(nodesConfig, "count", JsonNode::asInt, 0);
+      final int nodesCount = JsonUtil.getInt(nodesConfig, "count", 0);
       LOG.info("Generating {} nodes keys.", nodesCount);
       IntStream.range(0, nodesCount).forEach(this::generateNodeKeypair);
     }
@@ -285,7 +285,7 @@ public class OperatorSubCommand implements Runnable {
       nodesConfig =
           JsonUtil.getObjectNode(blockchainConfig, "nodes")
               .orElse(JsonUtil.createEmptyObjectNode());
-      generateNodesKeys = JsonUtil.getValue(nodesConfig, "generate", JsonNode::asBoolean, false);
+      generateNodesKeys = JsonUtil.getBoolean(nodesConfig, "generate", false);
     }
 
     /**

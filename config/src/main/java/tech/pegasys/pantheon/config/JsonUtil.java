@@ -15,36 +15,65 @@ package tech.pegasys.pantheon.config;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.OptionalLong;
-import java.util.function.Function;
 
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class JsonUtil {
-  public static OptionalLong getOptionalLong(final ObjectNode json, final String key) {
-    return getValue(json, key, JsonNode::asLong).map(OptionalLong::of).orElse(OptionalLong.empty());
+
+  public static Optional<String> getString(final ObjectNode node, final String key) {
+    return getValue(node, key)
+        .filter(jsonNode -> validateType(jsonNode, JsonNodeType.STRING))
+        .map(JsonNode::asText);
   }
 
-  public static <T> Optional<T> getValue(
-      final ObjectNode node, final String key, final Function<JsonNode, T> formatter) {
-    JsonNode jsonValue = node.get(key);
-    if (jsonValue == null || jsonValue.isNull()) {
-      return Optional.empty();
-    }
-    return Optional.ofNullable(formatter.apply(jsonValue));
+  public static String getString(
+      final ObjectNode node, final String key, final String defaultValue) {
+    return getString(node, key).orElse(defaultValue);
   }
 
-  public static <T> T getValue(
-      final ObjectNode node,
-      final String key,
-      final Function<JsonNode, T> formatter,
-      final T defaultValue) {
-    return getValue(node, key, formatter).orElse(defaultValue);
+  public static OptionalInt getInt(final ObjectNode node, final String key) {
+    return getValue(node, key)
+        .filter(jsonNode -> validateType(jsonNode, JsonNodeType.NUMBER))
+        .filter(JsonUtil::validateInt)
+        .map(JsonNode::asInt)
+        .map(OptionalInt::of)
+        .orElse(OptionalInt.empty());
+  }
+
+  public static int getInt(final ObjectNode node, final String key, final int defaultValue) {
+    return getInt(node, key).orElse(defaultValue);
+  }
+
+  public static OptionalLong getLong(final ObjectNode json, final String key) {
+    return getValue(json, key)
+        .filter(jsonNode -> validateType(jsonNode, JsonNodeType.NUMBER))
+        .filter(JsonUtil::validateLong)
+        .map(JsonNode::asLong)
+        .map(OptionalLong::of)
+        .orElse(OptionalLong.empty());
+  }
+
+  public static long getLong(final ObjectNode json, final String key, final long defaultValue) {
+    return getLong(json, key).orElse(defaultValue);
+  }
+
+  public static Optional<Boolean> getBoolean(final ObjectNode node, final String key) {
+    return getValue(node, key)
+        .filter(jsonNode -> validateType(jsonNode, JsonNodeType.BOOLEAN))
+        .map(JsonNode::asBoolean);
+  }
+
+  public static boolean getBoolean(
+      final ObjectNode node, final String key, final boolean defaultValue) {
+    return getBoolean(node, key).orElse(defaultValue);
   }
 
   public static ObjectNode createEmptyObjectNode() {
@@ -66,12 +95,7 @@ public class JsonUtil {
     objectMapper.configure(Feature.ALLOW_COMMENTS, allowComments);
     try {
       final JsonNode jsonNode = objectMapper.readTree(jsonData);
-      if (!jsonNode.isObject()) {
-        throw new IllegalArgumentException(
-            "JSON string must represent a json object, but "
-                + jsonNode.getNodeType()
-                + " supplied.");
-      }
+      validateType(jsonNode, JsonNodeType.OBJECT);
       return (ObjectNode) jsonNode;
     } catch (IOException e) {
       // Reading directly from a string should not raise an IOException, just catch and rethrow
@@ -110,10 +134,7 @@ public class JsonUtil {
 
     if (!obj.isObject()) {
       if (strict) {
-        throw new IllegalArgumentException(
-            String.format(
-                "Expected OBJECT node at \"%s\" but got %s",
-                fieldKey, obj.getNodeType().toString()));
+        validateType(obj, JsonNodeType.OBJECT);
       } else {
         return Optional.empty();
       }
@@ -135,15 +156,45 @@ public class JsonUtil {
 
     if (!obj.isArray()) {
       if (strict) {
-        throw new IllegalArgumentException(
-            String.format(
-                "Expected ARRAY node at \"%s\" but got %s",
-                fieldKey, obj.getNodeType().toString()));
+        validateType(obj, JsonNodeType.ARRAY);
       } else {
         return Optional.empty();
       }
     }
 
     return Optional.of((ArrayNode) obj);
+  }
+
+  private static Optional<JsonNode> getValue(final ObjectNode node, final String key) {
+    JsonNode jsonNode = node.get(key);
+    if (jsonNode == null || jsonNode.isNull()) {
+      return Optional.empty();
+    }
+    return Optional.of(jsonNode);
+  }
+
+  private static boolean validateType(final JsonNode node, final JsonNodeType expectedType) {
+    if (node.getNodeType() != expectedType) {
+      final String errorMessage =
+          String.format(
+              "Expected %s value but got %s",
+              expectedType.toString().toLowerCase(), node.getNodeType().toString().toLowerCase());
+      throw new IllegalArgumentException(errorMessage);
+    }
+    return true;
+  }
+
+  private static boolean validateLong(final JsonNode node) {
+    if (!node.canConvertToLong()) {
+      throw new IllegalArgumentException("Cannot convert value to long: " + node.toString());
+    }
+    return true;
+  }
+
+  private static boolean validateInt(final JsonNode node) {
+    if (!node.canConvertToInt()) {
+      throw new IllegalArgumentException("Cannot convert value to integer: " + node.toString());
+    }
+    return true;
   }
 }

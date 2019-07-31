@@ -20,7 +20,6 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 
@@ -134,21 +133,17 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
 
   @Override
   public Optional<BigInteger> getChainId() {
-    return JsonUtil.getValue(configRoot, "chainid", JsonNode::asText).map(BigInteger::new);
+    return JsonUtil.getString(configRoot, "chainid").map(BigInteger::new);
   }
 
   @Override
   public OptionalInt getContractSizeLimit() {
-    return JsonUtil.getValue(configRoot, "contractsizelimit", JsonNode::asInt)
-        .map(OptionalInt::of)
-        .orElse(OptionalInt.empty());
+    return JsonUtil.getInt(configRoot, "contractsizelimit");
   }
 
   @Override
   public OptionalInt getEvmStackSize() {
-    return JsonUtil.getValue(configRoot, "evmstacksize", JsonNode::asInt)
-        .map(OptionalInt::of)
-        .orElse(OptionalInt.empty());
+    return JsonUtil.getInt(configRoot, "evmstacksize");
   }
 
   @Override
@@ -198,6 +193,6 @@ public class JsonGenesisConfigOptions implements GenesisConfigOptions {
   }
 
   private OptionalLong getOptionalLong(final String key) {
-    return JsonUtil.getOptionalLong(configRoot, key);
+    return JsonUtil.getLong(configRoot, key);
   }
 }

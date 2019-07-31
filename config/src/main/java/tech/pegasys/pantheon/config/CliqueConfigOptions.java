@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.config;
 
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 
@@ -33,13 +32,11 @@ public class CliqueConfigOptions {
   }
 
   public long getEpochLength() {
-    return JsonUtil.getValue(
-        cliqueConfigRoot, "epochlength", JsonNode::asLong, DEFAULT_EPOCH_LENGTH);
+    return JsonUtil.getLong(cliqueConfigRoot, "epochlength", DEFAULT_EPOCH_LENGTH);
   }
 
   public int getBlockPeriodSeconds() {
-    return JsonUtil.getValue(
-        cliqueConfigRoot, "blockperiodseconds", JsonNode::asInt, DEFAULT_BLOCK_PERIOD_SECONDS);
+    return JsonUtil.getInt(cliqueConfigRoot, "blockperiodseconds", DEFAULT_BLOCK_PERIOD_SECONDS);
   }
 
   Map<String, Object> asMap() {

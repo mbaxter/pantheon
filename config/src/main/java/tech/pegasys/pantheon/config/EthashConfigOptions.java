@@ -30,7 +30,7 @@ public class EthashConfigOptions {
   }
 
   public OptionalLong getFixedDifficulty() {
-    return JsonUtil.getOptionalLong(ethashConfigRoot, "fixeddifficulty");
+    return JsonUtil.getLong(ethashConfigRoot, "fixeddifficulty");
   }
 
   Map<String, Object> asMap() {
