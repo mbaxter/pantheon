@@ -13,7 +13,6 @@
 package tech.pegasys.pantheon.config;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -27,22 +26,16 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class JsonUtil {
   public static OptionalLong getOptionalLong(final ObjectNode json, final String key) {
-    return json.has(key) ? OptionalLong.of(json.get(key).asLong()) : OptionalLong.empty();
-  }
-
-  public static Optional<BigInteger> getOptionalBigInteger(
-      final ObjectNode jsonObject, final String key) {
-    return jsonObject.has(key)
-        ? Optional.of(new BigInteger(jsonObject.get(key).asText()))
-        : Optional.empty();
+    return getValue(json, key, JsonNode::asLong).map(OptionalLong::of).orElse(OptionalLong.empty());
   }
 
   public static <T> Optional<T> getValue(
       final ObjectNode node, final String key, final Function<JsonNode, T> formatter) {
-    if (!node.has(key)) {
+    JsonNode jsonValue = node.get(key);
+    if (jsonValue == null || jsonValue.isNull()) {
       return Optional.empty();
     }
-    return Optional.ofNullable(formatter.apply(node.get(key)));
+    return Optional.ofNullable(formatter.apply(jsonValue));
   }
 
   public static <T> T getValue(
@@ -50,11 +43,7 @@ public class JsonUtil {
       final String key,
       final Function<JsonNode, T> formatter,
       final T defaultValue) {
-    JsonNode jsonValue = node.get(key);
-    if (jsonValue == null || jsonValue.isNull()) {
-      return defaultValue;
-    }
-    return formatter.apply(node.get(key));
+    return getValue(node, key, formatter).orElse(defaultValue);
   }
 
   public static ObjectNode createEmptyObjectNode() {
@@ -115,7 +104,8 @@ public class JsonUtil {
       if (strict) {
         throw new IllegalArgumentException(
             String.format(
-                "Expected object node at %s but got %s", fieldKey, obj.getNodeType().toString()));
+                "Expected OBJECT node at \"%s\" but got %s",
+                fieldKey, obj.getNodeType().toString()));
       } else {
         return Optional.empty();
       }
@@ -139,7 +129,8 @@ public class JsonUtil {
       if (strict) {
         throw new IllegalArgumentException(
             String.format(
-                "Expected array node at %s but got %s", fieldKey, obj.getNodeType().toString()));
+                "Expected ARRAY node at \"%s\" but got %s",
+                fieldKey, obj.getNodeType().toString()));
       } else {
         return Optional.empty();
       }
