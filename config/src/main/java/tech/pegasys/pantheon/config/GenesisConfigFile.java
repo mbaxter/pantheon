@@ -133,9 +133,7 @@ public class GenesisConfigFile {
     }
   }
 
-  /* Converts the {@link ObjectNode} describing the Genesis Block to a {@link Map}. This method
-   * converts all nested {@link ObjectNode} to {@link Map} as well. Also, note that all keys are
-   * converted to lowercase for easier lookup since the keys in a 'genesis.json' file are assumed
+  /* Converts all to lowercase for easier lookup since the keys in a 'genesis.json' file are assumed
    * case insensitive.
    */
   private static ObjectNode normalizeKeys(final ObjectNode genesis) {
