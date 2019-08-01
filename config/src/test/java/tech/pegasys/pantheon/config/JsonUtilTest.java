@@ -212,60 +212,60 @@ public class JsonUtilTest {
   }
 
   @Test
-  public void getText_nonExistentKey() {
+  public void getString_nonExistentKey() {
     final ObjectNode node = mapper.createObjectNode();
-    final Optional<String> result = JsonUtil.getText(node, "test");
+    final Optional<String> result = JsonUtil.getString(node, "test");
     assertThat(result).isEmpty();
   }
 
   @Test
-  public void getText_nullValue() {
+  public void getString_nullValue() {
     final ObjectNode node = mapper.createObjectNode();
     node.set("test", null);
-    final Optional<String> result = JsonUtil.getText(node, "test");
+    final Optional<String> result = JsonUtil.getString(node, "test");
     assertThat(result).isEmpty();
   }
 
   @Test
-  public void getText_validValue() {
+  public void getString_validValue() {
     final ObjectNode node = mapper.createObjectNode();
     node.put("test", "bla");
-    final Optional<String> result = JsonUtil.getText(node, "test");
+    final Optional<String> result = JsonUtil.getString(node, "test");
     assertThat(result).hasValue("bla");
   }
 
   @Test
-  public void getText_wrongType() {
+  public void getString_wrongType() {
     final String jsonStr = "{\"test\": 123 }";
     final ObjectNode rootNode = JsonUtil.objectNodeFromString(jsonStr);
 
-    assertThatThrownBy(() -> JsonUtil.getText(rootNode, "test"))
+    assertThatThrownBy(() -> JsonUtil.getString(rootNode, "test"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Expected string value but got number");
   }
 
   @Test
-  public void getText_nullValue_withDefault() {
+  public void getString_nullValue_withDefault() {
     final String defaultValue = "bla";
     final ObjectNode node = mapper.createObjectNode();
     node.set("test", null);
-    final String result = JsonUtil.getText(node, "test", defaultValue);
+    final String result = JsonUtil.getString(node, "test", defaultValue);
     assertThat(result).isEqualTo(defaultValue);
   }
 
   @Test
-  public void getText_nonExistentKey_withDefault() {
+  public void getString_nonExistentKey_withDefault() {
     final String defaultValue = "bla";
     final ObjectNode node = mapper.createObjectNode();
-    final String result = JsonUtil.getText(node, "test", defaultValue);
+    final String result = JsonUtil.getString(node, "test", defaultValue);
     assertThat(result).isEqualTo(defaultValue);
   }
 
   @Test
-  public void getText_validValue_withDefault() {
+  public void getString_validValue_withDefault() {
     final ObjectNode node = mapper.createObjectNode();
     node.put("test", "bla");
-    final String result = JsonUtil.getText(node, "test", "11");
+    final String result = JsonUtil.getString(node, "test", "11");
     assertThat(result).isEqualTo("bla");
   }
 

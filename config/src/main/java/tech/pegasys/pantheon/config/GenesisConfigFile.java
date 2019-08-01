@@ -82,7 +82,7 @@ public class GenesisConfigFile {
   }
 
   public String getParentHash() {
-    return JsonUtil.getText(configRoot, "parenthash", "");
+    return JsonUtil.getString(configRoot, "parenthash", "");
   }
 
   public String getDifficulty() {
@@ -90,7 +90,7 @@ public class GenesisConfigFile {
   }
 
   public String getExtraData() {
-    return JsonUtil.getText(configRoot, "extradata", "");
+    return JsonUtil.getString(configRoot, "extradata", "");
   }
 
   public long getGasLimit() {
@@ -98,7 +98,7 @@ public class GenesisConfigFile {
   }
 
   public String getMixHash() {
-    return JsonUtil.getText(configRoot, "mixhash", "");
+    return JsonUtil.getString(configRoot, "mixhash", "");
   }
 
   public String getNonce() {
@@ -106,7 +106,7 @@ public class GenesisConfigFile {
   }
 
   public Optional<String> getCoinbase() {
-    return JsonUtil.getText(configRoot, "coinbase");
+    return JsonUtil.getString(configRoot, "coinbase");
   }
 
   public long getTimestamp() {

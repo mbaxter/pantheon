@@ -35,7 +35,7 @@ public class GenesisAllocation {
   }
 
   public String getCode() {
-    return JsonUtil.getText(data, "code", null);
+    return JsonUtil.getString(data, "code", null);
   }
 
   public String getNonce() {

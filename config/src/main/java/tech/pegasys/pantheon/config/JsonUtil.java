@@ -29,7 +29,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class JsonUtil {
 
   /**
-   * Get the string representation of the value at {@code key}.
+   * Get the string representation of the value at {@code key}. For example, a numeric value like 5
+   * will be returned as "5".
    *
    * @param node The {@code ObjectNode} from which the value will be extracted.
    * @param key The key corresponding to the value to extract.
@@ -40,7 +41,8 @@ public class JsonUtil {
   }
 
   /**
-   * Get the string representation of the value at {@code key}.
+   * Get the string representation of the value at {@code key}. For example, a numeric value like 5
+   * will be returned as "5".
    *
    * @param node The {@code ObjectNode} from which the value will be extracted.
    * @param key The key corresponding to the value to extract.
@@ -60,7 +62,7 @@ public class JsonUtil {
    * @param key The key corresponding to the value to extract.
    * @return The textual value at {@code key} if it exists.
    */
-  public static Optional<String> getText(final ObjectNode node, final String key) {
+  public static Optional<String> getString(final ObjectNode node, final String key) {
     return getValue(node, key)
         .filter(jsonNode -> validateType(jsonNode, JsonNodeType.STRING))
         .map(JsonNode::asText);
@@ -75,8 +77,9 @@ public class JsonUtil {
    * @param defaultValue The value to return if no value is found at {@code key}.
    * @return The textual value at {@code key} if it exists, otherwise {@code defaultValue}
    */
-  public static String getText(final ObjectNode node, final String key, final String defaultValue) {
-    return getText(node, key).orElse(defaultValue);
+  public static String getString(
+      final ObjectNode node, final String key, final String defaultValue) {
+    return getString(node, key).orElse(defaultValue);
   }
 
   public static OptionalInt getInt(final ObjectNode node, final String key) {
