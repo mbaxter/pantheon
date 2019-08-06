@@ -175,6 +175,7 @@ public interface Account {
    * Retrieve a list of rlp-serialized MerkleTree-Nodes, starting with the storageHash-Node,
    * following the path of the SHA3 (key) as path.
    *
+   * @param key the key to retrieve in the account storage.
    * @return the list of rlp-serialized MerkleTree-Nodes
    */
   List<BytesValue> getStorageEntry(Bytes32 key);
