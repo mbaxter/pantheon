@@ -90,6 +90,11 @@ public interface Account {
    */
   Hash getCodeHash();
 
+  /**
+   * The hash of the root of the storage trie associated with this account.
+   *
+   * @return the hash of the root node of the storage trie.
+   */
   Hash getStorageRoot();
 
   /**
@@ -154,11 +159,23 @@ public interface Account {
    *
    * @param startKeyHash the first key hash to return.
    * @param limit the maximum number of entries to return.
-   * @return the requested storage entries as a map of key hash to value.
+   * @return the requested storage entries as a map of key hash to entry.
    */
-  NavigableMap<Bytes32, UInt256> storageEntriesFrom(Bytes32 startKeyHash, int limit);
+  NavigableMap<Bytes32, AccountStorageEntry> storageEntriesFrom(Bytes32 startKeyHash, int limit);
 
+  /**
+   * Retrieve a list of rlp-serialized MerkleTree-Nodes, starting with the stateRoot-Node, following
+   * the path of the SHA3 (address) as key.
+   *
+   * @return the list of rlp-serialized MerkleTree-Nodes
+   */
   List<BytesValue> getAccountProof();
 
+  /**
+   * Retrieve a list of rlp-serialized MerkleTree-Nodes, starting with the storageHash-Node,
+   * following the path of the SHA3 (key) as path.
+   *
+   * @return the list of rlp-serialized MerkleTree-Nodes
+   */
   List<BytesValue> getStorageEntry(Bytes32 key);
 }

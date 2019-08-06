@@ -29,6 +29,7 @@ import tech.pegasys.pantheon.ethereum.core.WorldUpdater;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.mainnet.ScheduleBasedBlockHeaderFunctions;
 import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStateKeyValueStorage;
+import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStatePreimageKeyValueStorage;
 import tech.pegasys.pantheon.ethereum.worldstate.DefaultMutableWorldState;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -121,8 +122,12 @@ public final class GenesisState {
   }
 
   private static Hash calculateGenesisStateHash(final List<GenesisAccount> genesisAccounts) {
+    final WorldStateKeyValueStorage stateStorage =
+        new WorldStateKeyValueStorage(new InMemoryKeyValueStorage());
+    final WorldStatePreimageKeyValueStorage preimageStorage =
+        new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage());
     final MutableWorldState worldState =
-        new DefaultMutableWorldState(new WorldStateKeyValueStorage(new InMemoryKeyValueStorage()));
+        new DefaultMutableWorldState(stateStorage, preimageStorage);
     writeAccountsTo(worldState, genesisAccounts);
     return worldState.rootHash();
   }
@@ -237,7 +242,7 @@ public final class GenesisState {
         final String hexNonce,
         final String hexAddress,
         final String balance,
-        final Map<String, Object> storage,
+        final Map<String, String> storage,
         final String hexCode,
         final String version) {
       this.nonce = withNiceErrorMessage("nonce", hexNonce, GenesisState::parseUnsignedLong);
@@ -259,14 +264,19 @@ public final class GenesisState {
       return Wei.of(val);
     }
 
-    private Map<UInt256, UInt256> parseStorage(final Map<String, Object> storage) {
+    private Map<UInt256, UInt256> parseStorage(final Map<String, String> storage) {
       final Map<UInt256, UInt256> parsedStorage = new HashMap<>();
-      storage.forEach(
-          (key, value) ->
-              parsedStorage.put(
-                  withNiceErrorMessage("storage key", key, UInt256::fromHexString),
-                  withNiceErrorMessage(
-                      "storage value", String.valueOf(value), UInt256::fromHexString)));
+      storage
+          .entrySet()
+          .forEach(
+              (entry) -> {
+                final UInt256 key =
+                    withNiceErrorMessage("storage key", entry.getKey(), UInt256::fromHexString);
+                final UInt256 value =
+                    withNiceErrorMessage("storage value", entry.getValue(), UInt256::fromHexString);
+                parsedStorage.put(key, value);
+              });
+
       return parsedStorage;
     }
 

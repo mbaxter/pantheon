@@ -36,6 +36,12 @@ public interface MerklePatriciaTrie<K, V> {
    */
   Optional<V> get(K key);
 
+  /**
+   * Returns a list of nodes mapped to the hash if it exists; otherwise empty.
+   *
+   * @param key The key for the value.
+   * @return a list of nodes mapped to the hash if it exists; otherwise empty
+   */
   List<Node<V>> getProof(K key);
 
   /**
