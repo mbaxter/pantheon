@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
@@ -276,6 +277,11 @@ public abstract class AbstractWorldUpdater<W extends WorldView, A extends Accoun
     }
 
     @Override
+    public Hash getStorageRoot() {
+      return account.getStorageRoot();
+    }
+
+    @Override
     public boolean hasCode() {
       // Note that we set code for new account, so it's only null if account isn't.
       return updatedCode == null ? account.hasCode() : !updatedCode.isEmpty();
@@ -339,6 +345,16 @@ public abstract class AbstractWorldUpdater<W extends WorldView, A extends Accoun
         entries.remove(entries.lastKey());
       }
       return entries;
+    }
+
+    @Override
+    public List<BytesValue> getAccountProof() {
+      return account.getAccountProof();
+    }
+
+    @Override
+    public List<BytesValue> getStorageEntry(final Bytes32 key) {
+      return account.getStorageEntry(key);
     }
 
     @Override

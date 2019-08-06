@@ -16,6 +16,7 @@ import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.uint.UInt256;
 
+import java.util.List;
 import java.util.NavigableMap;
 
 /**
@@ -89,6 +90,8 @@ public interface Account {
    */
   Hash getCodeHash();
 
+  Hash getStorageRoot();
+
   /**
    * Whether the account has (non empty) EVM bytecode associated to it.
    *
@@ -154,4 +157,8 @@ public interface Account {
    * @return the requested storage entries as a map of key hash to value.
    */
   NavigableMap<Bytes32, UInt256> storageEntriesFrom(Bytes32 startKeyHash, int limit);
+
+  List<BytesValue> getAccountProof();
+
+  List<BytesValue> getStorageEntry(Bytes32 key);
 }

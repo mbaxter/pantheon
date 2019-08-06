@@ -18,6 +18,7 @@ import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -34,6 +35,8 @@ public interface MerklePatriciaTrie<K, V> {
    * @return an {@code Optional} of value mapped to the hash if it exists; otherwise empty
    */
   Optional<V> get(K key);
+
+  List<Node<V>> getProof(K key);
 
   /**
    * Updates the value mapped to the specified key, creating the mapping if one does not already

@@ -18,6 +18,7 @@ import static tech.pegasys.pantheon.ethereum.trie.CompactEncoding.bytesToPath;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -48,6 +49,14 @@ public class SimpleMerklePatriciaTrie<K extends BytesValue, V> implements Merkle
   public Optional<V> get(final K key) {
     checkNotNull(key);
     return root.accept(getVisitor, bytesToPath(key)).getValue();
+  }
+
+  @Override
+  public List<Node<V>> getProof(final K key) {
+    checkNotNull(key);
+    ProofVisitor<V> proofVisitor = new ProofVisitor<>();
+    root.accept(proofVisitor, bytesToPath(key));
+    return proofVisitor.getProof();
   }
 
   @Override
