@@ -26,6 +26,8 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.JsonRpcRequest;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.exception.InvalidJsonRpcParameters;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.parameters.JsonRpcParameter;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.queries.BlockchainQueries;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcError;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcErrorResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof.GetProofResult;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof.StorageEntry;
@@ -61,7 +63,7 @@ public class EthGetProofTest {
       Address.fromHexString("0x1234567890123456789012345678901234567890");
   private final String storageKey =
       "0x0000000000000000000000000000000000000000000000000000000000000001";
-  private final int blockNumber = 1;
+  private final String blockNumber = "1";
 
   @Before
   public void setUp() {
@@ -116,13 +118,32 @@ public class EthGetProofTest {
   }
 
   @Test
+  public void exceptionWhenAccountNotFound() {
+
+    generateWorldState();
+
+    final JsonRpcErrorResponse expectedResponse =
+        new JsonRpcErrorResponse(null, JsonRpcError.NO_ACCOUNT_FOUND);
+    ;
+
+    final JsonRpcRequest request =
+        requestWithParams(
+            Address.fromHexString("0x0000000000000000000000000000000000000000"),
+            new String[] {storageKey},
+            blockNumber);
+
+    final JsonRpcErrorResponse response = (JsonRpcErrorResponse) method.response(request);
+
+    assertThat(response).isEqualToComparingFieldByField(expectedResponse);
+  }
+
+  @Test
   public void getProof() {
 
     final GetProofResult expectedResponse = generateWorldState();
 
     final JsonRpcRequest request =
-        requestWithParams(
-            address.toString(), new String[] {storageKey}, String.valueOf(blockNumber));
+        requestWithParams(address.toString(), new String[] {storageKey}, blockNumber);
 
     final JsonRpcSuccessResponse response = (JsonRpcSuccessResponse) method.response(request);
 
@@ -143,8 +164,9 @@ public class EthGetProofTest {
         Hash.fromHexString("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
     final UInt256 storageValue = UInt256.fromHexString("0x1");
     final List<BytesValue> accountProof = new ArrayList<>();
-    accountProof.add(BytesValue.fromHexString("0xf90211"));
     final List<BytesValue> storageEntries = new ArrayList<>();
+
+    accountProof.add(BytesValue.fromHexString("0xf90211"));
     storageEntries.add(BytesValue.fromHexString("0x55"));
 
     final MutableWorldState mutableWorldState = mock(MutableWorldState.class);
@@ -159,9 +181,10 @@ public class EthGetProofTest {
     when(account.getStorageEntry(Bytes32.fromHexString(storageKey))).thenReturn(storageEntries);
 
     when(mutableWorldState.get(address)).thenReturn(account);
-    when(blockchainQueries.getWorldState(blockNumber)).thenReturn(Optional.of(mutableWorldState));
+    when(blockchainQueries.getWorldState(Integer.getInteger(blockNumber)))
+        .thenReturn(Optional.of(mutableWorldState));
 
-    List<StorageEntry> storageProof = new ArrayList<>();
+    final List<StorageEntry> storageProof = new ArrayList<>();
     storageProof.add(new StorageEntry(storageKey, storageValue, storageEntries));
     return new GetProofResult(
         address, balance, codeHash, nonce, storageRoot, accountProof, storageProof);

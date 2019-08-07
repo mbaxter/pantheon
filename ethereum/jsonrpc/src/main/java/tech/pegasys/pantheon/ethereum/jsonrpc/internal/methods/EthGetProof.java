@@ -57,11 +57,11 @@ public class EthGetProof implements JsonRpcMethod {
     final long blockNumber =
         resolveBlockNumber(parameters.required(request.getParams(), 2, BlockParameter.class));
 
-    Optional<MutableWorldState> worldState = blockchain.getWorldState(blockNumber);
+    final Optional<MutableWorldState> worldState = blockchain.getWorldState(blockNumber);
     if (worldState.isPresent()) {
-      Account account = worldState.get().get(address);
+      final Account account = worldState.get().get(address);
       if (account != null) {
-        List<StorageEntry> storageEntries = new ArrayList<>();
+        final List<StorageEntry> storageEntries = new ArrayList<>();
         Arrays.stream(storageKeys)
             .forEach(
                 entry ->
@@ -70,7 +70,8 @@ public class EthGetProof implements JsonRpcMethod {
                             entry,
                             account.getStorageValue(UInt256.fromHexString(entry)),
                             account.getStorageEntry(Bytes32.fromHexString(entry)))));
-        GetProofResult getProofResult =
+        return new JsonRpcSuccessResponse(
+            request.getId(),
             new GetProofResult(
                 address,
                 account.getBalance(),
@@ -78,8 +79,7 @@ public class EthGetProof implements JsonRpcMethod {
                 account.getNonce(),
                 account.getStorageRoot(),
                 account.getAccountProof(),
-                storageEntries);
-        return new JsonRpcSuccessResponse(request.getId(), getProofResult);
+                storageEntries));
 
       } else {
         return new JsonRpcErrorResponse(request.getId(), JsonRpcError.NO_ACCOUNT_FOUND);
