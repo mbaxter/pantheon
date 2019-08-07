@@ -77,13 +77,18 @@ public class BlocksSubCommand implements Runnable {
 
   private final BlockImporter blockImporter;
   private final BlockExporter blockExporter;
+  private final ChainImporterFactory chainImporterFactory;
 
   private final PrintStream out;
 
   public BlocksSubCommand(
-      final BlockImporter blockImporter, final BlockExporter blockExporter, final PrintStream out) {
+      final BlockImporter blockImporter,
+      final BlockExporter blockExporter,
+      final ChainImporterFactory chainImporterFactory,
+      final PrintStream out) {
     this.blockImporter = blockImporter;
     this.blockExporter = blockExporter;
+    this.chainImporterFactory = chainImporterFactory;
     this.out = out;
   }
 
@@ -110,11 +115,11 @@ public class BlocksSubCommand implements Runnable {
         names = "--from",
         required = true,
         paramLabel = MANDATORY_FILE_FORMAT_HELP,
-        description = "File containing blocks to import",
+        description = "File containing blocks to import.",
         arity = "1..1")
     private final File blocksImportFile = null;
 
-    @Option(names = "--format", description = "The type of data to be imported", arity = "1..1")
+    @Option(names = "--format", description = "The type of data to be imported.", arity = "1..1")
     private final BlockFormat format = BlockFormat.RLP;
 
     @SuppressWarnings("unused")
@@ -189,7 +194,7 @@ public class BlocksSubCommand implements Runnable {
     private <T> void importJsonBlocks(final PantheonController<T> controller, final Path path)
         throws IOException {
 
-      ChainImporter<T> importer = new ChainImporter<>(controller);
+      ChainImporter<T> importer = parentCommand.chainImporterFactory.get(controller);
       final String jsonData = Files.readString(path);
       importer.importChain(jsonData);
     }
@@ -313,5 +318,10 @@ public class BlocksSubCommand implements Runnable {
       metricsService.ifPresent(MetricsService::start);
     }
     return metricsService;
+  }
+
+  @FunctionalInterface
+  public interface ChainImporterFactory {
+    <T> ChainImporter<T> get(PantheonController<T> controller);
   }
 }

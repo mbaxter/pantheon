@@ -129,7 +129,9 @@ public class ChainImporter<C> {
       final int missingTransactions =
           transactions.size() - block.getBody().getTransactions().size();
       throw new IllegalStateException(
-          "Unable to create block.  " + missingTransactions + " were found to be invalid.");
+          "Unable to create block.  "
+              + missingTransactions
+              + " transaction(s) were found to be invalid.");
     }
   }
 
@@ -199,7 +201,7 @@ public class ChainImporter<C> {
       // If there is no number or hash, import blocks in order
       blockNumber = importedBlocks.get(importedBlocks.size() - 1).getHeader().getNumber();
     } else {
-      blockNumber = BlockHeader.GENESIS_BLOCK_NUMBER + 1L;
+      blockNumber = BlockHeader.GENESIS_BLOCK_NUMBER;
     }
 
     if (blockNumber < BlockHeader.GENESIS_BLOCK_NUMBER) {

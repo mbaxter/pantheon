@@ -49,6 +49,7 @@ import tech.pegasys.pantheon.cli.subcommands.PasswordSubCommand;
 import tech.pegasys.pantheon.cli.subcommands.PublicKeySubCommand;
 import tech.pegasys.pantheon.cli.subcommands.PublicKeySubCommand.KeyLoader;
 import tech.pegasys.pantheon.cli.subcommands.blocks.BlocksSubCommand;
+import tech.pegasys.pantheon.cli.subcommands.blocks.BlocksSubCommand.ChainImporterFactory;
 import tech.pegasys.pantheon.cli.subcommands.operator.OperatorSubCommand;
 import tech.pegasys.pantheon.cli.subcommands.rlp.RLPSubCommand;
 import tech.pegasys.pantheon.cli.util.ConfigOptionSearchAndRunHandler;
@@ -150,6 +151,7 @@ import picocli.CommandLine.ParameterException;
 public class PantheonCommand implements DefaultCommandValues, Runnable {
 
   private final Logger logger;
+  private final ChainImporterFactory chainImporterFactory;
 
   private CommandLine commandLine;
 
@@ -630,6 +632,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       final Logger logger,
       final BlockImporter blockImporter,
       final BlockExporter blockExporter,
+      final ChainImporterFactory chainImporterFactory,
       final RunnerBuilder runnerBuilder,
       final PantheonController.Builder controllerBuilderFactory,
       final PantheonPluginContextImpl pantheonPluginContext,
@@ -637,6 +640,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
     this.logger = logger;
     this.blockImporter = blockImporter;
     this.blockExporter = blockExporter;
+    this.chainImporterFactory = chainImporterFactory;
     this.runnerBuilder = runnerBuilder;
     this.controllerBuilderFactory = controllerBuilderFactory;
     this.pantheonPluginContext = pantheonPluginContext;
@@ -682,7 +686,8 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
       final AbstractParseResultHandler<List<Object>> resultHandler, final InputStream in) {
     commandLine.addSubcommand(
         BlocksSubCommand.COMMAND_NAME,
-        new BlocksSubCommand(blockImporter, blockExporter, resultHandler.out()));
+        new BlocksSubCommand(
+            blockImporter, blockExporter, chainImporterFactory, resultHandler.out()));
     commandLine.addSubcommand(
         PublicKeySubCommand.COMMAND_NAME,
         new PublicKeySubCommand(resultHandler.out(), getKeyLoader()));
