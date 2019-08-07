@@ -19,14 +19,14 @@ import java.util.List;
 
 class ProofVisitor<V> extends GetVisitor<V> implements PathNodeVisitor<V> {
 
-  private final List<Node<V>> PROOF = new ArrayList<>();
+  private final List<Node<V>> proof = new ArrayList<>();
 
   @Override
   public Node<V> visit(final BranchNode<V> branchNode, final BytesValue path) {
     assert path.size() > 0 : "Visiting path doesn't end with a non-matching terminator";
 
-    if (PROOF.isEmpty()) {
-      PROOF.add(branchNode);
+    if (proof.isEmpty()) {
+      proof.add(branchNode);
     }
 
     final byte childIndex = path.get(0);
@@ -37,13 +37,13 @@ class ProofVisitor<V> extends GetVisitor<V> implements PathNodeVisitor<V> {
     Node<V> children = branchNode.child(childIndex);
 
     if (!(children instanceof NullNode)) {
-      PROOF.add(children);
+      proof.add(children);
     }
 
     return children.accept(this, path.slice(1));
   }
 
   public List<Node<V>> getProof() {
-    return PROOF;
+    return proof;
   }
 }
