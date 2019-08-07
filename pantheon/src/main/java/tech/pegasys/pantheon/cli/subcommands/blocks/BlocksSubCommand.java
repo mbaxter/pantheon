@@ -18,14 +18,20 @@ import static tech.pegasys.pantheon.cli.DefaultCommandValues.MANDATORY_FILE_FORM
 import static tech.pegasys.pantheon.cli.DefaultCommandValues.MANDATORY_LONG_FORMAT_HELP;
 import static tech.pegasys.pantheon.cli.subcommands.blocks.BlocksSubCommand.COMMAND_NAME;
 
+import tech.pegasys.pantheon.chainimport.ChainImporter;
 import tech.pegasys.pantheon.cli.PantheonCommand;
 import tech.pegasys.pantheon.cli.subcommands.blocks.BlocksSubCommand.ExportSubCommand;
 import tech.pegasys.pantheon.cli.subcommands.blocks.BlocksSubCommand.ImportSubCommand;
+import tech.pegasys.pantheon.controller.PantheonController;
+import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Block;
+import tech.pegasys.pantheon.ethereum.core.MiningParameters;
+import tech.pegasys.pantheon.ethereum.core.Wei;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsService;
 import tech.pegasys.pantheon.util.BlockExporter;
 import tech.pegasys.pantheon.util.BlockImporter;
+import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -45,6 +51,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.ExecutionException;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 
@@ -107,9 +114,16 @@ public class BlocksSubCommand implements Runnable {
         arity = "1..1")
     private final File blocksImportFile = null;
 
+    @Option(names = "--format", description = "The type of data to be imported", arity = "1..1")
+    private final BlockFormat format = BlockFormat.RLP;
+
+    @SuppressWarnings("unused")
+    @Spec
+    private CommandSpec spec;
+
     @Override
     public void run() {
-      LOG.info("Runs import sub command with blocksImportFile : {}", blocksImportFile);
+      LOG.info("Import {} block data from {}", format, blocksImportFile);
 
       checkCommand(parentCommand);
       checkNotNull(parentCommand.blockImporter);
@@ -118,19 +132,27 @@ public class BlocksSubCommand implements Runnable {
 
       try {
         // As blocksImportFile even if initialized as null is injected by PicoCLI and param is
-        // mandatory
-        // So we are sure it's always not null, we can remove the warning
+        // mandatory. So we are sure it's always not null, we can remove the warning.
         //noinspection ConstantConditions
         final Path path = blocksImportFile.toPath();
-
-        parentCommand.blockImporter.importBlockchain(
-            path, parentCommand.parentCommand.buildController());
+        final PantheonController<?> controller = createController();
+        switch (format) {
+          case RLP:
+            importRlpBlocks(controller, path);
+            break;
+          case JSON:
+            importJsonBlocks(controller, path);
+            break;
+          default:
+            throw new ParameterException(
+                spec.commandLine(), "Unsupported format: " + format.toString());
+        }
       } catch (final FileNotFoundException e) {
         throw new ExecutionException(
-            new CommandLine(this), "Could not find file to import: " + blocksImportFile);
+            spec.commandLine(), "Could not find file to import: " + blocksImportFile);
       } catch (final IOException e) {
         throw new ExecutionException(
-            new CommandLine(this), "Unable to import blocks from " + blocksImportFile, e);
+            spec.commandLine(), "Unable to import blocks from " + blocksImportFile, e);
       } finally {
         metricsService.ifPresent(MetricsService::stop);
       }
@@ -139,6 +161,42 @@ public class BlocksSubCommand implements Runnable {
     private static void checkCommand(final BlocksSubCommand parentCommand) {
       checkNotNull(parentCommand);
       checkNotNull(parentCommand.parentCommand);
+    }
+
+    private PantheonController<?> createController() {
+      try {
+        // Set some defaults
+        return parentCommand
+            .parentCommand
+            .getControllerBuilder()
+            .miningParameters(getMiningParameters())
+            .build();
+      } catch (final IOException e) {
+        throw new ExecutionException(new CommandLine(parentCommand), "Invalid path", e);
+      } catch (final Exception e) {
+        throw new ExecutionException(new CommandLine(parentCommand), e.getMessage(), e);
+      }
+    }
+
+    private MiningParameters getMiningParameters() {
+      final Wei minTransactionGasPrice = Wei.ZERO;
+      // Extradata and coinbase can be configured on a per-block level via the json file
+      final Address coinbase = Address.ZERO;
+      final BytesValue extraData = BytesValue.EMPTY;
+      return new MiningParameters(coinbase, minTransactionGasPrice, extraData, false);
+    }
+
+    private <T> void importJsonBlocks(final PantheonController<T> controller, final Path path)
+        throws IOException {
+
+      ChainImporter<T> importer = new ChainImporter<>(controller);
+      final String jsonData = Files.readString(path);
+      importer.importChain(jsonData);
+    }
+
+    private <T> void importRlpBlocks(final PantheonController<T> controller, final Path path)
+        throws IOException {
+      parentCommand.blockImporter.importBlockchain(path, controller);
     }
   }
 

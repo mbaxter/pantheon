@@ -56,6 +56,7 @@ import tech.pegasys.pantheon.cli.util.VersionProvider;
 import tech.pegasys.pantheon.config.GenesisConfigFile;
 import tech.pegasys.pantheon.controller.KeyPairUtil;
 import tech.pegasys.pantheon.controller.PantheonController;
+import tech.pegasys.pantheon.controller.PantheonControllerBuilder;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.MiningParameters;
 import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
@@ -91,7 +92,6 @@ import tech.pegasys.pantheon.services.PicoCLIOptionsImpl;
 import tech.pegasys.pantheon.services.kvstore.RocksDbConfiguration;
 import tech.pegasys.pantheon.util.BlockExporter;
 import tech.pegasys.pantheon.util.BlockImporter;
-import tech.pegasys.pantheon.util.InvalidConfigurationException;
 import tech.pegasys.pantheon.util.PermissioningConfigurationValidator;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.number.Fraction;
@@ -871,6 +871,16 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
 
   public PantheonController<?> buildController() {
     try {
+      return getControllerBuilder().build();
+    } catch (final IOException e) {
+      throw new ExecutionException(this.commandLine, "Invalid path", e);
+    } catch (final Exception e) {
+      throw new ExecutionException(this.commandLine, e.getMessage(), e);
+    }
+  }
+
+  public PantheonControllerBuilder<?> getControllerBuilder() {
+    try {
       return controllerBuilderFactory
           .fromEthNetworkConfig(updateNetworkConfig(getNetwork()))
           .synchronizerConfiguration(buildSyncConfig())
@@ -884,11 +894,8 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
           .metricsSystem(metricsSystem.get())
           .privacyParameters(privacyParameters())
           .clock(Clock.systemUTC())
-          .isRevertReasonEnabled(isRevertReasonEnabled)
-          .build();
-    } catch (final InvalidConfigurationException e) {
-      throw new ExecutionException(this.commandLine, e.getMessage());
-    } catch (final IOException e) {
+          .isRevertReasonEnabled(isRevertReasonEnabled);
+    } catch (IOException e) {
       throw new ExecutionException(this.commandLine, "Invalid path", e);
     }
   }
