@@ -63,13 +63,10 @@ public interface MiningCoordinator {
    * @param parentHeader The parent block's header
    * @param transactions The list of transactions to include
    * @param ommers The list of ommers to include
-   * @return The block that was created, otherwise an empty response on failure.
+   * @return If supported, returns the block that was created, otherwise an empty response.
    */
-  default Optional<Block> createBlock(
+  Optional<Block> createBlock(
       final BlockHeader parentHeader,
       final List<Transaction> transactions,
-      final List<BlockHeader> ommers) {
-    // TODO: Should this just get implemented everywhere?
-    return Optional.empty();
-  }
+      final List<BlockHeader> ommers);
 }
