@@ -181,7 +181,7 @@ public class EthGetProofTest {
     when(account.getStorageEntry(Bytes32.fromHexString(storageKey))).thenReturn(storageEntries);
 
     when(mutableWorldState.get(address)).thenReturn(account);
-    when(blockchainQueries.getWorldState(Integer.getInteger(blockNumber)))
+    when(blockchainQueries.getWorldState(Integer.parseInt(blockNumber)))
         .thenReturn(Optional.of(mutableWorldState));
 
     final List<StorageEntry> storageProof = new ArrayList<>();
