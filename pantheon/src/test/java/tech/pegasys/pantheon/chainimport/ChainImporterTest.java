@@ -54,13 +54,13 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-@RunWith(Parameterized.class)
-public class ChainImporterTest {
+public abstract class ChainImporterTest {
 
   @Rule public final TemporaryFolder folder = new TemporaryFolder();
-  private final GenesisConfigFile genesisConfigFile;
-  private final String consensusEngine;
-  private final boolean isEthash;
+
+  protected final String consensusEngine;
+  protected final GenesisConfigFile genesisConfigFile;
+  protected final boolean isEthash;
 
   public ChainImporterTest(final String consensusEngine) throws IOException {
     this.consensusEngine = consensusEngine;
@@ -69,330 +69,342 @@ public class ChainImporterTest {
     this.isEthash = genesisConfigFile.getConfigOptions().isEthHash();
   }
 
-  @Parameters(name = "Name: {0}")
-  public static Collection<Object[]> getParameters() throws Exception {
-    Object[][] params = {{"ethash"}, {"clique"}};
-    return Arrays.asList(params);
-  }
-
-  @Test
-  public void importChain_validJson_withBlockNumbers() throws IOException {
-    final PantheonController<?> controller = createController();
-    final ChainImporter<?> importer = new ChainImporter<>(controller);
-
-    final String jsonData = getFileContents("blocks-import-valid.json");
-    importer.importChain(jsonData);
-
-    final Blockchain blockchain = controller.getProtocolContext().getBlockchain();
-
-    // Check blocks were imported
-    assertThat(blockchain.getChainHead().getHeight()).isEqualTo(4);
-    // Get imported blocks
-    List<Block> blocks = new ArrayList<>(4);
-    for (int i = 0; i < 4; i++) {
-      blocks.add(getBlockAt(blockchain, i + 1));
+  public static class SingletonTests extends ChainImporterTest {
+    public SingletonTests() throws IOException {
+      super("unsupported");
     }
 
-    // Check block 1
-    Block block = blocks.get(0);
-    if (isEthash) {
-      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
-      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
-    }
-    assertThat(block.getBody().getTransactions().size()).isEqualTo(2);
-    // Check first tx
-    Transaction tx = block.getBody().getTransactions().get(0);
-    assertThat(tx.getSender())
-        .isEqualTo(Address.fromHexString("fe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    assertThat(tx.getTo())
-        .hasValue(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
-    assertThat(tx.getGasLimit()).isEqualTo(0xFFFFF1L);
-    assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
-    assertThat(tx.getValue()).isEqualTo(Wei.of(1L));
-    assertThat(tx.getNonce()).isEqualTo(0L);
-    // Check second tx
-    tx = block.getBody().getTransactions().get(1);
-    assertThat(tx.getSender())
-        .isEqualTo(Address.fromHexString("fe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    assertThat(tx.getTo())
-        .hasValue(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
-    assertThat(tx.getGasLimit()).isEqualTo(0xFFFFF2L);
-    assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xEF"));
-    assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
-    assertThat(tx.getNonce()).isEqualTo(1L);
+    @Test
+    public void importChain_unsupportedConsensusAlgorithm() throws IOException {
+      final PantheonController<?> controller = createController();
+      final ChainImporter<?> importer = new ChainImporter<>(controller);
 
-    // Check block 2
-    block = blocks.get(1);
-    if (isEthash) {
-      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x1234"));
-      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.fromHexString("0x02"));
-    }
-    assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
-    // Check first tx
-    tx = block.getBody().getTransactions().get(0);
-    assertThat(tx.getSender())
-        .isEqualTo(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
-    assertThat(tx.getTo())
-        .hasValue(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
-    assertThat(tx.getGasLimit()).isEqualTo(0xFFFFFFL);
-    assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
-    assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
-    assertThat(tx.getNonce()).isEqualTo(0L);
+      final String jsonData = getFileContents("clique", "blocks-import-valid.json");
 
-    // Check block 3
-    block = blocks.get(2);
-    if (isEthash) {
-      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x3456"));
-      assertThat(block.getHeader().getCoinbase())
-          .isEqualTo(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
-    }
-    assertThat(block.getBody().getTransactions().size()).isEqualTo(0);
-
-    // Check block 4
-    block = blocks.get(3);
-    if (isEthash) {
-      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
-      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
-    }
-    assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
-    // Check first tx
-    tx = block.getBody().getTransactions().get(0);
-    assertThat(tx.getSender())
-        .isEqualTo(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
-    assertThat(tx.getTo()).isEmpty();
-    assertThat(tx.getGasLimit()).isEqualTo(0xFFFFFFL);
-    assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
-    assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
-    assertThat(tx.getNonce()).isEqualTo(1L);
-  }
-
-  @Test
-  public void importChain_validJson_noBlockIdentifiers() throws IOException {
-    final PantheonController<?> controller = createController();
-    final ChainImporter<?> importer = new ChainImporter<>(controller);
-
-    final String jsonData = getFileContents("blocks-import-valid-no-block-identifiers.json");
-    importer.importChain(jsonData);
-
-    final Blockchain blockchain = controller.getProtocolContext().getBlockchain();
-
-    // Check blocks were imported
-    assertThat(blockchain.getChainHead().getHeight()).isEqualTo(4);
-    // Get imported blocks
-    List<Block> blocks = new ArrayList<>(4);
-    for (int i = 0; i < 4; i++) {
-      blocks.add(getBlockAt(blockchain, i + 1));
-    }
-
-    // Check block 1
-    Block block = blocks.get(0);
-    if (isEthash) {
-      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
-      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
-    }
-    assertThat(block.getBody().getTransactions().size()).isEqualTo(2);
-    // Check first tx
-    Transaction tx = block.getBody().getTransactions().get(0);
-    assertThat(tx.getSender())
-        .isEqualTo(Address.fromHexString("fe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    assertThat(tx.getTo())
-        .hasValue(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
-    assertThat(tx.getGasLimit()).isEqualTo(0xFFFFF1L);
-    assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
-    assertThat(tx.getValue()).isEqualTo(Wei.of(1L));
-    assertThat(tx.getNonce()).isEqualTo(0L);
-    // Check second tx
-    tx = block.getBody().getTransactions().get(1);
-    assertThat(tx.getSender())
-        .isEqualTo(Address.fromHexString("fe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    assertThat(tx.getTo())
-        .hasValue(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
-    assertThat(tx.getGasLimit()).isEqualTo(0xFFFFF2L);
-    assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xEF"));
-    assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
-    assertThat(tx.getNonce()).isEqualTo(1L);
-
-    // Check block 2
-    block = blocks.get(1);
-    if (isEthash) {
-      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x1234"));
-      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.fromHexString("0x02"));
-    }
-    assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
-    // Check first tx
-    tx = block.getBody().getTransactions().get(0);
-    assertThat(tx.getSender())
-        .isEqualTo(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
-    assertThat(tx.getTo())
-        .hasValue(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
-    assertThat(tx.getGasLimit()).isEqualTo(0xFFFFFFL);
-    assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
-    assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
-    assertThat(tx.getNonce()).isEqualTo(0L);
-
-    // Check block 3
-    block = blocks.get(2);
-    if (isEthash) {
-      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x3456"));
-      assertThat(block.getHeader().getCoinbase())
-          .isEqualTo(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
-    }
-    assertThat(block.getBody().getTransactions().size()).isEqualTo(0);
-
-    // Check block 4
-    block = blocks.get(3);
-    if (isEthash) {
-      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
-      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
-    }
-    assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
-    // Check first tx
-    tx = block.getBody().getTransactions().get(0);
-    assertThat(tx.getSender())
-        .isEqualTo(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
-    assertThat(tx.getTo()).isEmpty();
-    assertThat(tx.getGasLimit()).isEqualTo(0xFFFFFFL);
-    assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
-    assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
-    assertThat(tx.getNonce()).isEqualTo(1L);
-  }
-
-  @Test
-  public void importChain_validJson_withParentHashes() throws IOException {
-    final PantheonController<?> controller = createController();
-    final ChainImporter<?> importer = new ChainImporter<>(controller);
-
-    String jsonData = getFileContents("blocks-import-valid.json");
-
-    importer.importChain(jsonData);
-
-    final Blockchain blockchain = controller.getProtocolContext().getBlockchain();
-
-    // Check blocks were imported
-    assertThat(blockchain.getChainHead().getHeight()).isEqualTo(4);
-    // Get imported blocks
-    List<Block> blocks = new ArrayList<>(4);
-    for (int i = 0; i < 4; i++) {
-      blocks.add(getBlockAt(blockchain, i + 1));
-    }
-
-    // Run new import based on first file
-    jsonData = getFileContents("blocks-import-valid-addendum.json");
-    ObjectNode newImportData = JsonUtil.objectNodeFromString(jsonData);
-    final ObjectNode block0 = (ObjectNode) newImportData.get("blocks").get(0);
-    final Block parentBlock = blocks.get(3);
-    block0.put("parentHash", parentBlock.getHash().toString());
-    final String newImportJsonData = JsonUtil.getJson(newImportData);
-    importer.importChain(newImportJsonData);
-
-    // Check blocks were imported
-    assertThat(blockchain.getChainHead().getHeight()).isEqualTo(5);
-    final Block newBlock = getBlockAt(blockchain, parentBlock.getHeader().getNumber() + 1L);
-
-    // Check block 1
-    assertThat(newBlock.getHeader().getParentHash()).isEqualTo(parentBlock.getHash());
-    if (isEthash) {
-      assertThat(newBlock.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
-      assertThat(newBlock.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
-    }
-    assertThat(newBlock.getBody().getTransactions().size()).isEqualTo(1);
-    // Check first tx
-    Transaction tx = newBlock.getBody().getTransactions().get(0);
-    assertThat(tx.getSender())
-        .isEqualTo(Address.fromHexString("fe3b557e8fb62b89f4916b721be55ceb828dbd73"));
-    assertThat(tx.getTo())
-        .hasValue(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
-    assertThat(tx.getGasLimit()).isEqualTo(0xFFFFF1L);
-    assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
-    assertThat(tx.getValue()).isEqualTo(Wei.of(1L));
-    assertThat(tx.getNonce()).isEqualTo(2L);
-  }
-
-  @Test
-  public void importChain_invalidParent() throws IOException {
-    final PantheonController<?> controller = createController();
-    final ChainImporter<?> importer = new ChainImporter<>(controller);
-
-    final String jsonData = getFileContents("blocks-import-invalid-bad-parent.json");
-
-    assertThatThrownBy(() -> importer.importChain(jsonData))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageStartingWith("Unable to locate block parent at 2456");
-  }
-
-  @Test
-  public void importChain_invalidTransaction() throws IOException {
-    final PantheonController<?> controller = createController();
-    final ChainImporter<?> importer = new ChainImporter<>(controller);
-
-    final String jsonData = getFileContents("blocks-import-invalid-bad-tx.json");
-
-    assertThatThrownBy(() -> importer.importChain(jsonData))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageStartingWith(
-            "Unable to create block.  1 transaction(s) were found to be invalid.");
-  }
-
-  @Test
-  public void importChain_specialFields() throws IOException {
-    final PantheonController<?> controller = createController();
-    final ChainImporter<?> importer = new ChainImporter<>(controller);
-
-    final String jsonData = getFileContents("blocks-import-special-fields.json");
-
-    if (isEthash) {
-      importer.importChain(jsonData);
-      final Blockchain blockchain = controller.getProtocolContext().getBlockchain();
-      final Block block = getBlockAt(blockchain, 1);
-      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x0123"));
-      assertThat(block.getHeader().getCoinbase())
-          .isEqualTo(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
-    } else {
       assertThatThrownBy(() -> importer.importChain(jsonData))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessage(
-              "Some fields (coinbase, extraData) are unsupported by the current consensus engine: "
+              "Unable to create block using current consensus engine: "
                   + genesisConfigFile.getConfigOptions().getConsensusEngine());
     }
   }
 
-  @Test
-  public void importChain_unsupportedConsensusAlgorithm() throws IOException {
-    final String genesisFile = getFileContents("unsupported", "genesis.json");
-    final GenesisConfigFile genesisConfigFile = GenesisConfigFile.fromConfig(genesisFile);
-    final PantheonController<?> controller = createController(genesisConfigFile);
-    final ChainImporter<?> importer = new ChainImporter<>(controller);
+  @RunWith(Parameterized.class)
+  public static class ParameterizedTests extends ChainImporterTest {
 
-    final String jsonData = getFileContents("blocks-import-valid.json");
+    public ParameterizedTests(final String consensusEngine) throws IOException {
+      super(consensusEngine);
+    }
 
-    assertThatThrownBy(() -> importer.importChain(jsonData))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessage(
-            "Unable to create block using current consensus engine: "
-                + genesisConfigFile.getConfigOptions().getConsensusEngine());
+    @Parameters(name = "Name: {0}")
+    public static Collection<Object[]> getParameters() {
+      Object[][] params = {{"ethash"}, {"clique"}};
+      return Arrays.asList(params);
+    }
+
+    @Test
+    public void importChain_validJson_withBlockNumbers() throws IOException {
+      final PantheonController<?> controller = createController();
+      final ChainImporter<?> importer = new ChainImporter<>(controller);
+
+      final String jsonData = getFileContents("blocks-import-valid.json");
+      importer.importChain(jsonData);
+
+      final Blockchain blockchain = controller.getProtocolContext().getBlockchain();
+
+      // Check blocks were imported
+      assertThat(blockchain.getChainHead().getHeight()).isEqualTo(4);
+      // Get imported blocks
+      List<Block> blocks = new ArrayList<>(4);
+      for (int i = 0; i < 4; i++) {
+        blocks.add(getBlockAt(blockchain, i + 1));
+      }
+
+      // Check block 1
+      Block block = blocks.get(0);
+      if (isEthash) {
+        assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
+        assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+      }
+      assertThat(block.getBody().getTransactions().size()).isEqualTo(2);
+      // Check first tx
+      Transaction tx = block.getBody().getTransactions().get(0);
+      assertThat(tx.getSender())
+          .isEqualTo(Address.fromHexString("fe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+      assertThat(tx.getTo())
+          .hasValue(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
+      assertThat(tx.getGasLimit()).isEqualTo(0xFFFFF1L);
+      assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
+      assertThat(tx.getValue()).isEqualTo(Wei.of(1L));
+      assertThat(tx.getNonce()).isEqualTo(0L);
+      // Check second tx
+      tx = block.getBody().getTransactions().get(1);
+      assertThat(tx.getSender())
+          .isEqualTo(Address.fromHexString("fe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+      assertThat(tx.getTo())
+          .hasValue(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
+      assertThat(tx.getGasLimit()).isEqualTo(0xFFFFF2L);
+      assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xEF"));
+      assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
+      assertThat(tx.getNonce()).isEqualTo(1L);
+
+      // Check block 2
+      block = blocks.get(1);
+      if (isEthash) {
+        assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x1234"));
+        assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.fromHexString("0x02"));
+      }
+      assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
+      // Check first tx
+      tx = block.getBody().getTransactions().get(0);
+      assertThat(tx.getSender())
+          .isEqualTo(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
+      assertThat(tx.getTo())
+          .hasValue(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
+      assertThat(tx.getGasLimit()).isEqualTo(0xFFFFFFL);
+      assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
+      assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
+      assertThat(tx.getNonce()).isEqualTo(0L);
+
+      // Check block 3
+      block = blocks.get(2);
+      if (isEthash) {
+        assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x3456"));
+        assertThat(block.getHeader().getCoinbase())
+            .isEqualTo(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
+      }
+      assertThat(block.getBody().getTransactions().size()).isEqualTo(0);
+
+      // Check block 4
+      block = blocks.get(3);
+      if (isEthash) {
+        assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
+        assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+      }
+      assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
+      // Check first tx
+      tx = block.getBody().getTransactions().get(0);
+      assertThat(tx.getSender())
+          .isEqualTo(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
+      assertThat(tx.getTo()).isEmpty();
+      assertThat(tx.getGasLimit()).isEqualTo(0xFFFFFFL);
+      assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
+      assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
+      assertThat(tx.getNonce()).isEqualTo(1L);
+    }
+
+    @Test
+    public void importChain_validJson_noBlockIdentifiers() throws IOException {
+      final PantheonController<?> controller = createController();
+      final ChainImporter<?> importer = new ChainImporter<>(controller);
+
+      final String jsonData = getFileContents("blocks-import-valid-no-block-identifiers.json");
+      importer.importChain(jsonData);
+
+      final Blockchain blockchain = controller.getProtocolContext().getBlockchain();
+
+      // Check blocks were imported
+      assertThat(blockchain.getChainHead().getHeight()).isEqualTo(4);
+      // Get imported blocks
+      List<Block> blocks = new ArrayList<>(4);
+      for (int i = 0; i < 4; i++) {
+        blocks.add(getBlockAt(blockchain, i + 1));
+      }
+
+      // Check block 1
+      Block block = blocks.get(0);
+      if (isEthash) {
+        assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
+        assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+      }
+      assertThat(block.getBody().getTransactions().size()).isEqualTo(2);
+      // Check first tx
+      Transaction tx = block.getBody().getTransactions().get(0);
+      assertThat(tx.getSender())
+          .isEqualTo(Address.fromHexString("fe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+      assertThat(tx.getTo())
+          .hasValue(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
+      assertThat(tx.getGasLimit()).isEqualTo(0xFFFFF1L);
+      assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
+      assertThat(tx.getValue()).isEqualTo(Wei.of(1L));
+      assertThat(tx.getNonce()).isEqualTo(0L);
+      // Check second tx
+      tx = block.getBody().getTransactions().get(1);
+      assertThat(tx.getSender())
+          .isEqualTo(Address.fromHexString("fe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+      assertThat(tx.getTo())
+          .hasValue(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
+      assertThat(tx.getGasLimit()).isEqualTo(0xFFFFF2L);
+      assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xEF"));
+      assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
+      assertThat(tx.getNonce()).isEqualTo(1L);
+
+      // Check block 2
+      block = blocks.get(1);
+      if (isEthash) {
+        assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x1234"));
+        assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.fromHexString("0x02"));
+      }
+      assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
+      // Check first tx
+      tx = block.getBody().getTransactions().get(0);
+      assertThat(tx.getSender())
+          .isEqualTo(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
+      assertThat(tx.getTo())
+          .hasValue(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
+      assertThat(tx.getGasLimit()).isEqualTo(0xFFFFFFL);
+      assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
+      assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
+      assertThat(tx.getNonce()).isEqualTo(0L);
+
+      // Check block 3
+      block = blocks.get(2);
+      if (isEthash) {
+        assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x3456"));
+        assertThat(block.getHeader().getCoinbase())
+            .isEqualTo(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
+      }
+      assertThat(block.getBody().getTransactions().size()).isEqualTo(0);
+
+      // Check block 4
+      block = blocks.get(3);
+      if (isEthash) {
+        assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
+        assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+      }
+      assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
+      // Check first tx
+      tx = block.getBody().getTransactions().get(0);
+      assertThat(tx.getSender())
+          .isEqualTo(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
+      assertThat(tx.getTo()).isEmpty();
+      assertThat(tx.getGasLimit()).isEqualTo(0xFFFFFFL);
+      assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
+      assertThat(tx.getValue()).isEqualTo(Wei.of(0L));
+      assertThat(tx.getNonce()).isEqualTo(1L);
+    }
+
+    @Test
+    public void importChain_validJson_withParentHashes() throws IOException {
+      final PantheonController<?> controller = createController();
+      final ChainImporter<?> importer = new ChainImporter<>(controller);
+
+      String jsonData = getFileContents("blocks-import-valid.json");
+
+      importer.importChain(jsonData);
+
+      final Blockchain blockchain = controller.getProtocolContext().getBlockchain();
+
+      // Check blocks were imported
+      assertThat(blockchain.getChainHead().getHeight()).isEqualTo(4);
+      // Get imported blocks
+      List<Block> blocks = new ArrayList<>(4);
+      for (int i = 0; i < 4; i++) {
+        blocks.add(getBlockAt(blockchain, i + 1));
+      }
+
+      // Run new import based on first file
+      jsonData = getFileContents("blocks-import-valid-addendum.json");
+      ObjectNode newImportData = JsonUtil.objectNodeFromString(jsonData);
+      final ObjectNode block0 = (ObjectNode) newImportData.get("blocks").get(0);
+      final Block parentBlock = blocks.get(3);
+      block0.put("parentHash", parentBlock.getHash().toString());
+      final String newImportJsonData = JsonUtil.getJson(newImportData);
+      importer.importChain(newImportJsonData);
+
+      // Check blocks were imported
+      assertThat(blockchain.getChainHead().getHeight()).isEqualTo(5);
+      final Block newBlock = getBlockAt(blockchain, parentBlock.getHeader().getNumber() + 1L);
+
+      // Check block 1
+      assertThat(newBlock.getHeader().getParentHash()).isEqualTo(parentBlock.getHash());
+      if (isEthash) {
+        assertThat(newBlock.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
+        assertThat(newBlock.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+      }
+      assertThat(newBlock.getBody().getTransactions().size()).isEqualTo(1);
+      // Check first tx
+      Transaction tx = newBlock.getBody().getTransactions().get(0);
+      assertThat(tx.getSender())
+          .isEqualTo(Address.fromHexString("fe3b557e8fb62b89f4916b721be55ceb828dbd73"));
+      assertThat(tx.getTo())
+          .hasValue(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
+      assertThat(tx.getGasLimit()).isEqualTo(0xFFFFF1L);
+      assertThat(tx.getGasPrice()).isEqualTo(Wei.fromHexString("0xFF"));
+      assertThat(tx.getValue()).isEqualTo(Wei.of(1L));
+      assertThat(tx.getNonce()).isEqualTo(2L);
+    }
+
+    @Test
+    public void importChain_invalidParent() throws IOException {
+      final PantheonController<?> controller = createController();
+      final ChainImporter<?> importer = new ChainImporter<>(controller);
+
+      final String jsonData = getFileContents("blocks-import-invalid-bad-parent.json");
+
+      assertThatThrownBy(() -> importer.importChain(jsonData))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageStartingWith("Unable to locate block parent at 2456");
+    }
+
+    @Test
+    public void importChain_invalidTransaction() throws IOException {
+      final PantheonController<?> controller = createController();
+      final ChainImporter<?> importer = new ChainImporter<>(controller);
+
+      final String jsonData = getFileContents("blocks-import-invalid-bad-tx.json");
+
+      assertThatThrownBy(() -> importer.importChain(jsonData))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageStartingWith(
+              "Unable to create block.  1 transaction(s) were found to be invalid.");
+    }
+
+    @Test
+    public void importChain_specialFields() throws IOException {
+      final PantheonController<?> controller = createController();
+      final ChainImporter<?> importer = new ChainImporter<>(controller);
+
+      final String jsonData = getFileContents("blocks-import-special-fields.json");
+
+      if (isEthash) {
+        importer.importChain(jsonData);
+        final Blockchain blockchain = controller.getProtocolContext().getBlockchain();
+        final Block block = getBlockAt(blockchain, 1);
+        assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x0123"));
+        assertThat(block.getHeader().getCoinbase())
+            .isEqualTo(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
+      } else {
+        assertThatThrownBy(() -> importer.importChain(jsonData))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage(
+                "Some fields (coinbase, extraData) are unsupported by the current consensus engine: "
+                    + genesisConfigFile.getConfigOptions().getConsensusEngine());
+      }
+    }
   }
 
-  private Block getBlockAt(final Blockchain blockchain, final long blockNumber) {
+  protected Block getBlockAt(final Blockchain blockchain, final long blockNumber) {
     final BlockHeader header = blockchain.getBlockHeader(blockNumber).get();
     final BlockBody body = blockchain.getBlockBody(header.getHash()).get();
     return new Block(header, body);
   }
 
-  private String getFileContents(final String filename) throws IOException {
+  protected String getFileContents(final String filename) throws IOException {
     return getFileContents(consensusEngine, filename);
   }
 
-  private String getFileContents(final String folder, final String filename) throws IOException {
+  protected String getFileContents(final String folder, final String filename) throws IOException {
     final String filePath = folder + "/" + filename;
     final URL fileURL = this.getClass().getResource(filePath);
     return Resources.toString(fileURL, UTF_8);
   }
 
-  private PantheonController<?> createController() throws IOException {
+  protected PantheonController<?> createController() throws IOException {
     return createController(genesisConfigFile);
   }
 
-  private PantheonController<?> createController(final GenesisConfigFile genesisConfigFile)
+  protected PantheonController<?> createController(final GenesisConfigFile genesisConfigFile)
       throws IOException {
     final Path dataDir = folder.newFolder().toPath();
     return new PantheonController.Builder()
