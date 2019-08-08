@@ -15,12 +15,14 @@ package tech.pegasys.pantheon.chainimport;
 import tech.pegasys.pantheon.config.GenesisConfigOptions;
 import tech.pegasys.pantheon.controller.PantheonController;
 import tech.pegasys.pantheon.ethereum.blockcreation.MiningCoordinator;
+import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.BlockImporter;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.Transaction;
 import tech.pegasys.pantheon.ethereum.mainnet.HeaderValidationMode;
+import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -87,20 +90,43 @@ public class ChainImporter<C> {
       final BlockHeader parentHeader,
       final List<Transaction> transactions) {
     final MiningCoordinator miner = controller.getMiningCoordinator();
-    miner.setCoinbase(blockData.getCoinbase());
-    miner.setExtraData(blockData.getExtraData());
+    final GenesisConfigOptions genesisConfigOptions = controller.getGenesisConfigOptions();
+    setOptionalFields(miner, blockData, genesisConfigOptions);
 
     Optional<Block> maybeBlock =
         miner.createBlock(parentHeader, transactions, Collections.emptyList());
 
     if (maybeBlock.isEmpty()) {
       // Some MiningCoordinator's (specific to consensus type) do not support block-level imports
-      final GenesisConfigOptions genesisConfigOptions = controller.getGenesisConfigOptions();
       throw new IllegalArgumentException(
           "Unable to create block using current consensus engine: "
               + genesisConfigOptions.getConsensusEngine());
     }
     return maybeBlock.get();
+  }
+
+  private void setOptionalFields(
+      final MiningCoordinator miner,
+      final BlockData blockData,
+      final GenesisConfigOptions genesisConfig) {
+    // Some fields can only be configured for ethash
+    if (genesisConfig.isEthHash()) {
+      // For simplicity only set these for ethash.  Other consensus algorithms use these fields for
+      // special purposes or ignore them
+      miner.setCoinbase(blockData.getCoinbase().orElse(Address.ZERO));
+      miner.setExtraData(blockData.getExtraData().orElse(BytesValue.EMPTY));
+    } else if (blockData.getCoinbase().isPresent() || blockData.getExtraData().isPresent()) {
+      // Fail if these fields are set for non-ethash chains
+      final Stream.Builder<String> fields = Stream.builder();
+      blockData.getCoinbase().map((c) -> "coinbase").ifPresent(fields::add);
+      blockData.getExtraData().map((e) -> "extraData").ifPresent(fields::add);
+      final String fieldsList = fields.build().collect(Collectors.joining(", "));
+      throw new IllegalArgumentException(
+          "Some fields ("
+              + fieldsList
+              + ") are unsupported by the current consensus engine: "
+              + genesisConfig.getConsensusEngine());
+    }
   }
 
   private void importBlock(final Block block) {

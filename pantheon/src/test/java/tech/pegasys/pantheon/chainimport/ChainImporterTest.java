@@ -10,13 +10,12 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package tech.pegasys.pantheon.cli.chainimport;
+package tech.pegasys.pantheon.chainimport;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import tech.pegasys.pantheon.chainimport.ChainImporter;
 import tech.pegasys.pantheon.config.GenesisConfigFile;
 import tech.pegasys.pantheon.config.JsonUtil;
 import tech.pegasys.pantheon.controller.PantheonController;
@@ -42,6 +41,8 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -49,19 +50,37 @@ import com.google.common.io.Resources;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class ChainImporterTest {
 
   @Rule public final TemporaryFolder folder = new TemporaryFolder();
+  private final GenesisConfigFile genesisConfigFile;
+  private final String consensusEngine;
+  private final boolean isEthash;
+
+  public ChainImporterTest(final String consensusEngine) throws IOException {
+    this.consensusEngine = consensusEngine;
+    final String genesisData = getFileContents("genesis.json");
+    this.genesisConfigFile = GenesisConfigFile.fromConfig(genesisData);
+    this.isEthash = genesisConfigFile.getConfigOptions().isEthHash();
+  }
+
+  @Parameters(name = "Name: {0}")
+  public static Collection<Object[]> getParameters() throws Exception {
+    Object[][] params = {{"ethash"}, {"clique"}};
+    return Arrays.asList(params);
+  }
 
   @Test
   public void importChain_validJson_withBlockNumbers() throws IOException {
-    final PantheonController<?> controller = createController(getDevGenesisConfig());
+    final PantheonController<?> controller = createController();
     final ChainImporter<?> importer = new ChainImporter<>(controller);
 
-    final URL jsonDataURL = ChainImporter.class.getResource("blocks-import-valid.json");
-    final String jsonData = Resources.toString(jsonDataURL, UTF_8);
-
+    final String jsonData = getFileContents("blocks-import-valid.json");
     importer.importChain(jsonData);
 
     final Blockchain blockchain = controller.getProtocolContext().getBlockchain();
@@ -76,8 +95,10 @@ public class ChainImporterTest {
 
     // Check block 1
     Block block = blocks.get(0);
-    assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
-    assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+    if (isEthash) {
+      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
+      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+    }
     assertThat(block.getBody().getTransactions().size()).isEqualTo(2);
     // Check first tx
     Transaction tx = block.getBody().getTransactions().get(0);
@@ -102,8 +123,10 @@ public class ChainImporterTest {
 
     // Check block 2
     block = blocks.get(1);
-    assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x1234"));
-    assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.fromHexString("0x02"));
+    if (isEthash) {
+      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x1234"));
+      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.fromHexString("0x02"));
+    }
     assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
     // Check first tx
     tx = block.getBody().getTransactions().get(0);
@@ -118,15 +141,19 @@ public class ChainImporterTest {
 
     // Check block 3
     block = blocks.get(2);
-    assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x3456"));
-    assertThat(block.getHeader().getCoinbase())
-        .isEqualTo(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
+    if (isEthash) {
+      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x3456"));
+      assertThat(block.getHeader().getCoinbase())
+          .isEqualTo(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
+    }
     assertThat(block.getBody().getTransactions().size()).isEqualTo(0);
 
     // Check block 4
     block = blocks.get(3);
-    assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
-    assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+    if (isEthash) {
+      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
+      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+    }
     assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
     // Check first tx
     tx = block.getBody().getTransactions().get(0);
@@ -140,14 +167,11 @@ public class ChainImporterTest {
   }
 
   @Test
-  public void importChain_validJson_NoBlockIdentifiers() throws IOException {
-    final PantheonController<?> controller = createController(getDevGenesisConfig());
+  public void importChain_validJson_noBlockIdentifiers() throws IOException {
+    final PantheonController<?> controller = createController();
     final ChainImporter<?> importer = new ChainImporter<>(controller);
 
-    final URL jsonDataURL =
-        ChainImporter.class.getResource("blocks-import-valid-no-block-identifiers.json");
-    final String jsonData = Resources.toString(jsonDataURL, UTF_8);
-
+    final String jsonData = getFileContents("blocks-import-valid-no-block-identifiers.json");
     importer.importChain(jsonData);
 
     final Blockchain blockchain = controller.getProtocolContext().getBlockchain();
@@ -162,8 +186,10 @@ public class ChainImporterTest {
 
     // Check block 1
     Block block = blocks.get(0);
-    assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
-    assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+    if (isEthash) {
+      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
+      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+    }
     assertThat(block.getBody().getTransactions().size()).isEqualTo(2);
     // Check first tx
     Transaction tx = block.getBody().getTransactions().get(0);
@@ -188,8 +214,10 @@ public class ChainImporterTest {
 
     // Check block 2
     block = blocks.get(1);
-    assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x1234"));
-    assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.fromHexString("0x02"));
+    if (isEthash) {
+      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x1234"));
+      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.fromHexString("0x02"));
+    }
     assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
     // Check first tx
     tx = block.getBody().getTransactions().get(0);
@@ -204,15 +232,19 @@ public class ChainImporterTest {
 
     // Check block 3
     block = blocks.get(2);
-    assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x3456"));
-    assertThat(block.getHeader().getCoinbase())
-        .isEqualTo(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
+    if (isEthash) {
+      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x3456"));
+      assertThat(block.getHeader().getCoinbase())
+          .isEqualTo(Address.fromHexString("f17f52151EbEF6C7334FAD080c5704D77216b732"));
+    }
     assertThat(block.getBody().getTransactions().size()).isEqualTo(0);
 
     // Check block 4
     block = blocks.get(3);
-    assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
-    assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+    if (isEthash) {
+      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
+      assertThat(block.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+    }
     assertThat(block.getBody().getTransactions().size()).isEqualTo(1);
     // Check first tx
     tx = block.getBody().getTransactions().get(0);
@@ -227,11 +259,10 @@ public class ChainImporterTest {
 
   @Test
   public void importChain_validJson_withParentHashes() throws IOException {
-    final PantheonController<?> controller = createController(getDevGenesisConfig());
+    final PantheonController<?> controller = createController();
     final ChainImporter<?> importer = new ChainImporter<>(controller);
 
-    URL jsonDataURL = ChainImporter.class.getResource("blocks-import-valid.json");
-    String jsonData = Resources.toString(jsonDataURL, UTF_8);
+    String jsonData = getFileContents("blocks-import-valid.json");
 
     importer.importChain(jsonData);
 
@@ -246,8 +277,7 @@ public class ChainImporterTest {
     }
 
     // Run new import based on first file
-    jsonDataURL = ChainImporter.class.getResource("blocks-import-valid-addendum.json");
-    jsonData = Resources.toString(jsonDataURL, UTF_8);
+    jsonData = getFileContents("blocks-import-valid-addendum.json");
     ObjectNode newImportData = JsonUtil.objectNodeFromString(jsonData);
     final ObjectNode block0 = (ObjectNode) newImportData.get("blocks").get(0);
     final Block parentBlock = blocks.get(3);
@@ -261,8 +291,10 @@ public class ChainImporterTest {
 
     // Check block 1
     assertThat(newBlock.getHeader().getParentHash()).isEqualTo(parentBlock.getHash());
-    assertThat(newBlock.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
-    assertThat(newBlock.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+    if (isEthash) {
+      assertThat(newBlock.getHeader().getExtraData()).isEqualTo(BytesValue.EMPTY);
+      assertThat(newBlock.getHeader().getCoinbase()).isEqualTo(Address.ZERO);
+    }
     assertThat(newBlock.getBody().getTransactions().size()).isEqualTo(1);
     // Check first tx
     Transaction tx = newBlock.getBody().getTransactions().get(0);
@@ -278,12 +310,10 @@ public class ChainImporterTest {
 
   @Test
   public void importChain_invalidParent() throws IOException {
-    final PantheonController<?> controller = createController(getDevGenesisConfig());
+    final PantheonController<?> controller = createController();
     final ChainImporter<?> importer = new ChainImporter<>(controller);
 
-    final URL jsonDataURL =
-        ChainImporter.class.getResource("blocks-import-invalid-bad-parent.json");
-    final String jsonData = Resources.toString(jsonDataURL, UTF_8);
+    final String jsonData = getFileContents("blocks-import-invalid-bad-parent.json");
 
     assertThatThrownBy(() -> importer.importChain(jsonData))
         .isInstanceOf(IllegalArgumentException.class)
@@ -292,16 +322,54 @@ public class ChainImporterTest {
 
   @Test
   public void importChain_invalidTransaction() throws IOException {
-    final PantheonController<?> controller = createController(getDevGenesisConfig());
+    final PantheonController<?> controller = createController();
     final ChainImporter<?> importer = new ChainImporter<>(controller);
 
-    final URL jsonDataURL = ChainImporter.class.getResource("blocks-import-invalid-bad-tx.json");
-    final String jsonData = Resources.toString(jsonDataURL, UTF_8);
+    final String jsonData = getFileContents("blocks-import-invalid-bad-tx.json");
 
     assertThatThrownBy(() -> importer.importChain(jsonData))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageStartingWith(
             "Unable to create block.  1 transaction(s) were found to be invalid.");
+  }
+
+  @Test
+  public void importChain_specialFields() throws IOException {
+    final PantheonController<?> controller = createController();
+    final ChainImporter<?> importer = new ChainImporter<>(controller);
+
+    final String jsonData = getFileContents("blocks-import-special-fields.json");
+
+    if (isEthash) {
+      importer.importChain(jsonData);
+      final Blockchain blockchain = controller.getProtocolContext().getBlockchain();
+      final Block block = getBlockAt(blockchain, 1);
+      assertThat(block.getHeader().getExtraData()).isEqualTo(BytesValue.fromHexString("0x0123"));
+      assertThat(block.getHeader().getCoinbase())
+          .isEqualTo(Address.fromHexString("627306090abaB3A6e1400e9345bC60c78a8BEf57"));
+    } else {
+      assertThatThrownBy(() -> importer.importChain(jsonData))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessage(
+              "Some fields (coinbase, extraData) are unsupported by the current consensus engine: "
+                  + genesisConfigFile.getConfigOptions().getConsensusEngine());
+    }
+  }
+
+  @Test
+  public void importChain_unsupportedConsensusAlgorithm() throws IOException {
+    final String genesisFile = getFileContents("unsupported", "genesis.json");
+    final GenesisConfigFile genesisConfigFile = GenesisConfigFile.fromConfig(genesisFile);
+    final PantheonController<?> controller = createController(genesisConfigFile);
+    final ChainImporter<?> importer = new ChainImporter<>(controller);
+
+    final String jsonData = getFileContents("blocks-import-valid.json");
+
+    assertThatThrownBy(() -> importer.importChain(jsonData))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage(
+            "Unable to create block using current consensus engine: "
+                + genesisConfigFile.getConfigOptions().getConsensusEngine());
   }
 
   private Block getBlockAt(final Blockchain blockchain, final long blockNumber) {
@@ -310,14 +378,25 @@ public class ChainImporterTest {
     return new Block(header, body);
   }
 
-  private String getDevGenesisConfig() throws IOException {
-    return Resources.toString(this.getClass().getResource("/dev.json"), UTF_8);
+  private String getFileContents(final String filename) throws IOException {
+    return getFileContents(consensusEngine, filename);
   }
 
-  private PantheonController<?> createController(final String config) throws IOException {
+  private String getFileContents(final String folder, final String filename) throws IOException {
+    final String filePath = folder + "/" + filename;
+    final URL fileURL = this.getClass().getResource(filePath);
+    return Resources.toString(fileURL, UTF_8);
+  }
+
+  private PantheonController<?> createController() throws IOException {
+    return createController(genesisConfigFile);
+  }
+
+  private PantheonController<?> createController(final GenesisConfigFile genesisConfigFile)
+      throws IOException {
     final Path dataDir = folder.newFolder().toPath();
     return new PantheonController.Builder()
-        .fromGenesisConfig(GenesisConfigFile.fromConfig(config))
+        .fromGenesisConfig(genesisConfigFile)
         .synchronizerConfiguration(SynchronizerConfiguration.builder().build())
         .ethProtocolConfiguration(EthProtocolConfiguration.defaultConfig())
         .storageProvider(new InMemoryStorageProvider())

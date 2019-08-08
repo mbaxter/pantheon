@@ -31,8 +31,8 @@ public class BlockData {
   private final Optional<Long> number;
   private final Optional<Hash> parentHash;
   private final List<TransactionData> transactionData;
-  private final Address coinbase;
-  private final BytesValue extraData;
+  private final Optional<Address> coinbase;
+  private final Optional<BytesValue> extraData;
 
   @JsonCreator
   public BlockData(
@@ -43,8 +43,8 @@ public class BlockData {
       @JsonProperty("transactions") final List<TransactionData> transactions) {
     this.number = number.map(UInt256::fromHexString).map(UInt256::toLong);
     this.parentHash = parentHash.map(Bytes32::fromHexString).map(Hash::wrap);
-    this.coinbase = coinbase.map(Address::fromHexString).orElse(Address.ZERO);
-    this.extraData = extraData.map(BytesValue::fromHexStringLenient).orElse(BytesValue.EMPTY);
+    this.coinbase = coinbase.map(Address::fromHexString);
+    this.extraData = extraData.map(BytesValue::fromHexStringLenient);
     this.transactionData = transactions;
   }
 
@@ -56,11 +56,11 @@ public class BlockData {
     return parentHash;
   }
 
-  public Address getCoinbase() {
+  public Optional<Address> getCoinbase() {
     return coinbase;
   }
 
-  public BytesValue getExtraData() {
+  public Optional<BytesValue> getExtraData() {
     return extraData;
   }
 
