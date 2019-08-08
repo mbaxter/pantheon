@@ -21,6 +21,7 @@ import tech.pegasys.pantheon.util.bytes.BytesValue;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -120,6 +121,11 @@ public class StoredMerklePatriciaTrie<K extends BytesValue, V> implements Merkle
   @Override
   public Map<Bytes32, V> entriesFrom(final Bytes32 startKeyHash, final int limit) {
     return StorageEntriesCollector.collectEntries(root, startKeyHash, limit);
+  }
+
+  @Override
+  public void visitAll(final Consumer<Node<V>> visitor) {
+    root.accept(new AllNodesVisitor<>(visitor));
   }
 
   @Override
