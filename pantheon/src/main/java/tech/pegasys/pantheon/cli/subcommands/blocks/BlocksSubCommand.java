@@ -119,7 +119,10 @@ public class BlocksSubCommand implements Runnable {
         arity = "1..1")
     private final File blocksImportFile = null;
 
-    @Option(names = "--format", description = "The type of data to be imported.", arity = "1..1")
+    @Option(
+        names = "--format",
+        description = "The type of data to be imported (default: ${DEFAULT-VALUE}).",
+        arity = "1..1")
     private final BlockFormat format = BlockFormat.RLP;
 
     @SuppressWarnings("unused")
