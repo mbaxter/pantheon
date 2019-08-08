@@ -32,15 +32,14 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcErrorResp
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof.GetProofResult;
 import tech.pegasys.pantheon.ethereum.proof.WorldStateProof;
-import tech.pegasys.pantheon.ethereum.trie.Proof;
 import tech.pegasys.pantheon.ethereum.worldstate.StateTrieAccountValue;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
+import tech.pegasys.pantheon.util.uint.UInt256;
 
 import java.util.Collections;
-import java.util.Map;
 import java.util.Optional;
 
 import org.junit.Before;
@@ -67,8 +66,8 @@ public class EthGetProofTest {
 
   private final Address address =
       Address.fromHexString("0x1234567890123456789012345678901234567890");
-  private final String storageKey =
-      "0x0000000000000000000000000000000000000000000000000000000000000001";
+  private final Bytes32 storageKey =
+      Bytes32.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000001");
   private final long blockNumber = 1;
 
   @Before
@@ -139,7 +138,7 @@ public class EthGetProofTest {
     final JsonRpcRequest request =
         requestWithParams(
             Address.fromHexString("0x0000000000000000000000000000000000000000"),
-            new String[] {storageKey},
+            new String[] {storageKey.toString()},
             String.valueOf(blockNumber));
 
     final JsonRpcErrorResponse response = (JsonRpcErrorResponse) method.response(request);
@@ -154,7 +153,7 @@ public class EthGetProofTest {
 
     final JsonRpcRequest request =
         requestWithParams(
-            address.toString(), new String[] {storageKey}, String.valueOf(blockNumber));
+            address.toString(), new String[] {storageKey.toString()}, String.valueOf(blockNumber));
 
     final JsonRpcSuccessResponse response = (JsonRpcSuccessResponse) method.response(request);
 
@@ -165,6 +164,7 @@ public class EthGetProofTest {
     return new JsonRpcRequest(JSON_RPC_VERSION, ETH_METHOD, params);
   }
 
+  @SuppressWarnings("unchecked")
   private GetProofResult generateWorldState() {
 
     final Wei balance = Wei.of(1);
@@ -182,21 +182,21 @@ public class EthGetProofTest {
     when(stateTrieAccountValue.getNonce()).thenReturn(nonce);
     when(stateTrieAccountValue.getStorageRoot()).thenReturn(storageRoot);
 
-    final Proof<BytesValue> accountProof =
-        new Proof<>(
+    final WorldStateProof<Bytes32, BytesValue> worldStateProof = mock(WorldStateProof.class);
+    when(worldStateProof.getAccountProof())
+        .thenReturn(
             Collections.singletonList(
                 BytesValue.fromHexString(
                     "0x1111111111111111111111111111111111111111111111111111111111111111")));
-    final Proof<BytesValue> storageProof =
-        new Proof<>(
+    when(worldStateProof.getStateTrieAccountValue()).thenReturn(stateTrieAccountValue);
+    when(worldStateProof.getStorageKeys()).thenReturn(Collections.singletonList(storageKey));
+    when(worldStateProof.getStorageProof(storageKey))
+        .thenReturn(
             Collections.singletonList(
                 BytesValue.fromHexString(
                     "0x2222222222222222222222222222222222222222222222222222222222222222")));
-    final WorldStateProof<Bytes32, BytesValue> worldStateProof =
-        new WorldStateProof<>(
-            stateTrieAccountValue,
-            accountProof,
-            Map.of(Bytes32.fromHexString(storageKey), storageProof));
+    when(worldStateProof.getStorageValue(storageKey)).thenReturn(UInt256.ZERO);
+
     when(worldStateStorage.getAccountProof(eq(rootHash), eq(address), anyList()))
         .thenReturn(Optional.of(worldStateProof));
 
