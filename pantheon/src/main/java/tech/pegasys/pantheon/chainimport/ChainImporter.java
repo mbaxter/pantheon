@@ -21,6 +21,7 @@ import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.BlockImporter;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.Transaction;
+import tech.pegasys.pantheon.ethereum.core.WorldState;
 import tech.pegasys.pantheon.ethereum.mainnet.HeaderValidationMode;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
@@ -75,8 +76,14 @@ public class ChainImporter<C> {
         parentHeader.getNumber() + 1L,
         parentHeader.getHash());
 
+    final WorldState worldState =
+        controller
+            .getProtocolContext()
+            .getWorldStateArchive()
+            .get(parentHeader.getStateRoot())
+            .get();
     final List<Transaction> transactions =
-        blockData.streamTransactions().collect(Collectors.toList());
+        blockData.streamTransactions(worldState).collect(Collectors.toList());
 
     final Block block = createBlock(blockData, parentHeader, transactions);
     assertAllTransactionsIncluded(block, transactions);

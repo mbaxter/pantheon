@@ -30,7 +30,6 @@ public class TransactionData {
 
   private final long gasLimit;
   private final Wei gasPrice;
-  private final long nonce;
   private final BytesValue data;
   private final Wei value;
   private final Optional<Address> to;
@@ -40,23 +39,23 @@ public class TransactionData {
   public TransactionData(
       @JsonProperty("gasLimit") final String gasLimit,
       @JsonProperty("gasPrice") final String gasPrice,
-      @JsonProperty("nonce") final String nonce,
       @JsonProperty("data") final Optional<String> data,
       @JsonProperty("value") final Optional<String> value,
       @JsonProperty("to") final Optional<String> to,
       @JsonProperty("fromPrivateKey") final String fromPrivateKey) {
     this.gasLimit = UInt256.fromHexString(gasLimit).toLong();
     this.gasPrice = Wei.fromHexString(gasPrice);
-    this.nonce = UInt256.fromHexString(nonce).toLong();
     this.data = data.map(BytesValue::fromHexString).orElse(BytesValue.EMPTY);
     this.value = value.map(Wei::fromHexString).orElse(Wei.ZERO);
     this.to = to.map(Address::fromHexString);
     this.privateKey = PrivateKey.create(Bytes32.fromHexString(fromPrivateKey));
   }
 
-  public Transaction getSignedTransaction() {
+  public Transaction getSignedTransaction(final NonceProvider nonceProvider) {
     KeyPair keyPair = KeyPair.create(privateKey);
 
+    final Address fromAddress = Address.extract(keyPair.getPublicKey());
+    final long nonce = nonceProvider.get(fromAddress);
     return Transaction.builder()
         .gasLimit(gasLimit)
         .gasPrice(gasPrice)
@@ -65,5 +64,10 @@ public class TransactionData {
         .value(value)
         .to(to.orElse(null))
         .signAndBuild(keyPair);
+  }
+
+  @FunctionalInterface
+  public interface NonceProvider {
+    long get(final Address address);
   }
 }

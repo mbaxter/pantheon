@@ -12,13 +12,17 @@
  */
 package tech.pegasys.pantheon.chainimport;
 
+import tech.pegasys.pantheon.chainimport.TransactionData.NonceProvider;
+import tech.pegasys.pantheon.ethereum.core.Account;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.Transaction;
+import tech.pegasys.pantheon.ethereum.core.WorldState;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.uint.UInt256;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -64,7 +68,23 @@ public class BlockData {
     return extraData;
   }
 
-  public Stream<Transaction> streamTransactions() {
-    return transactionData.stream().map(TransactionData::getSignedTransaction);
+  public Stream<Transaction> streamTransactions(final WorldState worldState) {
+    final NonceProvider nonceProvider = getNonceProvider(worldState);
+    return transactionData.stream().map((tx) -> tx.getSignedTransaction(nonceProvider));
+  }
+
+  public NonceProvider getNonceProvider(final WorldState worldState) {
+    final HashMap<Address, Long> currentNonceValues = new HashMap<>();
+    return (Address address) ->
+        currentNonceValues.compute(
+            address,
+            (addr, currentValue) -> {
+              if (currentValue == null) {
+                return Optional.ofNullable(worldState.get(address))
+                    .map(Account::getNonce)
+                    .orElse(0L);
+              }
+              return currentValue + 1;
+            });
   }
 }
