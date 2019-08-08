@@ -72,11 +72,6 @@ public class EthGetProofTest {
 
   @Before
   public void setUp() {
-
-    final WorldStateArchive worldStateArchive = mock(WorldStateArchive.class);
-    when(worldStateArchive.getWorldStateStorage()).thenReturn(worldStateStorage);
-    when(blockchainQueries.getWorldStateArchive()).thenReturn(worldStateArchive);
-
     method = new EthGetProof(blockchainQueries, parameters);
   }
 
@@ -175,6 +170,10 @@ public class EthGetProofTest {
         Hash.fromHexString("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b431");
     final Hash storageRoot =
         Hash.fromHexString("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
+
+    final WorldStateArchive worldStateArchive = mock(WorldStateArchive.class);
+    when(worldStateArchive.getWorldStateStorage()).thenReturn(worldStateStorage);
+    when(blockchainQueries.getWorldStateArchive()).thenReturn(worldStateArchive);
 
     final StateTrieAccountValue stateTrieAccountValue = mock(StateTrieAccountValue.class);
     when(stateTrieAccountValue.getBalance()).thenReturn(balance);

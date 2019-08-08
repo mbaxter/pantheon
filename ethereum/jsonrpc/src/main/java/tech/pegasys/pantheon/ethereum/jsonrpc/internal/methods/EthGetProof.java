@@ -26,7 +26,6 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof.GetProofResult;
 import tech.pegasys.pantheon.ethereum.proof.WorldStateProof;
-import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
@@ -38,12 +37,10 @@ import java.util.stream.Collectors;
 public class EthGetProof implements JsonRpcMethod {
 
   private final BlockchainQueries blockchain;
-  private final WorldStateStorage worldStateStorage;
   private final JsonRpcParameter parameters;
 
   public EthGetProof(final BlockchainQueries blockchain, final JsonRpcParameter parameters) {
     this.blockchain = blockchain;
-    this.worldStateStorage = blockchain.getWorldStateArchive().getWorldStateStorage();
     this.parameters = parameters;
   }
 
@@ -69,7 +66,10 @@ public class EthGetProof implements JsonRpcMethod {
 
     if (worldState.isPresent()) {
       Optional<WorldStateProof<Bytes32, BytesValue>> proofOptional =
-          worldStateStorage.getAccountProof(worldState.get().rootHash(), address, storageKeys);
+          blockchain
+              .getWorldStateArchive()
+              .getWorldStateStorage()
+              .getAccountProof(worldState.get().rootHash(), address, storageKeys);
       return proofOptional
           .map(
               proof ->
