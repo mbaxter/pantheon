@@ -12,7 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods;
 
-import tech.pegasys.pantheon.ethereum.core.Account;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
@@ -26,22 +25,25 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcErrorResp
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof.GetProofResult;
-import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof.StorageEntry;
+import tech.pegasys.pantheon.ethereum.proof.WorldStateProof;
+import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
-import tech.pegasys.pantheon.util.uint.UInt256;
+import tech.pegasys.pantheon.util.bytes.BytesValue;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class EthGetProof implements JsonRpcMethod {
 
   private final BlockchainQueries blockchain;
+  private final WorldStateStorage worldStateStorage;
   private final JsonRpcParameter parameters;
 
   public EthGetProof(final BlockchainQueries blockchain, final JsonRpcParameter parameters) {
     this.blockchain = blockchain;
+    this.worldStateStorage = blockchain.getWorldStateArchive().getWorldStateStorage();
     this.parameters = parameters;
   }
 
@@ -52,38 +54,29 @@ public class EthGetProof implements JsonRpcMethod {
 
   @Override
   public JsonRpcResponse response(final JsonRpcRequest request) {
+
     final Address address = parameters.required(request.getParams(), 0, Address.class);
-    final String[] storageKeys = parameters.required(request.getParams(), 1, String[].class);
+
+    final List<Bytes32> storageKeys =
+        Arrays.stream(parameters.required(request.getParams(), 1, String[].class))
+            .map(Bytes32::fromHexString)
+            .collect(Collectors.toList());
+
     final long blockNumber =
         resolveBlockNumber(parameters.required(request.getParams(), 2, BlockParameter.class));
 
     final Optional<MutableWorldState> worldState = blockchain.getWorldState(blockNumber);
-    if (worldState.isPresent()) {
-      final Account account = worldState.get().get(address);
-      if (account != null) {
-        final List<StorageEntry> storageEntries = new ArrayList<>();
-        Arrays.stream(storageKeys)
-            .forEach(
-                entry ->
-                    storageEntries.add(
-                        new StorageEntry(
-                            entry,
-                            account.getStorageValue(UInt256.fromHexString(entry)),
-                            account.getStorageEntry(Bytes32.fromHexString(entry)))));
-        return new JsonRpcSuccessResponse(
-            request.getId(),
-            new GetProofResult(
-                address,
-                account.getBalance(),
-                account.getCodeHash(),
-                account.getNonce(),
-                account.getStorageRoot(),
-                account.getAccountProof(),
-                storageEntries));
 
-      } else {
-        return new JsonRpcErrorResponse(request.getId(), JsonRpcError.NO_ACCOUNT_FOUND);
-      }
+    if (worldState.isPresent()) {
+      Optional<WorldStateProof<Bytes32, BytesValue>> proofOptional =
+          worldStateStorage.getAccountProof(worldState.get().rootHash(), address, storageKeys);
+      return proofOptional
+          .map(
+              proof ->
+                  (JsonRpcResponse)
+                      new JsonRpcSuccessResponse(
+                          request.getId(), GetProofResult.buildGetProofResult(address, proof)))
+          .orElse(new JsonRpcErrorResponse(request.getId(), JsonRpcError.NO_ACCOUNT_FOUND));
     }
 
     return new JsonRpcErrorResponse(request.getId(), JsonRpcError.INTERNAL_ERROR);

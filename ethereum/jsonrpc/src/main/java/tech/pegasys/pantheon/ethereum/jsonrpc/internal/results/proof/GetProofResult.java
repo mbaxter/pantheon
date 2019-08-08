@@ -15,9 +15,12 @@ package tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Wei;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.Quantity;
+import tech.pegasys.pantheon.ethereum.proof.WorldStateProof;
+import tech.pegasys.pantheon.ethereum.worldstate.StateTrieAccountValue;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -54,6 +57,32 @@ public class GetProofResult {
     this.storageHash = storageHash;
     this.accountProof = accountProof;
     this.storageEntries = storageEntries;
+  }
+
+  public static GetProofResult buildGetProofResult(
+      final Address address, final WorldStateProof<Bytes32, BytesValue> worldStateProof) {
+
+    final StateTrieAccountValue stateTrieAccountValue = worldStateProof.getStateTrieAccountValue();
+
+    final List<StorageEntry> storageEntries = new ArrayList<>();
+    worldStateProof
+        .getStorageKeys()
+        .forEach(
+            key ->
+                storageEntries.add(
+                    new StorageEntry(
+                        key,
+                        worldStateProof.getStorageValue(key),
+                        worldStateProof.getStorageProof(key))));
+
+    return new GetProofResult(
+        address,
+        stateTrieAccountValue.getBalance(),
+        stateTrieAccountValue.getCodeHash(),
+        stateTrieAccountValue.getNonce(),
+        stateTrieAccountValue.getStorageRoot(),
+        worldStateProof.getAccountProof(),
+        storageEntries);
   }
 
   @JsonGetter(value = "address")

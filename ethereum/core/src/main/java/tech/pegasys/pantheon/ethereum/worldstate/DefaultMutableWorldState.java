@@ -25,7 +25,6 @@ import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.ethereum.rlp.RLPException;
 import tech.pegasys.pantheon.ethereum.rlp.RLPInput;
 import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
-import tech.pegasys.pantheon.ethereum.trie.Node;
 import tech.pegasys.pantheon.ethereum.trie.StoredMerklePatriciaTrie;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
@@ -34,14 +33,12 @@ import tech.pegasys.pantheon.util.uint.UInt256;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class DefaultMutableWorldState implements MutableWorldState {
@@ -317,20 +314,6 @@ public class DefaultMutableWorldState implements MutableWorldState {
                 storageEntries.put(key, entry);
               });
       return storageEntries;
-    }
-
-    @Override
-    public List<BytesValue> getAccountProof() {
-      return accountStateTrie.getProof(getAddressHash()).stream()
-          .map(Node::getRlp)
-          .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<BytesValue> getStorageEntry(final Bytes32 key) {
-      return storageTrie().getProof(Hash.hash(key)).stream()
-          .map(Node::getRlp)
-          .collect(Collectors.toList());
     }
 
     private UInt256 convertToUInt256(final BytesValue value) {

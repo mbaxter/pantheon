@@ -13,11 +13,12 @@
 package tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import tech.pegasys.pantheon.ethereum.core.Account;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
@@ -30,13 +31,16 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcError;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcErrorResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof.GetProofResult;
-import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof.StorageEntry;
+import tech.pegasys.pantheon.ethereum.proof.WorldStateProof;
+import tech.pegasys.pantheon.ethereum.trie.Proof;
+import tech.pegasys.pantheon.ethereum.worldstate.StateTrieAccountValue;
+import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
+import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
-import tech.pegasys.pantheon.util.uint.UInt256;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.Before;
@@ -53,6 +57,8 @@ public class EthGetProofTest {
   @Rule public final ExpectedException thrown = ExpectedException.none();
 
   @Mock private BlockchainQueries blockchainQueries;
+  @Mock private WorldStateStorage worldStateStorage;
+
   private final JsonRpcParameter parameters = new JsonRpcParameter();
 
   private EthGetProof method;
@@ -63,10 +69,15 @@ public class EthGetProofTest {
       Address.fromHexString("0x1234567890123456789012345678901234567890");
   private final String storageKey =
       "0x0000000000000000000000000000000000000000000000000000000000000001";
-  private final String blockNumber = "1";
+  private final long blockNumber = 1;
 
   @Before
   public void setUp() {
+
+    final WorldStateArchive worldStateArchive = mock(WorldStateArchive.class);
+    when(worldStateArchive.getWorldStateStorage()).thenReturn(worldStateStorage);
+    when(blockchainQueries.getWorldStateArchive()).thenReturn(worldStateArchive);
+
     method = new EthGetProof(blockchainQueries, parameters);
   }
 
@@ -124,13 +135,12 @@ public class EthGetProofTest {
 
     final JsonRpcErrorResponse expectedResponse =
         new JsonRpcErrorResponse(null, JsonRpcError.NO_ACCOUNT_FOUND);
-    ;
 
     final JsonRpcRequest request =
         requestWithParams(
             Address.fromHexString("0x0000000000000000000000000000000000000000"),
             new String[] {storageKey},
-            blockNumber);
+            String.valueOf(blockNumber));
 
     final JsonRpcErrorResponse response = (JsonRpcErrorResponse) method.response(request);
 
@@ -143,7 +153,8 @@ public class EthGetProofTest {
     final GetProofResult expectedResponse = generateWorldState();
 
     final JsonRpcRequest request =
-        requestWithParams(address.toString(), new String[] {storageKey}, blockNumber);
+        requestWithParams(
+            address.toString(), new String[] {storageKey}, String.valueOf(blockNumber));
 
     final JsonRpcSuccessResponse response = (JsonRpcSuccessResponse) method.response(request);
 
@@ -156,37 +167,43 @@ public class EthGetProofTest {
 
   private GetProofResult generateWorldState() {
 
-    final Wei balance = Wei.of(12);
+    final Wei balance = Wei.of(1);
     final Hash codeHash =
         Hash.fromHexString("0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     final long nonce = 1;
+    final Hash rootHash =
+        Hash.fromHexString("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b431");
     final Hash storageRoot =
         Hash.fromHexString("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
-    final UInt256 storageValue = UInt256.fromHexString("0x1");
-    final List<BytesValue> accountProof = new ArrayList<>();
-    final List<BytesValue> storageEntries = new ArrayList<>();
 
-    accountProof.add(BytesValue.fromHexString("0xf90211"));
-    storageEntries.add(BytesValue.fromHexString("0x55"));
+    final StateTrieAccountValue stateTrieAccountValue = mock(StateTrieAccountValue.class);
+    when(stateTrieAccountValue.getBalance()).thenReturn(balance);
+    when(stateTrieAccountValue.getCodeHash()).thenReturn(codeHash);
+    when(stateTrieAccountValue.getNonce()).thenReturn(nonce);
+    when(stateTrieAccountValue.getStorageRoot()).thenReturn(storageRoot);
+
+    final Proof<BytesValue> accountProof =
+        new Proof<>(
+            Collections.singletonList(
+                BytesValue.fromHexString(
+                    "0x1111111111111111111111111111111111111111111111111111111111111111")));
+    final Proof<BytesValue> storageProof =
+        new Proof<>(
+            Collections.singletonList(
+                BytesValue.fromHexString(
+                    "0x2222222222222222222222222222222222222222222222222222222222222222")));
+    final WorldStateProof<Bytes32, BytesValue> worldStateProof =
+        new WorldStateProof<>(
+            stateTrieAccountValue,
+            accountProof,
+            Map.of(Bytes32.fromHexString(storageKey), storageProof));
+    when(worldStateStorage.getAccountProof(eq(rootHash), eq(address), anyList()))
+        .thenReturn(Optional.of(worldStateProof));
 
     final MutableWorldState mutableWorldState = mock(MutableWorldState.class);
-    final Account account = mock(Account.class);
+    when(mutableWorldState.rootHash()).thenReturn(rootHash);
+    when(blockchainQueries.getWorldState(blockNumber)).thenReturn(Optional.of(mutableWorldState));
 
-    when(account.getBalance()).thenReturn(balance);
-    when(account.getCodeHash()).thenReturn(codeHash);
-    when(account.getNonce()).thenReturn(nonce);
-    when(account.getStorageRoot()).thenReturn(storageRoot);
-    when(account.getAccountProof()).thenReturn(accountProof);
-    when(account.getStorageValue(UInt256.fromHexString(storageKey))).thenReturn(storageValue);
-    when(account.getStorageEntry(Bytes32.fromHexString(storageKey))).thenReturn(storageEntries);
-
-    when(mutableWorldState.get(address)).thenReturn(account);
-    when(blockchainQueries.getWorldState(Integer.parseInt(blockNumber)))
-        .thenReturn(Optional.of(mutableWorldState));
-
-    final List<StorageEntry> storageProof = new ArrayList<>();
-    storageProof.add(new StorageEntry(storageKey, storageValue, storageEntries));
-    return new GetProofResult(
-        address, balance, codeHash, nonce, storageRoot, accountProof, storageProof);
+    return GetProofResult.buildGetProofResult(address, worldStateProof);
   }
 }

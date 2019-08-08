@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * A {@link MerklePatriciaTrie} that persists trie nodes to a {@link MerkleStorage} key/value store.
@@ -77,11 +78,14 @@ public class StoredMerklePatriciaTrie<K extends BytesValue, V> implements Merkle
   }
 
   @Override
-  public List<Node<V>> getProof(final K key) {
+  public Proof<V> getValueWithProof(final K key) {
     checkNotNull(key);
-    ProofVisitor<V> proofVisitor = new ProofVisitor<>();
+    final ProofVisitor<V> proofVisitor = new ProofVisitor<>();
+    final Optional<V> value = get(key);
     root.accept(proofVisitor, bytesToPath(key));
-    return proofVisitor.getProof();
+    final List<BytesValue> proof =
+        proofVisitor.getProof().stream().map(Node::getRlp).collect(Collectors.toList());
+    return value.map(v -> new Proof<>(v, proof)).orElseGet(() -> new Proof<>(proof));
   }
 
   @Override

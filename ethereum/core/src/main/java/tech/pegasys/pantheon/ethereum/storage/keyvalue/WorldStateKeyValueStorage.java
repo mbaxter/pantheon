@@ -12,7 +12,10 @@
  */
 package tech.pegasys.pantheon.ethereum.storage.keyvalue;
 
+import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Hash;
+import tech.pegasys.pantheon.ethereum.proof.WorldStateProof;
+import tech.pegasys.pantheon.ethereum.proof.WorldStateProofProvider;
 import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
@@ -29,9 +32,11 @@ public class WorldStateKeyValueStorage implements WorldStateStorage {
 
   private final Subscribers<NodesAddedListener> nodeAddedListeners = Subscribers.create();
   private final KeyValueStorage keyValueStorage;
+  private final WorldStateProofProvider worldStateProof;
 
   public WorldStateKeyValueStorage(final KeyValueStorage keyValueStorage) {
     this.keyValueStorage = keyValueStorage;
+    this.worldStateProof = new WorldStateProofProvider(this);
   }
 
   @Override
@@ -51,6 +56,14 @@ public class WorldStateKeyValueStorage implements WorldStateStorage {
   @Override
   public Optional<BytesValue> getAccountStorageTrieNode(final Bytes32 nodeHash) {
     return getTrieNode(nodeHash);
+  }
+
+  @Override
+  public Optional<WorldStateProof<Bytes32, BytesValue>> getAccountProof(
+      final Hash worldStateRoot,
+      final Address accountAddress,
+      final List<Bytes32> accountStorageKeys) {
+    return worldStateProof.getAccountProof(worldStateRoot, accountAddress, accountStorageKeys);
   }
 
   private Optional<BytesValue> getTrieNode(final Bytes32 nodeHash) {

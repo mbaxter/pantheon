@@ -22,25 +22,32 @@ class ProofVisitor<V> extends GetVisitor<V> implements PathNodeVisitor<V> {
   private final List<Node<V>> proof = new ArrayList<>();
 
   @Override
-  public Node<V> visit(final BranchNode<V> branchNode, final BytesValue path) {
-    assert path.size() > 0 : "Visiting path doesn't end with a non-matching terminator";
+  public Node<V> visit(final ExtensionNode<V> extensionNode, final BytesValue path) {
+    if (extensionNode.isReferencedByHash()) {
+      proof.add(extensionNode);
+    }
+    return super.visit(extensionNode, path);
+  }
 
-    if (proof.isEmpty()) {
+  @Override
+  public Node<V> visit(final BranchNode<V> branchNode, final BytesValue path) {
+    if (branchNode.isReferencedByHash()) {
       proof.add(branchNode);
     }
+    return super.visit(branchNode, path);
+  }
 
-    final byte childIndex = path.get(0);
-    if (childIndex == CompactEncoding.LEAF_TERMINATOR) {
-      return branchNode;
+  @Override
+  public Node<V> visit(final LeafNode<V> leafNode, final BytesValue path) {
+    if (leafNode.isReferencedByHash()) {
+      proof.add(leafNode);
     }
+    return super.visit(leafNode, path);
+  }
 
-    Node<V> children = branchNode.child(childIndex);
-
-    if (!(children instanceof NullNode)) {
-      proof.add(children);
-    }
-
-    return children.accept(this, path.slice(1));
+  @Override
+  public Node<V> visit(final NullNode<V> nullNode, final BytesValue path) {
+    return super.visit(nullNode, path);
   }
 
   public List<Node<V>> getProof() {

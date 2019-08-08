@@ -13,6 +13,7 @@
 package tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof;
 
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.Quantity;
+import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.uint.UInt256;
 
@@ -23,13 +24,13 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 
 public class StorageEntry {
 
-  private final String key;
+  private final Bytes32 key;
 
   private final UInt256 value;
 
   private final List<BytesValue> storageProof;
 
-  public StorageEntry(final String key, final UInt256 value, final List<BytesValue> storageProof) {
+  public StorageEntry(final Bytes32 key, final UInt256 value, final List<BytesValue> storageProof) {
     this.key = key;
     this.value = value;
     this.storageProof = storageProof;
@@ -37,7 +38,7 @@ public class StorageEntry {
 
   @JsonGetter(value = "key")
   public String getKey() {
-    return key;
+    return key.toString();
   }
 
   @JsonGetter(value = "value")
