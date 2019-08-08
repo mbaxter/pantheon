@@ -281,11 +281,6 @@ public abstract class AbstractWorldUpdater<W extends WorldView, A extends Accoun
     }
 
     @Override
-    public Hash getStorageRoot() {
-      return account.getStorageRoot();
-    }
-
-    @Override
     public boolean hasCode() {
       // Note that we set code for new account, so it's only null if account isn't.
       return updatedCode == null ? account.hasCode() : !updatedCode.isEmpty();
