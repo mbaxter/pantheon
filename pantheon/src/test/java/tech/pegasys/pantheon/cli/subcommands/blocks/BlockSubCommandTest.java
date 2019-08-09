@@ -73,7 +73,8 @@ public class BlockSubCommandTest extends CommandTestAbstract {
           + System.lineSeparator()
           + "This command imports blocks from a file into the database."
           + System.lineSeparator()
-          + "      --format=<format>   The type of data to be imported (default: RLP)."
+          + "      --format=<format>   The type of data to be imported, possible values are: RLP,\n"
+          + "                            JSON (default: RLP)."
           + System.lineSeparator()
           + "      --from=<FILE>   File containing blocks to import."
           + System.lineSeparator()

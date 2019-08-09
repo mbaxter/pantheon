@@ -55,9 +55,9 @@ public class ChainImporter<C> {
   }
 
   public void importChain(final String chainJson) throws IOException {
-    checkDatabaseIsEmpty();
+    warnIfDatabaseIsNotEmpty();
 
-    ChainData chainData = mapper.readValue(chainJson, ChainData.class);
+    final ChainData chainData = mapper.readValue(chainJson, ChainData.class);
 
     final List<Block> importedBlocks = new ArrayList<>();
     for (final BlockData blockData : chainData.getBlocks()) {
@@ -66,8 +66,7 @@ public class ChainImporter<C> {
       importedBlocks.add(importedBlock);
     }
 
-    // Check that imported blocks form the canonical chain, if not print a warning
-    this.checkImportedBlocksAreOnCanonicalChain(importedBlocks);
+    this.warnIfImportedBlocksAreNotOnCanonicalChain(importedBlocks);
   }
 
   private Block processBlockData(final BlockData blockData, final BlockHeader parentHeader) {
@@ -100,16 +99,14 @@ public class ChainImporter<C> {
     final GenesisConfigOptions genesisConfigOptions = controller.getGenesisConfigOptions();
     setOptionalFields(miner, blockData, genesisConfigOptions);
 
-    Optional<Block> maybeBlock =
-        miner.createBlock(parentHeader, transactions, Collections.emptyList());
-
-    if (maybeBlock.isEmpty()) {
-      // Some MiningCoordinator's (specific to consensus type) do not support block-level imports
-      throw new IllegalArgumentException(
-          "Unable to create block using current consensus engine: "
-              + genesisConfigOptions.getConsensusEngine());
-    }
-    return maybeBlock.get();
+    // Some MiningCoordinator's (specific to consensus type) do not support block-level imports
+    return miner
+        .createBlock(parentHeader, transactions, Collections.emptyList())
+        .orElseThrow(
+            () ->
+                new IllegalArgumentException(
+                    "Unable to create block using current consensus engine: "
+                        + genesisConfigOptions.getConsensusEngine()));
   }
 
   private void setOptionalFields(
@@ -168,7 +165,7 @@ public class ChainImporter<C> {
     }
   }
 
-  private void checkDatabaseIsEmpty() {
+  private void warnIfDatabaseIsNotEmpty() {
     final long chainHeight =
         controller.getProtocolContext().getBlockchain().getChainHead().getHeight();
     if (chainHeight > BlockHeader.GENESIS_BLOCK_NUMBER) {
@@ -178,7 +175,7 @@ public class ChainImporter<C> {
     }
   }
 
-  private void checkImportedBlocksAreOnCanonicalChain(final List<Block> importedBlocks) {
+  private void warnIfImportedBlocksAreNotOnCanonicalChain(final List<Block> importedBlocks) {
     final List<BlockHeader> nonCanonicalHeaders =
         importedBlocks.stream()
             .map(Block::getHeader)

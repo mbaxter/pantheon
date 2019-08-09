@@ -121,7 +121,8 @@ public class BlocksSubCommand implements Runnable {
 
     @Option(
         names = "--format",
-        description = "The type of data to be imported (default: ${DEFAULT-VALUE}).",
+        description =
+            "The type of data to be imported, possible values are: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).",
         arity = "1..1")
     private final BlockFormat format = BlockFormat.RLP;
 

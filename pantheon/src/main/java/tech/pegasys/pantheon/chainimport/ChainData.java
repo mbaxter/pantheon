@@ -27,7 +27,6 @@ public class ChainData {
   }
 
   public List<BlockData> getBlocks() {
-
     return blocks;
   }
 }
