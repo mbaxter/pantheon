@@ -12,14 +12,11 @@
  */
 package tech.pegasys.pantheon.ethereum.worldstate;
 
-import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Hash;
-import tech.pegasys.pantheon.ethereum.proof.WorldStateProof;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -30,9 +27,6 @@ public interface WorldStateStorage {
   Optional<BytesValue> getAccountStateTrieNode(Bytes32 nodeHash);
 
   Optional<BytesValue> getAccountStorageTrieNode(Bytes32 nodeHash);
-
-  Optional<WorldStateProof<Bytes32, BytesValue>> getAccountProof(
-      Hash worldStateRoot, Address accountAddress, List<Bytes32> accountStorageKeys);
 
   Optional<BytesValue> getNodeData(Bytes32 hash);
 

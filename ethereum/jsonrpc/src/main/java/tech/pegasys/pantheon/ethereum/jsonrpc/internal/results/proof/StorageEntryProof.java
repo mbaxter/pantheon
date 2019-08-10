@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 
-public class StorageEntry {
+public class StorageEntryProof {
 
   private final Bytes32 key;
 
@@ -30,7 +30,8 @@ public class StorageEntry {
 
   private final List<BytesValue> storageProof;
 
-  public StorageEntry(final Bytes32 key, final UInt256 value, final List<BytesValue> storageProof) {
+  public StorageEntryProof(
+      final Bytes32 key, final UInt256 value, final List<BytesValue> storageProof) {
     this.key = key;
     this.value = value;
     this.storageProof = storageProof;

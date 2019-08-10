@@ -18,22 +18,18 @@ import java.util.List;
 import java.util.Optional;
 
 public class Proof<V> {
-  private final V value;
+
+  private final Optional<V> value;
 
   private final List<BytesValue> proofRelatedNodes;
 
-  public Proof(final V value, final List<BytesValue> proofRelatedNodes) {
+  public Proof(final Optional<V> value, final List<BytesValue> proofRelatedNodes) {
     this.value = value;
     this.proofRelatedNodes = proofRelatedNodes;
   }
 
-  public Proof(final List<BytesValue> proofRelatedNodes) {
-    this.proofRelatedNodes = proofRelatedNodes;
-    value = null;
-  }
-
   public Optional<V> getValue() {
-    return Optional.ofNullable(value);
+    return value;
   }
 
   public List<BytesValue> getProofRelatedNodes() {

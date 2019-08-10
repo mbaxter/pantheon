@@ -19,6 +19,7 @@ import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.Before;
@@ -284,5 +285,37 @@ public class SimpleMerklePatriciaTrieTest {
     trie.remove(key2);
     trie.remove(key3);
     assertThat(trie.getRootHash()).isEqualTo(hash1);
+  }
+
+  @Test
+  public void testGetValueWithProofWithEmptyTrie() {
+    final BytesValue key1 = BytesValue.of(0xfe, 1);
+
+    Proof<String> valueWithProof = trie.getValueWithProof(key1);
+    assertThat(valueWithProof.getProofRelatedNodes()).hasSize(0);
+  }
+
+  @Test
+  public void testGetValueWithProof() {
+    final BytesValue key1 = BytesValue.of(0xfe, 1);
+    final BytesValue key2 = BytesValue.of(0xfe, 2);
+
+    Proof<String> valueWithProof = trie.getValueWithProof(key1);
+    assertThat(valueWithProof.getProofRelatedNodes()).hasSize(0);
+
+    final String value1 = "value1";
+    trie.put(key1, value1);
+
+    final String value2 = "value2";
+    trie.put(key2, value2);
+
+    valueWithProof = trie.getValueWithProof(key1);
+    assertThat(valueWithProof.getProofRelatedNodes()).hasSize(2);
+
+    List<Node<BytesValue>> nodes =
+        TrieNodeDecoder.decodeNodes(valueWithProof.getProofRelatedNodes().get(1));
+
+    assertThat(new String(nodes.get(1).getValue().get().extractArray())).isEqualTo(value1);
+    assertThat(new String(nodes.get(2).getValue().get().extractArray())).isEqualTo(value2);
   }
 }

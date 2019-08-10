@@ -57,11 +57,10 @@ public class SimpleMerklePatriciaTrie<K extends BytesValue, V> implements Merkle
   public Proof<V> getValueWithProof(final K key) {
     checkNotNull(key);
     final ProofVisitor<V> proofVisitor = new ProofVisitor<>();
-    final Optional<V> value = get(key);
-    root.accept(proofVisitor, bytesToPath(key));
+    final Optional<V> value = root.accept(proofVisitor, bytesToPath(key)).getValue();
     final List<BytesValue> proof =
         proofVisitor.getProof().stream().map(Node::getRlp).collect(Collectors.toList());
-    return value.map(v -> new Proof<>(v, proof)).orElseGet(() -> new Proof<>(proof));
+    return new Proof<>(value, proof);
   }
 
   @Override

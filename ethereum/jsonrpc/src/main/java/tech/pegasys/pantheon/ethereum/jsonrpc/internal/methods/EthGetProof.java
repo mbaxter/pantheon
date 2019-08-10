@@ -68,7 +68,6 @@ public class EthGetProof implements JsonRpcMethod {
       Optional<WorldStateProof<Bytes32, BytesValue>> proofOptional =
           blockchain
               .getWorldStateArchive()
-              .getWorldStateStorage()
               .getAccountProof(worldState.get().rootHash(), address, storageKeys);
       return proofOptional
           .map(
@@ -79,7 +78,7 @@ public class EthGetProof implements JsonRpcMethod {
           .orElse(new JsonRpcErrorResponse(request.getId(), JsonRpcError.NO_ACCOUNT_FOUND));
     }
 
-    return new JsonRpcErrorResponse(request.getId(), JsonRpcError.INTERNAL_ERROR);
+    return new JsonRpcErrorResponse(request.getId(), JsonRpcError.WORLD_STATE_UNAVAILABLE);
   }
 
   private long resolveBlockNumber(final BlockParameter param) {

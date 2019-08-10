@@ -40,23 +40,29 @@ public class WorldStateProofProvider {
       final Hash worldStateRoot,
       final Address accountAddress,
       final List<Bytes32> accountStorageKeys) {
-    final Hash addressHash = Hash.hash(accountAddress);
-    final MerklePatriciaTrie<Bytes32, BytesValue> accountStateTrie =
-        newAccountStateTrie(worldStateRoot);
-    return retrieveStateTrieAccountValue(addressHash, accountStateTrie)
-        .map(
-            stateTrieAccountValue -> {
-              final MerklePatriciaTrie<Bytes32, BytesValue> storageStateTrie =
-                  newAccountStorageTrie(stateTrieAccountValue.getStorageRoot());
-              final Proof<BytesValue> accountProof =
-                  accountStateTrie.getValueWithProof(addressHash);
-              final Map<Bytes32, Proof<BytesValue>> storageProof = new HashMap<>();
-              accountStorageKeys.forEach(
-                  key -> storageProof.put(key, storageStateTrie.getValueWithProof(Hash.hash(key))));
-              return Optional.of(
-                  new WorldStateProof<>(stateTrieAccountValue, accountProof, storageProof));
-            })
-        .orElse(Optional.empty());
+
+    if (!worldStateStorage.isWorldStateAvailable(worldStateRoot)) {
+      return Optional.empty();
+    } else {
+      final Hash addressHash = Hash.hash(accountAddress);
+      final MerklePatriciaTrie<Bytes32, BytesValue> accountStateTrie =
+          newAccountStateTrie(worldStateRoot);
+      return retrieveStateTrieAccountValue(addressHash, accountStateTrie)
+          .map(
+              stateTrieAccountValue -> {
+                final MerklePatriciaTrie<Bytes32, BytesValue> storageStateTrie =
+                    newAccountStorageTrie(stateTrieAccountValue.getStorageRoot());
+                final Proof<BytesValue> accountProof =
+                    accountStateTrie.getValueWithProof(addressHash);
+                final Map<Bytes32, Proof<BytesValue>> storageProof = new HashMap<>();
+                accountStorageKeys.forEach(
+                    key ->
+                        storageProof.put(key, storageStateTrie.getValueWithProof(Hash.hash(key))));
+                return Optional.of(
+                    new WorldStateProof<>(stateTrieAccountValue, accountProof, storageProof));
+              })
+          .orElse(Optional.empty());
+    }
   }
 
   private Optional<StateTrieAccountValue> retrieveStateTrieAccountValue(

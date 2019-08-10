@@ -21,6 +21,7 @@ import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -416,5 +417,42 @@ public class StoredMerklePatriciaTrieTest {
     trie.commit(merkleStorage::put);
 
     newTrie.get(BytesValue.fromHexString("0x0401"));
+  }
+
+  @Test
+  public void testGetValueWithProofWithEmptyTrie() {
+    final BytesValue key1 = BytesValue.of(0xfe, 1);
+
+    Proof<String> valueWithProof = trie.getValueWithProof(key1);
+    assertThat(valueWithProof.getValue()).isEmpty();
+    assertThat(valueWithProof.getProofRelatedNodes()).hasSize(0);
+  }
+
+  @Test
+  public void testGetValueWithProof() {
+    final BytesValue key1 = BytesValue.of(0xfe, 1);
+    final BytesValue key2 = BytesValue.of(0xfe, 2);
+    final BytesValue key3 = BytesValue.of(0xfe, 3);
+
+    Proof<String> valueWithProof = trie.getValueWithProof(key1);
+    assertThat(valueWithProof.getProofRelatedNodes()).hasSize(0);
+
+    final String value1 = "value1";
+    trie.put(key1, value1);
+
+    final String value2 = "value2";
+    trie.put(key2, value2);
+
+    final String value3 = "value3";
+    trie.put(key3, value3);
+
+    valueWithProof = trie.getValueWithProof(key1);
+    assertThat(valueWithProof.getProofRelatedNodes()).hasSize(2);
+
+    List<Node<BytesValue>> nodes =
+        TrieNodeDecoder.decodeNodes(valueWithProof.getProofRelatedNodes().get(1));
+
+    assertThat(new String(nodes.get(1).getValue().get().extractArray())).isEqualTo(value1);
+    assertThat(new String(nodes.get(2).getValue().get().extractArray())).isEqualTo(value2);
   }
 }

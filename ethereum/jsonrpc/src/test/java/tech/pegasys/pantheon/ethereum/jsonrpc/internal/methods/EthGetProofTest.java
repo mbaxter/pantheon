@@ -34,7 +34,6 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof.GetProofRes
 import tech.pegasys.pantheon.ethereum.proof.WorldStateProof;
 import tech.pegasys.pantheon.ethereum.worldstate.StateTrieAccountValue;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
-import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.uint.UInt256;
@@ -56,7 +55,6 @@ public class EthGetProofTest {
   @Rule public final ExpectedException thrown = ExpectedException.none();
 
   @Mock private BlockchainQueries blockchainQueries;
-  @Mock private WorldStateStorage worldStateStorage;
 
   private final JsonRpcParameter parameters = new JsonRpcParameter();
 
@@ -172,7 +170,7 @@ public class EthGetProofTest {
         Hash.fromHexString("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
 
     final WorldStateArchive worldStateArchive = mock(WorldStateArchive.class);
-    when(worldStateArchive.getWorldStateStorage()).thenReturn(worldStateStorage);
+
     when(blockchainQueries.getWorldStateArchive()).thenReturn(worldStateArchive);
 
     final StateTrieAccountValue stateTrieAccountValue = mock(StateTrieAccountValue.class);
@@ -196,7 +194,7 @@ public class EthGetProofTest {
                     "0x2222222222222222222222222222222222222222222222222222222222222222")));
     when(worldStateProof.getStorageValue(storageKey)).thenReturn(UInt256.ZERO);
 
-    when(worldStateStorage.getAccountProof(eq(rootHash), eq(address), anyList()))
+    when(worldStateArchive.getAccountProof(eq(rootHash), eq(address), anyList()))
         .thenReturn(Optional.of(worldStateProof));
 
     final MutableWorldState mutableWorldState = mock(MutableWorldState.class);

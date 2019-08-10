@@ -40,7 +40,7 @@ public class GetProofResult {
 
   private final Bytes32 storageHash;
 
-  private final List<StorageEntry> storageEntries;
+  private final List<StorageEntryProof> storageEntries;
 
   public GetProofResult(
       final Address address,
@@ -49,7 +49,7 @@ public class GetProofResult {
       final long nonce,
       final Bytes32 storageHash,
       final List<BytesValue> accountProof,
-      final List<StorageEntry> storageEntries) {
+      final List<StorageEntryProof> storageEntries) {
     this.address = address;
     this.balance = balance;
     this.codeHash = codeHash;
@@ -64,13 +64,13 @@ public class GetProofResult {
 
     final StateTrieAccountValue stateTrieAccountValue = worldStateProof.getStateTrieAccountValue();
 
-    final List<StorageEntry> storageEntries = new ArrayList<>();
+    final List<StorageEntryProof> storageEntries = new ArrayList<>();
     worldStateProof
         .getStorageKeys()
         .forEach(
             key ->
                 storageEntries.add(
-                    new StorageEntry(
+                    new StorageEntryProof(
                         key,
                         worldStateProof.getStorageValue(key),
                         worldStateProof.getStorageProof(key))));
@@ -116,7 +116,7 @@ public class GetProofResult {
   }
 
   @JsonGetter(value = "storageProof")
-  public List<StorageEntry> getStorageProof() {
+  public List<StorageEntryProof> getStorageProof() {
     return storageEntries;
   }
 }
