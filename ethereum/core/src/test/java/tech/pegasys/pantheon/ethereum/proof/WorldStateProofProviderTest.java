@@ -82,10 +82,6 @@ public class WorldStateProofProviderTest {
     when(worldStateStorage.getAccountStateTrieNode(accountKeyHash))
         .thenReturn(merkleStorage.get(accountKeyHash));
 
-    final StoredMerklePatriciaTrie<BytesValue, BytesValue> storageTrieNode =
-        new StoredMerklePatriciaTrie<>(merkleStorage::get, b -> b, b -> b);
-    storageTrieNode.commit(merkleStorage::put);
-
     when(worldStateStorage.isWorldStateAvailable(any(Bytes32.class))).thenReturn(true);
 
     final Optional<WorldStateProof<Bytes32, BytesValue>> accountProof =
@@ -97,5 +93,25 @@ public class WorldStateProofProviderTest {
     assertThat(accountProof.get().getAccountProof()).hasSize(1);
     assertThat(accountProof.get().getAccountProof().get(0))
         .isEqualTo(merkleStorage.get(accountKeyHash).get());
+  }
+
+  @Test
+  public void getProofWhenStateTrieAccountUnavailable() {
+
+    final KeyValueStorage keyValueStorage = new InMemoryKeyValueStorage();
+    final MerkleStorage merkleStorage = new KeyValueMerkleStorage(keyValueStorage);
+
+    final StoredMerklePatriciaTrie<Bytes32, BytesValue> accountTrieNode =
+        new StoredMerklePatriciaTrie<>(merkleStorage::get, b -> b, b -> b);
+    accountTrieNode.commit(merkleStorage::put);
+    final Bytes32 accountKeyHash = accountTrieNode.getRootHash();
+
+    when(worldStateStorage.isWorldStateAvailable(any(Bytes32.class))).thenReturn(true);
+
+    final Optional<WorldStateProof<Bytes32, BytesValue>> accountProof =
+        worldStateProofProvider.getAccountProof(
+            Hash.wrap(accountKeyHash), address, new ArrayList<>());
+
+    assertThat(accountProof).isEmpty();
   }
 }
