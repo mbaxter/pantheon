@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.trie;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static junit.framework.TestCase.assertFalse;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -19,6 +20,7 @@ import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
@@ -315,7 +317,7 @@ public class SimpleMerklePatriciaTrieTest {
     List<Node<BytesValue>> nodes =
         TrieNodeDecoder.decodeNodes(valueWithProof.getProofRelatedNodes().get(1));
 
-    assertThat(new String(nodes.get(1).getValue().get().extractArray())).isEqualTo(value1);
-    assertThat(new String(nodes.get(2).getValue().get().extractArray())).isEqualTo(value2);
+    assertThat(new String(nodes.get(1).getValue().get().extractArray(), UTF_8)).isEqualTo(value1);
+    assertThat(new String(nodes.get(2).getValue().get().extractArray(), UTF_8)).isEqualTo(value2);
   }
 }
