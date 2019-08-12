@@ -565,12 +565,13 @@ def getCheckedOutGitCommitHash() {
   getGitHeadHash().take 8
 }
 
-static def getGitHeadHash() {
-  getGitRefHash("^HEAD\$")
+def getGitHeadHash() {
+  getGitRefHash('^HEAD$')
 }
 
-static def getGitRefHash(String ref) {
-  def cmd = "git show-ref --head --hash " + ref
+def getGitRefHash(String ref) {
+  def gitFolder = "$projectDir/.git/"
+  def cmd = "git --git-dir $gitFolder show-ref --head --hash " + ref
   def proc = cmd.execute()
   def errors = ""
   proc.err.eachLine { line -> errors += line + "\n" }
