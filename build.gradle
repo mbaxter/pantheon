@@ -574,10 +574,10 @@ def getGitRefHash(String ref) {
   def cmd = "git --git-dir $gitFolder show-ref --head --hash $ref"
   def proc = cmd.execute()
   def errors = ""
-  proc.err.eachLine { line -> errors += line + "\n" }
+  proc.err.eachLine { line -> errors += "$line\n" }
   proc.waitFor()
   if (proc.exitValue() != 0) {
-    throw new GradleException("Unable to retrieve git ref hash for " + ref + ":\n" + errors)
+    throw new GradleException("Unable to retrieve git ref hash for \"$ref\":\n$errors")
   }
   proc.in.readLines().get(0).trim()
 }
