@@ -50,7 +50,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import picocli.CommandLine.Model.CommandSpec;
 
-public class BlockSubCommandTest extends CommandTestAbstract {
+public class BlocksSubCommandTest extends CommandTestAbstract {
 
   @Rule public final TemporaryFolder folder = new TemporaryFolder();
 
@@ -69,12 +69,15 @@ public class BlockSubCommandTest extends CommandTestAbstract {
           + System.lineSeparator();
 
   private static final String EXPECTED_BLOCK_IMPORT_USAGE =
-      "Usage: pantheon blocks import [-hV] [--format=<format>] --from=<FILE>"
+      "Usage: pantheon blocks import [-hV] --from=<FILE>"
+//      "Usage: pantheon blocks import [-hV] [--format=<format>] --from=<FILE>"
           + System.lineSeparator()
           + "This command imports blocks from a file into the database."
-          + System.lineSeparator()
-          + "      --format=<format>   The type of data to be imported, possible values are: RLP,\n"
-          + "                            JSON (default: RLP)."
+          // Hide format for while JSON option is under development
+          //          + System.lineSeparator()
+          //          + "      --format=<format>   The type of data to be imported, possible values
+          // are: RLP,\n"
+          //          + "                            JSON (default: RLP)."
           + System.lineSeparator()
           + "      --from=<FILE>   File containing blocks to import."
           + System.lineSeparator()

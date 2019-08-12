@@ -121,6 +121,7 @@ public class BlocksSubCommand implements Runnable {
 
     @Option(
         names = "--format",
+        hidden = true,
         description =
             "The type of data to be imported, possible values are: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).",
         arity = "1..1")
