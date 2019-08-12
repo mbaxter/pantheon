@@ -21,6 +21,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import tech.pegasys.pantheon.chainimport.RlpBlockImporter;
 import tech.pegasys.pantheon.cli.CommandTestAbstract;
 import tech.pegasys.pantheon.config.GenesisConfigFile;
 import tech.pegasys.pantheon.controller.PantheonController;
@@ -36,8 +37,6 @@ import tech.pegasys.pantheon.ethereum.eth.transactions.TransactionPoolConfigurat
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.testutil.BlockTestUtil;
 import tech.pegasys.pantheon.testutil.TestClock;
-import tech.pegasys.pantheon.util.BlockExporter;
-import tech.pegasys.pantheon.util.BlockImporter;
 
 import java.io.File;
 import java.io.IOException;
@@ -161,7 +160,7 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
     parseCommand(
         BLOCK_SUBCOMMAND_NAME, BLOCK_IMPORT_SUBCOMMAND_NAME, "--from", fileToImport.getPath());
 
-    verify(mockBlockImporter).importBlockchain(pathArgumentCaptor.capture(), any());
+    verify(mockRlpBlockImporter).importBlockchain(pathArgumentCaptor.capture(), any());
 
     assertThat(pathArgumentCaptor.getValue()).isEqualByComparingTo(fileToImport.toPath());
 
@@ -180,7 +179,7 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
         "--from",
         fileToImport.getPath());
 
-    verify(mockBlockImporter).importBlockchain(pathArgumentCaptor.capture(), any());
+    verify(mockRlpBlockImporter).importBlockchain(pathArgumentCaptor.capture(), any());
 
     assertThat(pathArgumentCaptor.getValue()).isEqualByComparingTo(fileToImport.toPath());
 
@@ -207,7 +206,7 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
 
-    verify(chainImporter, times(1)).importChain(stringArgumentCaptor.capture());
+    verify(jsonBlockImporter, times(1)).importChain(stringArgumentCaptor.capture());
     assertThat(stringArgumentCaptor.getValue()).isEqualTo(fileContent);
   }
 
@@ -263,8 +262,6 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
     final MutableBlockchain blockchain = pantheonController.getProtocolContext().getBlockchain();
     final File outputFile = File.createTempFile("export", "store");
 
-    mockBlockExporter = new BlockExporter();
-
     doReturn(pantheonController).when(mockControllerBuilder).build();
 
     parseCommand(
@@ -288,7 +285,7 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
   }
 
   private PantheonController<?> initPantheonController() throws IOException {
-    final BlockImporter blockImporter = new BlockImporter();
+    final RlpBlockImporter blockImporter = new RlpBlockImporter();
     final Path dataDir = folder.newFolder().toPath();
     final Path source = dataDir.resolve("1000.blocks");
     BlockTestUtil.write1000Blocks(source);
