@@ -13,7 +13,6 @@
 package tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods;
 
 import tech.pegasys.pantheon.ethereum.core.Address;
-import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
 import tech.pegasys.pantheon.ethereum.jsonrpc.RpcMethod;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.JsonRpcRequest;
@@ -34,33 +33,37 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class EthGetProof implements JsonRpcMethod {
+public class EthGetProof extends AbstractBlockParameterMethod {
 
   private final BlockchainQueries blockchain;
   private final JsonRpcParameter parameters;
 
   public EthGetProof(final BlockchainQueries blockchain, final JsonRpcParameter parameters) {
+    super(blockchain, parameters);
     this.blockchain = blockchain;
     this.parameters = parameters;
   }
 
-  @Override
-  public String getName() {
-    return RpcMethod.ETH_GET_PROOF.getMethodName();
+  private Address getAddress(final JsonRpcRequest request) {
+    return parameters.required(request.getParams(), 0, Address.class);
+  }
+
+  private List<Bytes32> getStorageKeys(final JsonRpcRequest request) {
+    return Arrays.stream(parameters.required(request.getParams(), 1, String[].class))
+        .map(Bytes32::fromHexString)
+        .collect(Collectors.toList());
   }
 
   @Override
-  public JsonRpcResponse response(final JsonRpcRequest request) {
+  protected BlockParameter blockParameter(final JsonRpcRequest request) {
+    return parameters.required(request.getParams(), 2, BlockParameter.class);
+  }
 
-    final Address address = parameters.required(request.getParams(), 0, Address.class);
+  @Override
+  protected Object resultByBlockNumber(final JsonRpcRequest request, final long blockNumber) {
 
-    final List<Bytes32> storageKeys =
-        Arrays.stream(parameters.required(request.getParams(), 1, String[].class))
-            .map(Bytes32::fromHexString)
-            .collect(Collectors.toList());
-
-    final long blockNumber =
-        resolveBlockNumber(parameters.required(request.getParams(), 2, BlockParameter.class));
+    final Address address = getAddress(request);
+    final List<Bytes32> storageKeys = getStorageKeys(request);
 
     final Optional<MutableWorldState> worldState = blockchain.getWorldState(blockNumber);
 
@@ -81,15 +84,13 @@ public class EthGetProof implements JsonRpcMethod {
     return new JsonRpcErrorResponse(request.getId(), JsonRpcError.WORLD_STATE_UNAVAILABLE);
   }
 
-  private long resolveBlockNumber(final BlockParameter param) {
-    if (param.getNumber().isPresent()) {
-      return param.getNumber().getAsLong();
-    } else if (param.isEarliest()) {
-      return BlockHeader.GENESIS_BLOCK_NUMBER;
-    } else if (param.isLatest() || param.isPending()) {
-      return blockchain.headBlockNumber();
-    } else {
-      throw new IllegalStateException("Unknown block parameter type.");
-    }
+  @Override
+  public JsonRpcResponse response(final JsonRpcRequest request) {
+    return (JsonRpcResponse) findResultByParamType(request);
+  }
+
+  @Override
+  public String getName() {
+    return RpcMethod.ETH_GET_PROOF.getMethodName();
   }
 }

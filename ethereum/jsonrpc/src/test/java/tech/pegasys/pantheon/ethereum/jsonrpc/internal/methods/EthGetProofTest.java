@@ -16,7 +16,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import tech.pegasys.pantheon.ethereum.core.Address;
@@ -79,20 +78,8 @@ public class EthGetProofTest {
   }
 
   @Test
-  public void exceptionWhenNoParamsSupplied() {
-    final JsonRpcRequest request = requestWithParams();
-
-    thrown.expect(InvalidJsonRpcParameters.class);
-    thrown.expectMessage("Missing required json rpc parameter at index 0");
-
-    method.response(request);
-
-    verifyNoMoreInteractions(blockchainQueries);
-  }
-
-  @Test
   public void exceptionWhenNoAddressAccountSupplied() {
-    final JsonRpcRequest request = requestWithParams();
+    final JsonRpcRequest request = requestWithParams(null, null, "latest");
 
     thrown.expect(InvalidJsonRpcParameters.class);
     thrown.expectMessage("Missing required json rpc parameter at index 0");
@@ -102,7 +89,7 @@ public class EthGetProofTest {
 
   @Test
   public void exceptionWhenNoStorageKeysSupplied() {
-    final JsonRpcRequest request = requestWithParams(address.toString());
+    final JsonRpcRequest request = requestWithParams(address.toString(), null, "latest");
 
     thrown.expect(InvalidJsonRpcParameters.class);
     thrown.expectMessage("Missing required json rpc parameter at index 1");
