@@ -579,8 +579,21 @@ def getCheckedOutGitCommitHash() {
 
   if (isCommit) return head[0].trim().take(takeFromHash) // e5a7c79edabb
 
-  def refHead = new File(gitFolder + head[1].trim()) // .git/refs/heads/master
-  refHead.text.trim().take takeFromHash
+  def ref = head[1].trim() // refs/heads/my-feature-branch
+  def refHash = getGitRefHash(ref)
+  refHash.take takeFromHash
+}
+
+static def getGitRefHash(String ref) {
+  def cmd = "git show-ref --hash " + ref
+  def proc = cmd.execute()
+  def errors = ""
+  proc.err.eachLine { line -> errors += line + "\n" }
+  proc.waitFor()
+  if (proc.exitValue() != 0) {
+    throw new GradleException("Unable to retrieve git ref hash for " + ref + ":\n" + errors)
+  }
+  return proc.in.readLines().get(0).trim()
 }
 
 apply plugin: 'net.researchgate.release'
