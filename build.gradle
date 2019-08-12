@@ -571,7 +571,7 @@ def getGitHeadHash() {
 
 def getGitRefHash(String ref) {
   def gitFolder = "$projectDir/.git/"
-  def cmd = "git --git-dir $gitFolder show-ref --head --hash " + ref
+  def cmd = "git --git-dir $gitFolder show-ref --head --hash $ref"
   def proc = cmd.execute()
   def errors = ""
   proc.err.eachLine { line -> errors += line + "\n" }
