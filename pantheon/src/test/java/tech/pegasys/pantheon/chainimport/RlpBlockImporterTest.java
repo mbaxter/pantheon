@@ -105,8 +105,8 @@ public final class RlpBlockImporterTest {
             .clock(TestClock.fixed())
             .transactionPoolConfiguration(TransactionPoolConfiguration.builder().build())
             .build();
-    final RlpBlockImporter.ImportResult result = rlpBlockImporter
-      .importBlockchain(source, controller);
+    final RlpBlockImporter.ImportResult result =
+        rlpBlockImporter.importBlockchain(source, controller);
 
     // Don't count the Genesis block
     assertThat(result.count).isEqualTo(958);

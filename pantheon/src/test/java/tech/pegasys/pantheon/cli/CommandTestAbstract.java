@@ -102,9 +102,9 @@ public abstract class CommandTestAbstract {
   @Mock protected ProtocolContext<Object> mockProtocolContext;
   @Mock protected BlockBroadcaster mockBlockBroadcaster;
   @Mock protected PantheonController<Object> mockController;
-  @Mock protected RlpBlockExporter mockRlpBlockExporter;
+  @Mock protected RlpBlockExporter rlpBlockExporter;
   @Mock protected JsonBlockImporter<?> jsonBlockImporter;
-  @Mock protected RlpBlockImporter mockRlpBlockImporter;
+  @Mock protected RlpBlockImporter rlpBlockImporter;
 
   @Mock protected Logger mockLogger;
   @Mock protected PantheonPluginContextImpl mockPantheonPluginContext;
@@ -229,9 +229,9 @@ public abstract class CommandTestAbstract {
     final TestPantheonCommand pantheonCommand =
         new TestPantheonCommand(
             mockLogger,
-            mockRlpBlockImporter,
+            rlpBlockImporter,
             this::jsonBlockImporterFactory,
-            (context) -> mockRlpBlockExporter,
+            (context) -> rlpBlockExporter,
             mockRunnerBuilder,
             mockControllerBuilderFactory,
             keyLoader,

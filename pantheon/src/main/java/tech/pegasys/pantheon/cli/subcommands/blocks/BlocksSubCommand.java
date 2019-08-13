@@ -262,7 +262,7 @@ public class BlocksSubCommand implements Runnable {
     @Override
     public void run() {
 
-      LOG.info("Runs export sub command");
+      LOG.info("Export {} block data to {}", format, blocksExportFile.toPath());
 
       checkCommand(this, startBlock, endBlock);
       final Optional<MetricsService> metricsService = initMetrics(parentCommand);
@@ -308,7 +308,9 @@ public class BlocksSubCommand implements Runnable {
               (blockNum) -> {
                 throw new CommandLine.ParameterException(
                     spec.commandLine(),
-                    "Parameter --start-block must be greater than or equal to zero: " + blockNum);
+                    "Parameter --start-block ("
+                        + blockNum
+                        + ") must be greater than or equal to zero.");
               });
 
       maybeEndBlock
@@ -317,7 +319,9 @@ public class BlocksSubCommand implements Runnable {
               (blockNum) -> {
                 throw new CommandLine.ParameterException(
                     spec.commandLine(),
-                    "Parameter --end-block must be greater than or equal to zero: " + blockNum);
+                    "Parameter --end-block ("
+                        + blockNum
+                        + ") must be greater than or equal to zero.");
               });
 
       if (maybeStartBlock.isPresent() && maybeEndBlock.isPresent()) {
