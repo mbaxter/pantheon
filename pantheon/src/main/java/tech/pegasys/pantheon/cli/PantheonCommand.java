@@ -1366,7 +1366,7 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
     }
   }
 
-  private Path dataDir() {
+  public Path dataDir() {
     if (isFullInstantiation()) {
       return standaloneCommands.dataPath.toAbsolutePath();
     } else if (isDocker) {

@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 
 import io.vertx.core.Vertx;
@@ -262,7 +263,7 @@ public class BlocksSubCommand implements Runnable {
     @Override
     public void run() {
 
-      LOG.info("Export {} block data to {}", format, blocksExportFile.toPath());
+      LOG.info("Export {} block data to file {}", format, blocksExportFile.toPath());
 
       checkCommand(this, startBlock, endBlock);
       final Optional<MetricsService> metricsService = initMetrics(parentCommand);
@@ -334,6 +335,22 @@ public class BlocksSubCommand implements Runnable {
                   + startBlock
                   + ").");
         }
+      }
+
+      // Error if data directory is empty
+      Path databasePath =
+          Paths.get(
+              parentCommand.parentCommand.dataDir().toAbsolutePath().toString(),
+              PantheonController.DATABASE_PATH);
+      File databaseDirectory = new File(databasePath.toString());
+      if (!databaseDirectory.exists()
+          || !databaseDirectory.isDirectory()
+          || databaseDirectory.list().length == 0) {
+        // Empty data directory, nothing to export
+        throw new CommandLine.ParameterException(
+            spec.commandLine(),
+            "Chain is empty.  Unable to export blocks from specified data directory: "
+                + databaseDirectory.toString());
       }
     }
 

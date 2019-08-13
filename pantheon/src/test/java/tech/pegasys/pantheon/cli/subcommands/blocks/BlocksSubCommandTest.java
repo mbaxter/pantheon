@@ -20,11 +20,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import tech.pegasys.pantheon.cli.CommandTestAbstract;
+import tech.pegasys.pantheon.controller.PantheonController;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 
 import org.junit.Rule;
@@ -195,17 +198,70 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
 
   // Export sub-sub-command
   @Test
-  public void blocksExport_missingFileParam() {
-    parseCommand(BLOCK_SUBCOMMAND_NAME, BLOCK_EXPORT_SUBCOMMAND_NAME);
+  public void blocksExport_missingFileParam() throws IOException {
+    createDbDirectory(true);
+    parseCommand(
+        "--data-path=" + folder.getRoot().getAbsolutePath(),
+        BLOCK_SUBCOMMAND_NAME,
+        BLOCK_EXPORT_SUBCOMMAND_NAME);
     final String expectedErrorOutputStart = "Missing required option '--to=<FILE>'";
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).startsWith(expectedErrorOutputStart);
+
+    verify(rlpBlockExporter, never()).exportBlocks(any(), any(), any());
+  }
+
+  @Test
+  public void blocksExport_noDbDirectory() throws IOException {
+    final File outputFile = folder.newFile("blocks.bin");
+    parseCommand(
+        "--data-path=" + folder.getRoot().getAbsolutePath(),
+        BLOCK_SUBCOMMAND_NAME,
+        BLOCK_EXPORT_SUBCOMMAND_NAME,
+        "--to",
+        outputFile.getPath());
+    final String expectedErrorOutputStart =
+        "Chain is empty.  Unable to export blocks from specified data directory: "
+            + folder.getRoot().getAbsolutePath()
+            + "/"
+            + PantheonController.DATABASE_PATH;
+    assertThat(commandOutput.toString()).isEmpty();
+    assertThat(commandErrorOutput.toString()).startsWith(expectedErrorOutputStart);
+
+    verify(rlpBlockExporter, never()).exportBlocks(any(), any(), any());
+  }
+
+  @Test
+  public void blocksExport_emptyDbDirectory() throws IOException {
+    createDbDirectory(false);
+    final File outputFile = folder.newFile("blocks.bin");
+    parseCommand(
+        "--data-path=" + folder.getRoot().getAbsolutePath(),
+        BLOCK_SUBCOMMAND_NAME,
+        BLOCK_EXPORT_SUBCOMMAND_NAME,
+        "--to",
+        outputFile.getPath());
+    final String expectedErrorOutputStart =
+        "Chain is empty.  Unable to export blocks from specified data directory: "
+            + folder.getRoot().getAbsolutePath()
+            + "/"
+            + PantheonController.DATABASE_PATH;
+    assertThat(commandOutput.toString()).isEmpty();
+    assertThat(commandErrorOutput.toString()).startsWith(expectedErrorOutputStart);
+
+    verify(rlpBlockExporter, never()).exportBlocks(any(), any(), any());
   }
 
   @Test
   public void blocksExport_noStartOrEnd() throws IOException {
+    createDbDirectory(true);
     final File outputFile = folder.newFile("blocks.bin");
-    parseCommand(BLOCK_SUBCOMMAND_NAME, BLOCK_EXPORT_SUBCOMMAND_NAME, "--to", outputFile.getPath());
+    parseCommand(
+        "--data-path=" + folder.getRoot().getAbsolutePath(),
+        BLOCK_SUBCOMMAND_NAME,
+        BLOCK_EXPORT_SUBCOMMAND_NAME,
+        "--to",
+        outputFile.getPath());
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();
 
@@ -214,8 +270,10 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
 
   @Test
   public void blocksExport_withStartAndNoEnd() throws IOException {
+    createDbDirectory(true);
     final File outputFile = folder.newFile("blocks.bin");
     parseCommand(
+        "--data-path=" + folder.getRoot().getAbsolutePath(),
         BLOCK_SUBCOMMAND_NAME,
         BLOCK_EXPORT_SUBCOMMAND_NAME,
         "--to",
@@ -229,8 +287,10 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
 
   @Test
   public void blocksExport_withEndAndNoStart() throws IOException {
+    createDbDirectory(true);
     final File outputFile = folder.newFile("blocks.bin");
     parseCommand(
+        "--data-path=" + folder.getRoot().getAbsolutePath(),
         BLOCK_SUBCOMMAND_NAME,
         BLOCK_EXPORT_SUBCOMMAND_NAME,
         "--to",
@@ -244,8 +304,10 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
 
   @Test
   public void blocksExport_withStartAndEnd() throws IOException {
+    createDbDirectory(true);
     final File outputFile = folder.newFile("blocks.bin");
     parseCommand(
+        "--data-path=" + folder.getRoot().getAbsolutePath(),
         BLOCK_SUBCOMMAND_NAME,
         BLOCK_EXPORT_SUBCOMMAND_NAME,
         "--to",
@@ -260,8 +322,10 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
 
   @Test
   public void blocksExport_withOutOfOrderStartAndEnd() throws IOException {
+    createDbDirectory(true);
     final File outputFile = folder.newFile("blocks.bin");
     parseCommand(
+        "--data-path=" + folder.getRoot().getAbsolutePath(),
         BLOCK_SUBCOMMAND_NAME,
         BLOCK_EXPORT_SUBCOMMAND_NAME,
         "--to",
@@ -277,8 +341,10 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
 
   @Test
   public void blocksExport_withEmptyRange() throws IOException {
+    createDbDirectory(true);
     final File outputFile = folder.newFile("blocks.bin");
     parseCommand(
+        "--data-path=" + folder.getRoot().getAbsolutePath(),
         BLOCK_SUBCOMMAND_NAME,
         BLOCK_EXPORT_SUBCOMMAND_NAME,
         "--to",
@@ -294,8 +360,10 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
 
   @Test
   public void blocksExport_withInvalidStart() throws IOException {
+    createDbDirectory(true);
     final File outputFile = folder.newFile("blocks.bin");
     parseCommand(
+        "--data-path=" + folder.getRoot().getAbsolutePath(),
         BLOCK_SUBCOMMAND_NAME,
         BLOCK_EXPORT_SUBCOMMAND_NAME,
         "--to",
@@ -310,8 +378,10 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
 
   @Test
   public void blocksExport_withInvalidEnd() throws IOException {
+    createDbDirectory(true);
     final File outputFile = folder.newFile("blocks.bin");
     parseCommand(
+        "--data-path=" + folder.getRoot().getAbsolutePath(),
         BLOCK_SUBCOMMAND_NAME,
         BLOCK_EXPORT_SUBCOMMAND_NAME,
         "--to",
@@ -329,5 +399,14 @@ public class BlocksSubCommandTest extends CommandTestAbstract {
     parseCommand(BLOCK_SUBCOMMAND_NAME, BLOCK_EXPORT_SUBCOMMAND_NAME, "--help");
     assertThat(commandOutput.toString()).startsWith(EXPECTED_BLOCK_EXPORT_USAGE);
     assertThat(commandErrorOutput.toString()).isEmpty();
+  }
+
+  private void createDbDirectory(final boolean createDataFiles) throws IOException {
+    File dbDir = folder.newFolder(PantheonController.DATABASE_PATH);
+    if (createDataFiles) {
+      Path dataFilePath = Paths.get(dbDir.getAbsolutePath(), "0000001.sst");
+      final boolean success = new File(dataFilePath.toString()).createNewFile();
+      assertThat(success).isTrue();
+    }
   }
 }
