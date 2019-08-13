@@ -20,6 +20,7 @@ import tech.pegasys.pantheon.ethereum.ProtocolContext;
 import tech.pegasys.pantheon.ethereum.blockcreation.IncrementingNonceGenerator;
 import tech.pegasys.pantheon.ethereum.chain.DefaultBlockchain;
 import tech.pegasys.pantheon.ethereum.chain.GenesisState;
+import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
@@ -67,7 +68,7 @@ public class RetestethContext {
 
   private final ReentrantLock contextLock = new ReentrantLock();
   private Address coinbase;
-  private DefaultBlockchain blockchain;
+  private MutableBlockchain blockchain;
   private ProtocolContext<Void> protocolContext;
   private BlockchainQueries blockchainQueries;
   private ProtocolSchedule<Void> protocolSchedule;
@@ -181,11 +182,11 @@ public class RetestethContext {
     return true;
   }
 
-  private static DefaultBlockchain createInMemoryBlockchain(final Block genesisBlock) {
+  private static MutableBlockchain createInMemoryBlockchain(final Block genesisBlock) {
     return createInMemoryBlockchain(genesisBlock, new MainnetBlockHeaderFunctions());
   }
 
-  private static DefaultBlockchain createInMemoryBlockchain(
+  private static MutableBlockchain createInMemoryBlockchain(
       final Block genesisBlock, final BlockHeaderFunctions blockHeaderFunctions) {
     final InMemoryKeyValueStorage keyValueStorage = new InMemoryKeyValueStorage();
     return DefaultBlockchain.createMutable(
@@ -238,7 +239,7 @@ public class RetestethContext {
     return coinbase;
   }
 
-  public DefaultBlockchain getBlockchain() {
+  public MutableBlockchain getBlockchain() {
     return blockchain;
   }
 

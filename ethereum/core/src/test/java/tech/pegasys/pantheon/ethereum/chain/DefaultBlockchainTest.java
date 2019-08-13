@@ -800,8 +800,9 @@ public class DefaultBlockchainTest {
 
   private DefaultBlockchain createMutableBlockchain(
       final KeyValueStorage kvStore, final Block genesisBlock) {
-    return DefaultBlockchain.createMutable(
-        genesisBlock, createStorage(kvStore), new NoOpMetricsSystem());
+    return (DefaultBlockchain)
+        DefaultBlockchain.createMutable(
+            genesisBlock, createStorage(kvStore), new NoOpMetricsSystem());
   }
 
   private Blockchain createBlockchain(final KeyValueStorage kvStore) {

@@ -115,7 +115,7 @@ public class DefaultBlockchain implements MutableBlockchain {
         () -> chainHeadOmmerCount);
   }
 
-  public static DefaultBlockchain createMutable(
+  public static MutableBlockchain createMutable(
       final Block genesisBlock,
       final BlockchainStorage blockchainStorage,
       final MetricsSystem metricsSystem) {
@@ -396,6 +396,7 @@ public class DefaultBlockchain implements MutableBlockchain {
         removedTransactions);
   }
 
+  @Override
   public boolean rewindToBlock(final long blockNumber) {
     final Optional<Hash> blockHash = blockchainStorage.getBlockHash(blockNumber);
     if (blockHash.isEmpty()) {
