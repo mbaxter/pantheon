@@ -77,7 +77,7 @@ public class EthGetProofTest {
   }
 
   @Test
-  public void exceptionWhenNoAddressAccountSupplied() {
+  public void errorWhenNoAddressAccountSupplied() {
     final JsonRpcRequest request = requestWithParams(null, null, "latest");
 
     thrown.expect(InvalidJsonRpcParameters.class);
@@ -87,7 +87,7 @@ public class EthGetProofTest {
   }
 
   @Test
-  public void exceptionWhenNoStorageKeysSupplied() {
+  public void errorWhenNoStorageKeysSupplied() {
     final JsonRpcRequest request = requestWithParams(address.toString(), null, "latest");
 
     thrown.expect(InvalidJsonRpcParameters.class);
@@ -97,7 +97,7 @@ public class EthGetProofTest {
   }
 
   @Test
-  public void exceptionWhenNoBlockNumberSupplied() {
+  public void errorWhenNoBlockNumberSupplied() {
     final JsonRpcRequest request = requestWithParams(address.toString(), new String[] {});
 
     thrown.expect(InvalidJsonRpcParameters.class);
@@ -107,12 +107,31 @@ public class EthGetProofTest {
   }
 
   @Test
-  public void exceptionWhenAccountNotFound() {
+  public void errorWhenAccountNotFound() {
 
     generateWorldState();
 
     final JsonRpcErrorResponse expectedResponse =
         new JsonRpcErrorResponse(null, JsonRpcError.NO_ACCOUNT_FOUND);
+
+    final JsonRpcRequest request =
+        requestWithParams(
+            Address.fromHexString("0x0000000000000000000000000000000000000000"),
+            new String[] {storageKey.toString()},
+            String.valueOf(blockNumber));
+
+    final JsonRpcErrorResponse response = (JsonRpcErrorResponse) method.response(request);
+
+    assertThat(response).isEqualToComparingFieldByField(expectedResponse);
+  }
+
+  @Test
+  public void errorWhenWorldStateUnavailable() {
+
+    when(blockchainQueries.getWorldState(blockNumber)).thenReturn(Optional.empty());
+
+    final JsonRpcErrorResponse expectedResponse =
+        new JsonRpcErrorResponse(null, JsonRpcError.WORLD_STATE_UNAVAILABLE);
 
     final JsonRpcRequest request =
         requestWithParams(
