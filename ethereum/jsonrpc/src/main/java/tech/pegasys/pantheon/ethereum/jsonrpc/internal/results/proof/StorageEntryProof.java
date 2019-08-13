@@ -38,7 +38,7 @@ public class StorageEntryProof {
 
   @JsonGetter(value = "key")
   public String getKey() {
-    return key.toString();
+    return key.getBytes().toString();
   }
 
   @JsonGetter(value = "value")
