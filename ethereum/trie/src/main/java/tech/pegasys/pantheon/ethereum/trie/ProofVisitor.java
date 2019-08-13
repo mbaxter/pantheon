@@ -46,7 +46,6 @@ class ProofVisitor<V> extends GetVisitor<V> implements PathNodeVisitor<V> {
 
   @Override
   public Node<V> visit(final NullNode<V> nullNode, final BytesValue path) {
-    maybeTrackNode(nullNode);
     return super.visit(nullNode, path);
   }
 

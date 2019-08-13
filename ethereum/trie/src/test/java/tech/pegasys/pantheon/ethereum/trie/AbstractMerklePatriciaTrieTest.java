@@ -16,7 +16,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static junit.framework.TestCase.assertFalse;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
 import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
@@ -340,8 +339,7 @@ public abstract class AbstractMerklePatriciaTrieTest {
 
     Proof<String> valueWithProof = trie.getValueWithProof(key1);
     assertThat(valueWithProof.getValue()).isEmpty();
-    assertThat(valueWithProof.getProofRelatedNodes()).hasSize(1);
-    assertThat(valueWithProof.getProofRelatedNodes().get(0)).isEqualTo(RLP.NULL);
+    assertThat(valueWithProof.getProofRelatedNodes()).hasSize(0);
   }
 
   @Test
