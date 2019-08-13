@@ -22,11 +22,12 @@ import tech.pegasys.pantheon.ethereum.worldstate.StateTrieAccountValue;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateStorage;
 import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
+import tech.pegasys.pantheon.util.uint.UInt256;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 public class WorldStateProofProvider {
 
@@ -36,40 +37,39 @@ public class WorldStateProofProvider {
     this.worldStateStorage = worldStateStorage;
   }
 
-  public Optional<WorldStateProof<Bytes32, BytesValue>> getAccountProof(
+  public Optional<WorldStateProof> getAccountProof(
       final Hash worldStateRoot,
       final Address accountAddress,
-      final List<Bytes32> accountStorageKeys) {
+      final List<UInt256> accountStorageKeys) {
 
     if (!worldStateStorage.isWorldStateAvailable(worldStateRoot)) {
       return Optional.empty();
     } else {
       final Hash addressHash = Hash.hash(accountAddress);
-      final MerklePatriciaTrie<Bytes32, BytesValue> accountStateTrie =
-          newAccountStateTrie(worldStateRoot);
-      return retrieveStateTrieAccountValue(addressHash, accountStateTrie)
+      final Proof<BytesValue> accountProof =
+          newAccountStateTrie(worldStateRoot).getValueWithProof(addressHash);
+
+      return accountProof
+          .getValue()
+          .map(RLP::input)
+          .map(StateTrieAccountValue::readFrom)
           .map(
-              stateTrieAccountValue -> {
-                final MerklePatriciaTrie<Bytes32, BytesValue> storageStateTrie =
-                    newAccountStorageTrie(stateTrieAccountValue.getStorageRoot());
-                final Proof<BytesValue> accountProof =
-                    accountStateTrie.getValueWithProof(addressHash);
-                final Map<Bytes32, Proof<BytesValue>> storageProof = new HashMap<>();
-                accountStorageKeys.forEach(
-                    key ->
-                        storageProof.put(key, storageStateTrie.getValueWithProof(Hash.hash(key))));
-                return Optional.of(
-                    new WorldStateProof<>(stateTrieAccountValue, accountProof, storageProof));
-              })
-          .orElse(Optional.empty());
+              account -> {
+                final SortedMap<UInt256, Proof<BytesValue>> storageProofs =
+                    getStorageProofs(account, accountStorageKeys);
+                return new WorldStateProof(account, accountProof, storageProofs);
+              });
     }
   }
 
-  private Optional<StateTrieAccountValue> retrieveStateTrieAccountValue(
-      final Hash addressHash, final MerklePatriciaTrie<Bytes32, BytesValue> accountStateTrie) {
-    return accountStateTrie
-        .get(addressHash)
-        .map(encoded -> StateTrieAccountValue.readFrom(RLP.input(encoded)));
+  private SortedMap<UInt256, Proof<BytesValue>> getStorageProofs(
+      final StateTrieAccountValue account, final List<UInt256> accountStorageKeys) {
+    final MerklePatriciaTrie<Bytes32, BytesValue> storageTrie =
+        newAccountStorageTrie(account.getStorageRoot());
+    final SortedMap<UInt256, Proof<BytesValue>> storageProofs = new TreeMap<>();
+    accountStorageKeys.forEach(
+        key -> storageProofs.put(key, storageTrie.getValueWithProof(Hash.hash(key.getBytes()))));
+    return storageProofs;
   }
 
   private MerklePatriciaTrie<Bytes32, BytesValue> newAccountStateTrie(final Bytes32 rootHash) {

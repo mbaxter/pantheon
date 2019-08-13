@@ -60,7 +60,7 @@ public class GetProofResult {
   }
 
   public static GetProofResult buildGetProofResult(
-      final Address address, final WorldStateProof<Bytes32, BytesValue> worldStateProof) {
+      final Address address, final WorldStateProof worldStateProof) {
 
     final StateTrieAccountValue stateTrieAccountValue = worldStateProof.getStateTrieAccountValue();
 

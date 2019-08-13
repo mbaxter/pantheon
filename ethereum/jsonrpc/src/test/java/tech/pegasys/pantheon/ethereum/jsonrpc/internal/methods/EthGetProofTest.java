@@ -33,7 +33,6 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof.GetProofRes
 import tech.pegasys.pantheon.ethereum.proof.WorldStateProof;
 import tech.pegasys.pantheon.ethereum.worldstate.StateTrieAccountValue;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
-import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 import tech.pegasys.pantheon.util.uint.UInt256;
 
@@ -63,8 +62,8 @@ public class EthGetProofTest {
 
   private final Address address =
       Address.fromHexString("0x1234567890123456789012345678901234567890");
-  private final Bytes32 storageKey =
-      Bytes32.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000001");
+  private final UInt256 storageKey =
+      UInt256.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000001");
   private final long blockNumber = 1;
 
   @Before
@@ -166,7 +165,7 @@ public class EthGetProofTest {
     when(stateTrieAccountValue.getNonce()).thenReturn(nonce);
     when(stateTrieAccountValue.getStorageRoot()).thenReturn(storageRoot);
 
-    final WorldStateProof<Bytes32, BytesValue> worldStateProof = mock(WorldStateProof.class);
+    final WorldStateProof worldStateProof = mock(WorldStateProof.class);
     when(worldStateProof.getAccountProof())
         .thenReturn(
             Collections.singletonList(

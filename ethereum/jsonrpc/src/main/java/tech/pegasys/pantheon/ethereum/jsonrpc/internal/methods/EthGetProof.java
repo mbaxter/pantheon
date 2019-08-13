@@ -25,8 +25,7 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.results.proof.GetProofResult;
 import tech.pegasys.pantheon.ethereum.proof.WorldStateProof;
-import tech.pegasys.pantheon.util.bytes.Bytes32;
-import tech.pegasys.pantheon.util.bytes.BytesValue;
+import tech.pegasys.pantheon.util.uint.UInt256;
 
 import java.util.Arrays;
 import java.util.List;
@@ -48,9 +47,9 @@ public class EthGetProof extends AbstractBlockParameterMethod {
     return parameters.required(request.getParams(), 0, Address.class);
   }
 
-  private List<Bytes32> getStorageKeys(final JsonRpcRequest request) {
+  private List<UInt256> getStorageKeys(final JsonRpcRequest request) {
     return Arrays.stream(parameters.required(request.getParams(), 1, String[].class))
-        .map(Bytes32::fromHexString)
+        .map(UInt256::fromHexString)
         .collect(Collectors.toList());
   }
 
@@ -63,12 +62,12 @@ public class EthGetProof extends AbstractBlockParameterMethod {
   protected Object resultByBlockNumber(final JsonRpcRequest request, final long blockNumber) {
 
     final Address address = getAddress(request);
-    final List<Bytes32> storageKeys = getStorageKeys(request);
+    final List<UInt256> storageKeys = getStorageKeys(request);
 
     final Optional<MutableWorldState> worldState = blockchain.getWorldState(blockNumber);
 
     if (worldState.isPresent()) {
-      Optional<WorldStateProof<Bytes32, BytesValue>> proofOptional =
+      Optional<WorldStateProof> proofOptional =
           blockchain
               .getWorldStateArchive()
               .getAccountProof(worldState.get().rootHash(), address, storageKeys);

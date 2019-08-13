@@ -22,22 +22,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.SortedMap;
 
-public class WorldStateProof<K, V extends BytesValue> {
+public class WorldStateProof {
 
   private final StateTrieAccountValue stateTrieAccountValue;
 
-  private final Proof<V> accountProof;
+  private final Proof<BytesValue> accountProof;
 
-  private final Map<K, Proof<V>> storageProof;
+  private final Map<UInt256, Proof<BytesValue>> storageProofs;
 
   public WorldStateProof(
       final StateTrieAccountValue stateTrieAccountValue,
-      final Proof<V> accountProof,
-      final Map<K, Proof<V>> storageProof) {
+      final Proof<BytesValue> accountProof,
+      final SortedMap<UInt256, Proof<BytesValue>> storageProofs) {
     this.stateTrieAccountValue = stateTrieAccountValue;
     this.accountProof = accountProof;
-    this.storageProof = storageProof;
+    this.storageProofs = storageProofs;
   }
 
   public StateTrieAccountValue getStateTrieAccountValue() {
@@ -48,12 +49,12 @@ public class WorldStateProof<K, V extends BytesValue> {
     return accountProof.getProofRelatedNodes();
   }
 
-  public List<K> getStorageKeys() {
-    return new ArrayList<>(storageProof.keySet());
+  public List<UInt256> getStorageKeys() {
+    return new ArrayList<>(storageProofs.keySet());
   }
 
-  public UInt256 getStorageValue(final K key) {
-    Optional<V> value = storageProof.get(key).getValue();
+  public UInt256 getStorageValue(final UInt256 key) {
+    Optional<BytesValue> value = storageProofs.get(key).getValue();
     if (value.isEmpty()) {
       return UInt256.ZERO;
     } else {
@@ -61,7 +62,7 @@ public class WorldStateProof<K, V extends BytesValue> {
     }
   }
 
-  public List<BytesValue> getStorageProof(final K key) {
-    return storageProof.get(key).getProofRelatedNodes();
+  public List<BytesValue> getStorageProof(final UInt256 key) {
+    return storageProofs.get(key).getProofRelatedNodes();
   }
 }

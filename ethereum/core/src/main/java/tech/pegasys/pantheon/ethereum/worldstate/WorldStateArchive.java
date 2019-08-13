@@ -19,8 +19,8 @@ import tech.pegasys.pantheon.ethereum.core.WorldState;
 import tech.pegasys.pantheon.ethereum.proof.WorldStateProof;
 import tech.pegasys.pantheon.ethereum.proof.WorldStateProofProvider;
 import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
-import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
+import tech.pegasys.pantheon.util.uint.UInt256;
 
 import java.util.List;
 import java.util.Optional;
@@ -70,10 +70,10 @@ public class WorldStateArchive {
     return worldStateStorage;
   }
 
-  public Optional<WorldStateProof<Bytes32, BytesValue>> getAccountProof(
+  public Optional<WorldStateProof> getAccountProof(
       final Hash worldStateRoot,
       final Address accountAddress,
-      final List<Bytes32> accountStorageKeys) {
+      final List<UInt256> accountStorageKeys) {
     return worldStateProof.getAccountProof(worldStateRoot, accountAddress, accountStorageKeys);
   }
 }
