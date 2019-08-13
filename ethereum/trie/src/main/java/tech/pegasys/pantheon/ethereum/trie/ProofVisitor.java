@@ -19,38 +19,44 @@ import java.util.List;
 
 class ProofVisitor<V> extends GetVisitor<V> implements PathNodeVisitor<V> {
 
+  private final Node<V> rootNode;
   private final List<Node<V>> proof = new ArrayList<>();
+
+  ProofVisitor(final Node<V> rootNode) {
+    this.rootNode = rootNode;
+  }
 
   @Override
   public Node<V> visit(final ExtensionNode<V> extensionNode, final BytesValue path) {
-    if (extensionNode.isReferencedByHash()) {
-      proof.add(extensionNode);
-    }
+    maybeTrackNode(extensionNode);
     return super.visit(extensionNode, path);
   }
 
   @Override
   public Node<V> visit(final BranchNode<V> branchNode, final BytesValue path) {
-    if (branchNode.isReferencedByHash()) {
-      proof.add(branchNode);
-    }
+    maybeTrackNode(branchNode);
     return super.visit(branchNode, path);
   }
 
   @Override
   public Node<V> visit(final LeafNode<V> leafNode, final BytesValue path) {
-    if (leafNode.isReferencedByHash()) {
-      proof.add(leafNode);
-    }
+    maybeTrackNode(leafNode);
     return super.visit(leafNode, path);
   }
 
   @Override
   public Node<V> visit(final NullNode<V> nullNode, final BytesValue path) {
+    maybeTrackNode(nullNode);
     return super.visit(nullNode, path);
   }
 
   public List<Node<V>> getProof() {
     return proof;
+  }
+
+  private void maybeTrackNode(final Node<V> node) {
+    if (node.equals(rootNode) || node.isReferencedByHash()) {
+      proof.add(node);
+    }
   }
 }
