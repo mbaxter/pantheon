@@ -35,6 +35,14 @@ public interface KeyValueStorage extends Closeable {
    */
   Optional<BytesValue> get(BytesValue key) throws StorageException;
 
+  /**
+   * Removes key/value pair from storage.
+   *
+   * @param key Index into storage
+   * @return
+   */
+  long remove(BytesValue key) throws StorageException;
+
   long removeUnless(Predicate<BytesValue> inUseCheck);
 
   /**

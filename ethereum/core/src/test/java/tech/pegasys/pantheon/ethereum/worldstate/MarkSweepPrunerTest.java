@@ -13,8 +13,16 @@
 package tech.pegasys.pantheon.ethereum.worldstate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
+import tech.pegasys.pantheon.ethereum.chain.DefaultBlockchain;
+import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
 import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator;
+import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
 import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStateKeyValueStorage;
@@ -24,9 +32,11 @@ import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import org.junit.Test;
+import org.mockito.InOrder;
 
 public class MarkSweepPrunerTest {
 
@@ -45,13 +55,18 @@ public class MarkSweepPrunerTest {
             worldStateStorage,
             new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()));
     final MutableWorldState worldState = worldStateArchive.getMutable();
+    final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
+    final BlockHeader header = mock(BlockHeader.class);
 
     // Generate accounts and save corresponding state root
     gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
     final Hash stateRoot = worldState.rootHash();
 
+    when(blockchain.getBlockHeader(1)).thenReturn(Optional.of(header));
+    when(header.getStateRoot()).thenReturn(stateRoot);
+
     final MarkSweepPruner pruner =
-        new MarkSweepPruner(worldStateStorage, markStorage, metricsSystem);
+        new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem);
     pruner.mark(stateRoot);
     pruner.flushPendingMarks();
 
@@ -63,8 +78,41 @@ public class MarkSweepPrunerTest {
     assertThat(stateStorage.keySet()).hasSizeGreaterThan(keysToKeep.size());
 
     // All those new nodes should be removed when we sweep
-    pruner.sweep();
+    pruner.sweepBefore(1);
     assertThat(stateStorage.keySet()).containsExactlyInAnyOrderElementsOf(keysToKeep);
     assertThat(markStorage.keySet()).isEmpty();
+  }
+
+  @Test
+  public void shouldSweepStateRootFirst() {
+
+    // Setup "remote" state
+    final WorldStateStorage worldStateStorage =
+        spy(new WorldStateKeyValueStorage(new InMemoryKeyValueStorage()));
+    final MutableWorldState worldState =
+        new WorldStateArchive(
+                worldStateStorage,
+                new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()))
+            .getMutable();
+    final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
+    final BlockHeader header = mock(BlockHeader.class);
+
+    // Generate accounts and save corresponding state root
+    gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
+    final Hash stateRoot = worldState.rootHash();
+
+    when(blockchain.getBlockHeader(0)).thenReturn(Optional.of(header));
+    when(header.getStateRoot()).thenReturn(stateRoot);
+
+    final MarkSweepPruner pruner =
+        new MarkSweepPruner(
+            worldStateStorage, blockchain, new InMemoryKeyValueStorage(), metricsSystem);
+
+    // Nothing is marked so we should sweep everything, but we need to make sure the state root goes
+    // first
+    pruner.sweepBefore(1);
+    InOrder inOrder = inOrder(worldStateStorage);
+    inOrder.verify(worldStateStorage).remove(stateRoot);
+    inOrder.verify(worldStateStorage).removeUnless(any());
   }
 }

@@ -113,6 +113,20 @@ public class RocksDbKeyValueStorage implements KeyValueStorage, Closeable {
   }
 
   @Override
+  public long remove(final BytesValue key) {
+    long entriesRemoved = 0;
+    try {
+      if (get(key).isPresent()) {
+        db.delete(key.getArrayUnsafe());
+        entriesRemoved = 1;
+      }
+    } catch (final RocksDBException e) {
+      throw new StorageException(e);
+    }
+    return entriesRemoved;
+  }
+
+  @Override
   public long removeUnless(final Predicate<BytesValue> inUseCheck) throws StorageException {
     long removedNodeCounter = 0;
     try (final RocksIterator rocksIterator = db.newIterator()) {

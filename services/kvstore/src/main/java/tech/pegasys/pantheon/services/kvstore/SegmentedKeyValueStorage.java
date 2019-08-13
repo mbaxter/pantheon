@@ -51,6 +51,8 @@ public interface SegmentedKeyValueStorage<S> extends Closeable {
 
   void clear(S segmentHandle);
 
+  long remove(S segmentHandle, BytesValue key);
+
   class StorageException extends RuntimeException {
     public StorageException(final Throwable t) {
       super(t);

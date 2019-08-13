@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.worldstate;
 
+import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
@@ -39,6 +40,7 @@ public class MarkSweepPruner {
   private static final BytesValue IN_USE = BytesValue.of(1);
   private static final int MARKS_PER_TRANSACTION = 1000;
   private final WorldStateStorage worldStateStorage;
+  private final MutableBlockchain blockchain;
   private final KeyValueStorage markStorage;
   private final Counter markedNodesCounter;
   private final Counter markOperationCounter;
@@ -50,10 +52,12 @@ public class MarkSweepPruner {
 
   public MarkSweepPruner(
       final WorldStateStorage worldStateStorage,
+      final MutableBlockchain blockchain,
       final KeyValueStorage markStorage,
       final MetricsSystem metricsSystem) {
     this.worldStateStorage = worldStateStorage;
     this.markStorage = markStorage;
+    this.blockchain = blockchain;
 
     markedNodesCounter =
         metricsSystem.createCounter(
@@ -104,11 +108,26 @@ public class MarkSweepPruner {
     LOG.info("Completed marking used nodes for pruning");
   }
 
-  public void sweep() {
+  public void sweepBefore(final long markedBlockNumber) {
     flushPendingMarks();
     sweepOperationCounter.inc();
     LOG.info("Sweeping unused nodes");
-    final long prunedNodeCount = worldStateStorage.prune(markStorage::containsKey);
+    // Sweep state roots first, walking backwards until we get to a state root that isn't in the
+    // storage
+    long prunedNodeCount = 0;
+    for (long blockNumber = markedBlockNumber - 1; blockNumber >= 0; blockNumber--) {
+      final Hash candidateStateRootHash =
+          blockchain.getBlockHeader(blockNumber).get().getStateRoot();
+
+      if (!worldStateStorage.contains(candidateStateRootHash)) {
+        break;
+      }
+
+      prunedNodeCount += worldStateStorage.remove(candidateStateRootHash);
+      markStorage.remove(candidateStateRootHash);
+    }
+    // Sweep non-state-root nodes
+    prunedNodeCount += worldStateStorage.removeUnless(markStorage::containsKey);
     sweptNodesCounter.inc(prunedNodeCount);
     worldStateStorage.removeNodeAddedListener(nodeAddedListenerId);
     markStorage.clear();

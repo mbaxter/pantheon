@@ -51,6 +51,11 @@ public class SegmentedKeyValueStorageAdapter<S> implements KeyValueStorage {
   }
 
   @Override
+  public long remove(final BytesValue key) throws StorageException {
+    return storage.remove(segmentHandle, key);
+  }
+
+  @Override
   public long removeUnless(final Predicate<BytesValue> inUseCheck) {
     return storage.removeUnless(segmentHandle, inUseCheck);
   }
