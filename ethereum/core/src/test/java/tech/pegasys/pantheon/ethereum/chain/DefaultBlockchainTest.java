@@ -142,7 +142,7 @@ public class DefaultBlockchainTest {
 
     assertThatThrownBy(() -> createBlockchain(kvStore))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Cannot create Blockchain from empty BlockchainStorage");
+        .hasMessageContaining("Cannot create Blockchain from empty storage");
   }
 
   @Test
