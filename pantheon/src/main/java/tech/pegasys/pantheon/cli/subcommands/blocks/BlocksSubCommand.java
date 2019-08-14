@@ -25,6 +25,7 @@ import tech.pegasys.pantheon.cli.subcommands.blocks.BlocksSubCommand.ExportSubCo
 import tech.pegasys.pantheon.cli.subcommands.blocks.BlocksSubCommand.ImportSubCommand;
 import tech.pegasys.pantheon.controller.PantheonController;
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
+import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.MiningParameters;
 import tech.pegasys.pantheon.ethereum.core.Wei;
@@ -292,7 +293,8 @@ public class BlocksSubCommand implements Runnable {
 
     private void exportRlpFormat(final PantheonController<?> controller) throws IOException {
       final ProtocolContext<?> context = controller.getProtocolContext();
-      RlpBlockExporter exporter = parentCommand.rlpBlockExporterFactory.get(context);
+      RlpBlockExporter exporter =
+          parentCommand.rlpBlockExporterFactory.get(context.getBlockchain());
       exporter.exportBlocks(blocksExportFile, getStartBlock(), getEndBlock());
     }
 
@@ -386,6 +388,6 @@ public class BlocksSubCommand implements Runnable {
 
   @FunctionalInterface
   public interface RlpBlockExporterFactory {
-    RlpBlockExporter get(ProtocolContext<?> context);
+    RlpBlockExporter get(Blockchain blockchain);
   }
 }

@@ -12,8 +12,7 @@
  */
 package tech.pegasys.pantheon.chainexport;
 
-import tech.pegasys.pantheon.ethereum.ProtocolContext;
-import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
+import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.Hash;
@@ -29,10 +28,10 @@ import org.apache.logging.log4j.Logger;
 /** Pantheon Block Export Util. */
 public abstract class BlockExporter {
   private static final Logger LOG = LogManager.getLogger();
-  private final ProtocolContext<?> context;
+  private final Blockchain blockchain;
 
-  protected BlockExporter(final ProtocolContext<?> context) {
-    this.context = context;
+  protected BlockExporter(final Blockchain blockchain) {
+    this.blockchain = blockchain;
   }
 
   /**
@@ -51,7 +50,6 @@ public abstract class BlockExporter {
       throws IOException {
 
     // Get range to export
-    final MutableBlockchain blockchain = context.getBlockchain();
     final long startBlock = maybeStartBlock.orElse(BlockHeader.GENESIS_BLOCK_NUMBER);
     final long endBlock =
         maybeEndBlock.orElse(
@@ -59,7 +57,7 @@ public abstract class BlockExporter {
                 // If only start is specified, just export one block
                 .map(start -> start + 1L)
                 // Otherwise, export everything
-                .orElse(context.getBlockchain().getChainHeadBlockNumber() + 1L));
+                .orElse(blockchain.getChainHeadBlockNumber() + 1L));
 
     // Append to file if a range is specified
     final boolean append = maybeStartBlock.isPresent();
@@ -73,11 +71,17 @@ public abstract class BlockExporter {
         Boolean.toString(append));
     for (long i = startBlock; i < endBlock; i++) {
       Optional<Hash> blockHash = blockchain.getBlockHashByNumber(i);
-      if (!blockHash.isPresent()) {
+      if (blockHash.isEmpty()) {
         LOG.warn("Unable to export blocks [{} - {}).  Blocks not found.", i, endBlock);
         break;
       }
+
       final Block block = blockchain.getBlockByHash(blockHash.get());
+      final long blockNumber = block.getHeader().getNumber();
+      if (blockNumber % 100 == 0) {
+        LOG.info("Export at block {}", blockNumber);
+      }
+
       exportBlock(outputStream, block);
     }
 

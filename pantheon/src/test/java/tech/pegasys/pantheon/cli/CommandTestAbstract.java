@@ -231,7 +231,7 @@ public abstract class CommandTestAbstract {
             mockLogger,
             rlpBlockImporter,
             this::jsonBlockImporterFactory,
-            (context) -> rlpBlockExporter,
+            (blockchain) -> rlpBlockExporter,
             mockRunnerBuilder,
             mockControllerBuilderFactory,
             keyLoader,
