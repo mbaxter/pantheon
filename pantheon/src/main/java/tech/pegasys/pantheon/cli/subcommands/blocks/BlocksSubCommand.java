@@ -345,9 +345,7 @@ public class BlocksSubCommand implements Runnable {
               parentCommand.parentCommand.dataDir().toAbsolutePath().toString(),
               PantheonController.DATABASE_PATH);
       File databaseDirectory = new File(databasePath.toString());
-      if (!databaseDirectory.exists()
-          || !databaseDirectory.isDirectory()
-          || databaseDirectory.list().length == 0) {
+      if (!databaseDirectory.isDirectory() || databaseDirectory.list().length == 0) {
         // Empty data directory, nothing to export
         throw new CommandLine.ParameterException(
             spec.commandLine(),
