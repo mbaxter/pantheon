@@ -12,6 +12,8 @@
  */
 package tech.pegasys.pantheon.chainexport;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
@@ -51,13 +53,9 @@ public abstract class BlockExporter {
 
     // Get range to export
     final long startBlock = maybeStartBlock.orElse(BlockHeader.GENESIS_BLOCK_NUMBER);
-    final long endBlock =
-        maybeEndBlock.orElse(
-            maybeStartBlock
-                // If only start is specified, just export one block
-                .map(start -> start + 1L)
-                // Otherwise, export everything
-                .orElse(blockchain.getChainHeadBlockNumber() + 1L));
+    final long endBlock = maybeEndBlock.orElse(blockchain.getChainHeadBlockNumber() + 1L);
+    checkArgument(startBlock >= 0 && endBlock >= 0, "Start and end blocks must be greater than 0.");
+    checkArgument(startBlock < endBlock, "Start block must be less than end block");
 
     // Append to file if a range is specified
     final boolean append = maybeStartBlock.isPresent();
@@ -69,6 +67,8 @@ public abstract class BlockExporter {
         endBlock,
         outputFile.toString(),
         Boolean.toString(append));
+
+    long blockNumber = 0L;
     for (long i = startBlock; i < endBlock; i++) {
       Optional<Hash> blockHash = blockchain.getBlockHashByNumber(i);
       if (blockHash.isEmpty()) {
@@ -77,7 +77,7 @@ public abstract class BlockExporter {
       }
 
       final Block block = blockchain.getBlockByHash(blockHash.get());
-      final long blockNumber = block.getHeader().getNumber();
+      blockNumber = block.getHeader().getNumber();
       if (blockNumber % 100 == 0) {
         LOG.info("Export at block {}", blockNumber);
       }
@@ -86,7 +86,7 @@ public abstract class BlockExporter {
     }
 
     outputStream.close();
-    LOG.info("Export complete.");
+    LOG.info("Export complete at block {}", blockNumber);
   }
 
   protected abstract void exportBlock(final FileOutputStream outputStream, final Block block)
