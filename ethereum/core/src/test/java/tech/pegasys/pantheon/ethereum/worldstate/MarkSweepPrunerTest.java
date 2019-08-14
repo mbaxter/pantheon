@@ -74,8 +74,13 @@ public class MarkSweepPrunerTest {
     assertThat(markStorage.keySet()).containsExactlyInAnyOrderElementsOf(keysToKeep);
 
     // Generate some more nodes from a world state we didn't mark
-    gen.createRandomContractAccountsWithNonEmptyStorage(worldStateArchive.getMutable(), 10);
+    gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 10);
     assertThat(stateStorage.keySet()).hasSizeGreaterThan(keysToKeep.size());
+
+    final BlockHeader headerOfUnused = mock(BlockHeader.class);
+    when(blockchain.getBlockHeader(0)).thenReturn(Optional.of(headerOfUnused));
+    final Hash unusedStateRoot = worldState.rootHash();
+    when(headerOfUnused.getStateRoot()).thenReturn(unusedStateRoot);
 
     // All those new nodes should be removed when we sweep
     pruner.sweepBefore(1);
