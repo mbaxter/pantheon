@@ -95,9 +95,15 @@ public class LimitedInMemoryKeyValueStorage implements KeyValueStorage {
 
   @Override
   public long removeUnless(final Predicate<BytesValue> inUseCheck) {
-    long initialSize = storage.size();
-    storage.asMap().keySet().removeIf(key -> !inUseCheck.test(key));
-    return initialSize - storage.size();
+    final Lock lock = rwLock.writeLock();
+    lock.lock();
+    try {
+      final long initialSize = storage.size();
+      storage.asMap().keySet().removeIf(key -> !inUseCheck.test(key));
+      return initialSize - storage.size();
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
