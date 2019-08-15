@@ -123,8 +123,9 @@ public class MarkSweepPruner {
         break;
       }
 
-      prunedNodeCount += worldStateStorage.remove(candidateStateRootHash);
-      markStorage.remove(candidateStateRootHash);
+      if (!markStorage.containsKey(candidateStateRootHash)) {
+        prunedNodeCount += worldStateStorage.remove(candidateStateRootHash);
+      }
     }
     // Sweep non-state-root nodes
     prunedNodeCount += worldStateStorage.removeUnless(markStorage::containsKey);

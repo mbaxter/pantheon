@@ -120,4 +120,44 @@ public class MarkSweepPrunerTest {
     inOrder.verify(worldStateStorage).remove(stateRoot);
     inOrder.verify(worldStateStorage).removeUnless(any());
   }
+
+  @Test
+  public void shouldntRemoveStateRootIfItsMarked() {
+    // Setup "remote" state
+    final InMemoryKeyValueStorage markStorage = new InMemoryKeyValueStorage();
+    final InMemoryKeyValueStorage stateStorage = new InMemoryKeyValueStorage();
+    final WorldStateStorage worldStateStorage = new WorldStateKeyValueStorage(stateStorage);
+    final WorldStateArchive worldStateArchive =
+        new WorldStateArchive(
+            worldStateStorage,
+            new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()));
+    final MutableWorldState worldState = worldStateArchive.getMutable();
+    final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
+    final BlockHeader header = mock(BlockHeader.class);
+    final MarkSweepPruner pruner =
+        new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem);
+
+    // Generate accounts and save corresponding state root
+    gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
+    final Hash stateRoot = worldState.rootHash();
+
+    when(blockchain.getBlockHeader(1)).thenReturn(Optional.of(header));
+    when(header.getStateRoot()).thenReturn(stateRoot);
+
+    gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 10);
+    final BlockHeader preSweepHeader = mock(BlockHeader.class);
+
+    when(blockchain.getBlockHeader(0)).thenReturn(Optional.of(preSweepHeader));
+    final Hash preSweepStateRoot = worldState.rootHash();
+    when(preSweepHeader.getStateRoot()).thenReturn(preSweepStateRoot);
+
+    pruner.mark(stateRoot);
+    pruner.mark(preSweepStateRoot);
+    pruner.flushPendingMarks();
+    final Set<BytesValue> markedNodes = new HashSet<>(markStorage.keySet());
+
+    // All those new nodes should be removed when we sweep
+    pruner.sweepBefore(1);
+    assertThat(stateStorage.keySet()).containsExactlyInAnyOrderElementsOf(markedNodes);
+  }
 }
