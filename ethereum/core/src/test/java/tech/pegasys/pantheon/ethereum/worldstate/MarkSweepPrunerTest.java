@@ -57,6 +57,8 @@ public class MarkSweepPrunerTest {
     final MutableWorldState worldState = worldStateArchive.getMutable();
     final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
     final BlockHeader header = mock(BlockHeader.class);
+    final MarkSweepPruner pruner =
+        new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem);
 
     // Generate accounts and save corresponding state root
     gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
@@ -65,8 +67,6 @@ public class MarkSweepPrunerTest {
     when(blockchain.getBlockHeader(1)).thenReturn(Optional.of(header));
     when(header.getStateRoot()).thenReturn(stateRoot);
 
-    final MarkSweepPruner pruner =
-        new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem);
     pruner.mark(stateRoot);
     pruner.flushPendingMarks();
 
@@ -101,6 +101,9 @@ public class MarkSweepPrunerTest {
             .getMutable();
     final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
     final BlockHeader header = mock(BlockHeader.class);
+    final MarkSweepPruner pruner =
+        new MarkSweepPruner(
+            worldStateStorage, blockchain, new InMemoryKeyValueStorage(), metricsSystem);
 
     // Generate accounts and save corresponding state root
     gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
@@ -108,10 +111,6 @@ public class MarkSweepPrunerTest {
 
     when(blockchain.getBlockHeader(0)).thenReturn(Optional.of(header));
     when(header.getStateRoot()).thenReturn(stateRoot);
-
-    final MarkSweepPruner pruner =
-        new MarkSweepPruner(
-            worldStateStorage, blockchain, new InMemoryKeyValueStorage(), metricsSystem);
 
     // Nothing is marked so we should sweep everything, but we need to make sure the state root goes
     // first
