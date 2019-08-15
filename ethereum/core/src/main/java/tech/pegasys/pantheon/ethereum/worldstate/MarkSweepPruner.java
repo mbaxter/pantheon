@@ -119,7 +119,7 @@ public class MarkSweepPruner {
       final Hash candidateStateRootHash =
           blockchain.getBlockHeader(blockNumber).get().getStateRoot();
 
-      if (!worldStateStorage.contains(candidateStateRootHash)) {
+      if (!worldStateStorage.isWorldStateAvailable(candidateStateRootHash)) {
         break;
       }
 
