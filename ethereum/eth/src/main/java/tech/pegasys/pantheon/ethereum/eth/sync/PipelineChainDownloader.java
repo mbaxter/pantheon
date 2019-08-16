@@ -115,14 +115,10 @@ public class PipelineChainDownloader<C> implements ChainDownloader {
 
   private CompletionStage<Void> handleFailedDownload(final Throwable error) {
     pipelineErrorCounter.inc();
-    if (!cancelled.get()
-        && syncTargetManager.shouldContinueDownloading()
-        && !(ExceptionUtils.rootCause(error) instanceof CancellationException)) {
-      logDownloadFailure("Chain download failed. Restarting after short delay.", error);
-      // Allowing the normal looping logic to retry after a brief delay.
-      return scheduler.scheduleFutureTask(() -> completedFuture(null), PAUSE_AFTER_ERROR_DURATION);
-    }
     if (ExceptionUtils.rootCause(error) instanceof InvalidBlockException) {
+      LOG.warn(
+          "Invalid block detected.  Disconnecting from sync target. {}",
+          ExceptionUtils.rootCause(error).getMessage());
       syncState
           .syncTarget()
           .ifPresent(
@@ -130,6 +126,14 @@ public class PipelineChainDownloader<C> implements ChainDownloader {
                   syncTarget
                       .peer()
                       .disconnect(DisconnectMessage.DisconnectReason.BREACH_OF_PROTOCOL));
+    }
+
+    if (!cancelled.get()
+        && syncTargetManager.shouldContinueDownloading()
+        && !(ExceptionUtils.rootCause(error) instanceof CancellationException)) {
+      logDownloadFailure("Chain download failed. Restarting after short delay.", error);
+      // Allowing the normal looping logic to retry after a brief delay.
+      return scheduler.scheduleFutureTask(() -> completedFuture(null), PAUSE_AFTER_ERROR_DURATION);
     }
 
     logDownloadFailure("Chain download failed.", error);
