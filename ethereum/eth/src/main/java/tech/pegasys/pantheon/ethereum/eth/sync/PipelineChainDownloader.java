@@ -145,9 +145,10 @@ public class PipelineChainDownloader<C> implements ChainDownloader {
     final Throwable rootCause = ExceptionUtils.rootCause(error);
     if (rootCause instanceof CancellationException || rootCause instanceof InterruptedException) {
       LOG.trace(message, error);
-    } else if (rootCause instanceof EthTaskException
-        || rootCause instanceof InvalidBlockException) {
+    } else if (rootCause instanceof EthTaskException) {
       LOG.debug(message, error);
+    } else if (rootCause instanceof InvalidBlockException) {
+      LOG.warn(message, error);
     } else {
       LOG.error(message, error);
     }
