@@ -109,7 +109,7 @@ public class InMemoryKeyValueStorage implements KeyValueStorage {
       lock.lock();
       try {
         hashValueStore.putAll(updatedValues);
-        removedKeys.forEach(k -> hashValueStore.remove(k));
+        removedKeys.forEach(hashValueStore::remove);
         updatedValues = null;
         removedKeys = null;
       } finally {
