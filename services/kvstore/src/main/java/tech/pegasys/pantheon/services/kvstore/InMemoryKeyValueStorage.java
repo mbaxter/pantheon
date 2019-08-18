@@ -74,11 +74,6 @@ public class InMemoryKeyValueStorage implements KeyValueStorage {
   }
 
   @Override
-  public long remove(final BytesValue key) {
-    return Optional.ofNullable(hashValueStore.remove(key)).map(__ -> 1).orElse(0);
-  }
-
-  @Override
   public long removeUnless(final Predicate<BytesValue> inUseCheck) {
     final Lock lock = rwLock.writeLock();
     lock.lock();

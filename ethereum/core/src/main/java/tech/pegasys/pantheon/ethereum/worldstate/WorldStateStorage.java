@@ -40,13 +40,13 @@ public interface WorldStateStorage {
 
   long removeUnless(Predicate<BytesValue> inUseCheck);
 
-  long remove(BytesValue key);
-
   long addNodeAddedListener(NodesAddedListener listener);
 
   void removeNodeAddedListener(long id);
 
   interface Updater {
+
+    Updater remove(Bytes32 nodeHash);
 
     Updater putCode(Bytes32 nodeHash, BytesValue code);
 

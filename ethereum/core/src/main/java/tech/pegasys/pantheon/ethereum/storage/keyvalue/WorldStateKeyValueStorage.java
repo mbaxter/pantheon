@@ -88,11 +88,6 @@ public class WorldStateKeyValueStorage implements WorldStateStorage {
   }
 
   @Override
-  public long remove(final BytesValue key) {
-    return keyValueStorage.remove(key);
-  }
-
-  @Override
   public long addNodeAddedListener(final NodesAddedListener listener) {
     return nodeAddedListeners.subscribe(listener);
   }
@@ -113,6 +108,12 @@ public class WorldStateKeyValueStorage implements WorldStateStorage {
         final Subscribers<NodesAddedListener> nodeAddedListeners) {
       this.transaction = transaction;
       this.nodeAddedListeners = nodeAddedListeners;
+    }
+
+    @Override
+    public Updater remove(final Bytes32 nodeHash) {
+      transaction.remove(nodeHash);
+      return this;
     }
 
     @Override

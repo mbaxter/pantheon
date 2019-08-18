@@ -122,7 +122,8 @@ public class MarkSweepPruner {
       if (!worldStateStorage.isWorldStateAvailable(candidateStateRootHash)) {
         break;
       } else if (!markStorage.containsKey(candidateStateRootHash)) {
-        prunedNodeCount += worldStateStorage.remove(candidateStateRootHash);
+        worldStateStorage.updater().remove(candidateStateRootHash).commit();
+        prunedNodeCount++;
       }
     }
     // Sweep non-state-root nodes

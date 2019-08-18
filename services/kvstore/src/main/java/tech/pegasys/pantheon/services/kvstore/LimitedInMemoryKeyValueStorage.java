@@ -77,23 +77,6 @@ public class LimitedInMemoryKeyValueStorage implements KeyValueStorage {
   }
 
   @Override
-  public long remove(final BytesValue key) throws StorageException {
-    long entriesRemoved = 0;
-    final Lock lock = rwLock.writeLock();
-    lock.lock();
-    try {
-      if (containsKey(key)) {
-        storage.invalidate(key);
-        entriesRemoved = 1;
-      }
-    } finally {
-      lock.unlock();
-    }
-
-    return entriesRemoved;
-  }
-
-  @Override
   public long removeUnless(final Predicate<BytesValue> inUseCheck) {
     final Lock lock = rwLock.writeLock();
     lock.lock();

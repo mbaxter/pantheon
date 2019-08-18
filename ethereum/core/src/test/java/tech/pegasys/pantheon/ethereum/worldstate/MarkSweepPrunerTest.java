@@ -29,9 +29,12 @@ import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStateKeyValueStorage
 import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStatePreimageKeyValueStorage;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
+import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -92,8 +95,9 @@ public class MarkSweepPrunerTest {
   public void shouldSweepStateRootFirst() {
 
     // Setup "remote" state
-    final WorldStateStorage worldStateStorage =
-        spy(new WorldStateKeyValueStorage(new InMemoryKeyValueStorage()));
+    final Map<BytesValue, BytesValue> hashValueStore = spy(new HashMap<>());
+    final KeyValueStorage stateStorage = spy(new InMemoryKeyValueStorage(hashValueStore));
+    final WorldStateStorage worldStateStorage = new WorldStateKeyValueStorage(stateStorage);
     final MutableWorldState worldState =
         new WorldStateArchive(
                 worldStateStorage,
@@ -115,9 +119,9 @@ public class MarkSweepPrunerTest {
     // Nothing is marked so we should sweep everything, but we need to make sure the state root goes
     // first
     pruner.sweepBefore(1);
-    InOrder inOrder = inOrder(worldStateStorage);
-    inOrder.verify(worldStateStorage).remove(stateRoot);
-    inOrder.verify(worldStateStorage).removeUnless(any());
+    InOrder inOrder = inOrder(hashValueStore, stateStorage);
+    inOrder.verify(hashValueStore).remove(stateRoot);
+    inOrder.verify(stateStorage).removeUnless(any());
   }
 
   @Test
