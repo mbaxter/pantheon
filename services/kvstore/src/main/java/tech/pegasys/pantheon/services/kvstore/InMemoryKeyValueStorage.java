@@ -14,7 +14,6 @@ package tech.pegasys.pantheon.services.kvstore;
 
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -84,7 +83,7 @@ public class InMemoryKeyValueStorage implements KeyValueStorage {
   }
 
   public Set<BytesValue> keySet() {
-    return Collections.unmodifiableSet(new HashSet<>(hashValueStore.keySet()));
+    return Set.copyOf(hashValueStore.keySet());
   }
 
   private class InMemoryTransaction extends AbstractTransaction {
