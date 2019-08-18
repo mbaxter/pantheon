@@ -193,20 +193,6 @@ public class ColumnarRocksDbKeyValueStorage
   }
 
   @Override
-  public long remove(final ColumnFamilyHandle segmentHandle, final BytesValue key) {
-    long entriesRemoved = 0;
-    try {
-      if (get(segmentHandle, key).isPresent()) {
-        db.delete(segmentHandle, key.getArrayUnsafe());
-        entriesRemoved = 1;
-      }
-    } catch (final RocksDBException e) {
-      throw new StorageException(e);
-    }
-    return entriesRemoved;
-  }
-
-  @Override
   public void close() {
     if (closed.compareAndSet(false, true)) {
       txOptions.close();
