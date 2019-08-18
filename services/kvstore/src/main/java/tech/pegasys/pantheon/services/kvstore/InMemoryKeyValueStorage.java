@@ -26,8 +26,16 @@ import java.util.function.Predicate;
 
 public class InMemoryKeyValueStorage implements KeyValueStorage {
 
-  private final Map<BytesValue, BytesValue> hashValueStore = new HashMap<>();
+  private final Map<BytesValue, BytesValue> hashValueStore;
   private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
+
+  public InMemoryKeyValueStorage() {
+    this(new HashMap<>());
+  }
+
+  public InMemoryKeyValueStorage(final Map<BytesValue, BytesValue> seedHashValueStore) {
+    this.hashValueStore = seedHashValueStore;
+  }
 
   @Override
   public void clear() {
