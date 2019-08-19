@@ -12,6 +12,7 @@
  */
 package tech.pegasys.pantheon.ethereum.worldstate;
 
+import static junit.framework.TestCase.assertTrue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
@@ -157,10 +158,9 @@ public class MarkSweepPrunerTest {
     pruner.mark(stateRoot);
     pruner.mark(preSweepStateRoot);
     pruner.flushPendingMarks();
-    final Set<BytesValue> markedNodes = new HashSet<>(markStorage.keySet());
 
     // All those new nodes should be removed when we sweep
     pruner.sweepBefore(1);
-    assertThat(stateStorage.containsKey(preSweepStateRoot));
+    assertTrue(stateStorage.containsKey(preSweepStateRoot));
   }
 }
