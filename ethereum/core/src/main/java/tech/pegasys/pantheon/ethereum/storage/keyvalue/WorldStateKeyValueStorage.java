@@ -83,7 +83,7 @@ public class WorldStateKeyValueStorage implements WorldStateStorage {
   }
 
   @Override
-  public long removeUnless(final Predicate<BytesValue> inUseCheck) {
+  public long prune(final Predicate<BytesValue> inUseCheck) {
     return keyValueStorage.removeUnless(inUseCheck);
   }
 

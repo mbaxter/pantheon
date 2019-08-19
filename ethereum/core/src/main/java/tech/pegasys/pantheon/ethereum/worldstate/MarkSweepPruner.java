@@ -131,7 +131,7 @@ public class MarkSweepPruner {
     }
     updater.commit();
     // Sweep non-state-root nodes
-    prunedNodeCount += worldStateStorage.removeUnless(markStorage::containsKey);
+    prunedNodeCount += worldStateStorage.prune(markStorage::containsKey);
     sweptNodesCounter.inc(prunedNodeCount);
     worldStateStorage.removeNodeAddedListener(nodeAddedListenerId);
     markStorage.clear();
