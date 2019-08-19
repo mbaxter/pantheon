@@ -124,7 +124,7 @@ public class MarkSweepPruner {
       }
 
       if (!markStorage.containsKey(candidateStateRootHash)) {
-        worldStateStorage.updater().remove(candidateStateRootHash).commit();
+        worldStateStorage.updater().removeAccountStateTrieNode(candidateStateRootHash).commit();
         prunedNodeCount++;
       }
     }
