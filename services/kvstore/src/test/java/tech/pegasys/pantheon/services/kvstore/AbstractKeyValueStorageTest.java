@@ -64,6 +64,22 @@ public abstract class AbstractKeyValueStorageTest {
   }
 
   @Test
+  public void removeUnless() throws Exception {
+    final KeyValueStorage store = createStore();
+    Transaction tx = store.startTransaction();
+    tx.put(BytesValue.fromHexString("0F"), BytesValue.fromHexString("0ABC"));
+    tx.put(BytesValue.fromHexString("10"), BytesValue.fromHexString("0ABC"));
+    tx.put(BytesValue.fromHexString("11"), BytesValue.fromHexString("0ABC"));
+    tx.put(BytesValue.fromHexString("12"), BytesValue.fromHexString("0ABC"));
+    tx.commit();
+    store.removeUnless(bv -> bv.toString().contains("1"));
+    assertFalse(store.containsKey(BytesValue.fromHexString("0F")));
+    assertTrue(store.containsKey(BytesValue.fromHexString("10")));
+    assertTrue(store.containsKey(BytesValue.fromHexString("11")));
+    assertTrue(store.containsKey(BytesValue.fromHexString("12")));
+  }
+
+  @Test
   public void containsKey() throws Exception {
     final KeyValueStorage store = createStore();
     final BytesValue key = BytesValue.fromHexString("ABCD");
