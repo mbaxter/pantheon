@@ -115,6 +115,7 @@ public class MarkSweepPruner {
     // Sweep state roots first, walking backwards until we get to a state root that isn't in the
     // storage
     long prunedNodeCount = 0;
+    WorldStateStorage.Updater updater = worldStateStorage.updater();
     for (long blockNumber = markedBlockNumber - 1; blockNumber >= 0; blockNumber--) {
       final Hash candidateStateRootHash =
           blockchain.getBlockHeader(blockNumber).get().getStateRoot();
@@ -124,10 +125,11 @@ public class MarkSweepPruner {
       }
 
       if (!markStorage.containsKey(candidateStateRootHash)) {
-        worldStateStorage.updater().removeAccountStateTrieNode(candidateStateRootHash).commit();
+        updater.removeAccountStateTrieNode(candidateStateRootHash);
         prunedNodeCount++;
       }
     }
+    updater.commit();
     // Sweep non-state-root nodes
     prunedNodeCount += worldStateStorage.removeUnless(markStorage::containsKey);
     sweptNodesCounter.inc(prunedNodeCount);
