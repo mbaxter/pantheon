@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -178,6 +179,7 @@ public class MarkSweepPruner {
         .visitAll(storageNode -> markNode(storageNode.getHash()));
   }
 
+  @VisibleForTesting
   void markNode(final Bytes32 hash) {
     markedNodesCounter.inc();
     markLock.lock();

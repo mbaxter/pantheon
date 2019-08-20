@@ -237,7 +237,7 @@ public class MarkSweepPrunerTest {
   }
 
   @Test
-  public void sweepBefore_shouldNotRemoveStateRootIfItsMarked() {
+  public void sweepBefore_shouldNotRemoveMarkedStateRoots() {
     final MarkSweepPruner pruner =
         new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem, 1);
 
