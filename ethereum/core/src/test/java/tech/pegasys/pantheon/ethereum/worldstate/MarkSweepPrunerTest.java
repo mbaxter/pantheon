@@ -62,7 +62,7 @@ public class MarkSweepPrunerTest {
     final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
     final BlockHeader header = mock(BlockHeader.class);
     final MarkSweepPruner pruner =
-        new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem);
+        new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem, 1);
 
     // Generate accounts and save corresponding state root
     gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
@@ -108,7 +108,7 @@ public class MarkSweepPrunerTest {
     final BlockHeader header = mock(BlockHeader.class);
     final MarkSweepPruner pruner =
         new MarkSweepPruner(
-            worldStateStorage, blockchain, new InMemoryKeyValueStorage(), metricsSystem);
+            worldStateStorage, blockchain, new InMemoryKeyValueStorage(), metricsSystem, 1);
 
     // Generate accounts and save corresponding state root
     gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
@@ -139,7 +139,7 @@ public class MarkSweepPrunerTest {
     final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
     final BlockHeader header = mock(BlockHeader.class);
     final MarkSweepPruner pruner =
-        new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem);
+        new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem, 1);
 
     // Generate accounts and save corresponding state root
     gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);

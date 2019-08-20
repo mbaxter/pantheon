@@ -38,7 +38,7 @@ import org.apache.logging.log4j.Logger;
 public class MarkSweepPruner {
   private static final Logger LOG = LogManager.getLogger();
   private static final BytesValue IN_USE = BytesValue.of(1);
-  private static final int OPS_PER_TRANSACTION = 1000;
+  private final int operationsPerTransaction;
   private final WorldStateStorage worldStateStorage;
   private final MutableBlockchain blockchain;
   private final KeyValueStorage markStorage;
@@ -55,9 +55,19 @@ public class MarkSweepPruner {
       final MutableBlockchain blockchain,
       final KeyValueStorage markStorage,
       final MetricsSystem metricsSystem) {
+    this(worldStateStorage, blockchain, markStorage, metricsSystem, 1000);
+  }
+
+  public MarkSweepPruner(
+      final WorldStateStorage worldStateStorage,
+      final MutableBlockchain blockchain,
+      final KeyValueStorage markStorage,
+      final MetricsSystem metricsSystem,
+      final int operationsPerTransaction) {
     this.worldStateStorage = worldStateStorage;
     this.markStorage = markStorage;
     this.blockchain = blockchain;
+    this.operationsPerTransaction = operationsPerTransaction;
 
     markedNodesCounter =
         metricsSystem.createCounter(
@@ -127,8 +137,9 @@ public class MarkSweepPruner {
       if (!markStorage.containsKey(candidateStateRootHash)) {
         updater.removeAccountStateTrieNode(candidateStateRootHash);
         prunedNodeCount++;
-        if (prunedNodeCount % OPS_PER_TRANSACTION == 0) {
+        if (prunedNodeCount % operationsPerTransaction == 0) {
           updater.commit();
+          updater = worldStateStorage.updater();
         }
       }
     }
@@ -177,7 +188,7 @@ public class MarkSweepPruner {
   }
 
   private void maybeFlushPendingMarks() {
-    if (pendingMarks.size() > OPS_PER_TRANSACTION) {
+    if (pendingMarks.size() > operationsPerTransaction) {
       flushPendingMarks();
     }
   }
