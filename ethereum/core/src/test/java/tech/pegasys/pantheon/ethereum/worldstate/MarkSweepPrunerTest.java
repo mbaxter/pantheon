@@ -64,9 +64,9 @@ public class MarkSweepPrunerTest {
   private final MutableBlockchain blockchain = createInMemoryBlockchain(genesisBlock);
 
   @Test
-  public void shouldMarkAllNodesInCurrentWorldState() {
+  public void mark_marksAllExpectedNodes() {
     final MarkSweepPruner pruner =
-        new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem, 1);
+        new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem);
 
     // Generate accounts and save corresponding state root
     final int numBlocks = 15;
@@ -110,7 +110,7 @@ public class MarkSweepPrunerTest {
   }
 
   @Test
-  public void shouldSweepStateRootFirst() {
+  public void sweepBefore_shouldSweepStateRootFirst() {
     final MarkSweepPruner pruner =
         new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem, 1);
 
@@ -141,7 +141,7 @@ public class MarkSweepPrunerTest {
   }
 
   @Test
-  public void shouldNotRemoveStateRootIfItsMarked() {
+  public void sweepBefore_shouldNotRemoveStateRootIfItsMarked() {
     final MarkSweepPruner pruner =
         new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem, 1);
 
@@ -214,9 +214,9 @@ public class MarkSweepPrunerTest {
               storageRoots.add(accountValue.getStorageRoot());
             });
 
-    // Collect nodes
+    // Collect state nodes
     collectTrieNodes(stateTrie, nodeData);
-    // Visit storage nodes
+    // Collect storage nodes
     for (Hash storageRoot : storageRoots) {
       final MerklePatriciaTrie<Bytes32, BytesValue> storageTrie = createStorageTrie(storageRoot);
       collectTrieNodes(storageTrie, nodeData);

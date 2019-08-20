@@ -36,8 +36,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class MarkSweepPruner {
+  private static final int DEFAULT_OPS_PER_TRANSACTION = 1000;
   private static final Logger LOG = LogManager.getLogger();
   private static final BytesValue IN_USE = BytesValue.of(1);
+
   private final int operationsPerTransaction;
   private final WorldStateStorage worldStateStorage;
   private final MutableBlockchain blockchain;
@@ -55,7 +57,7 @@ public class MarkSweepPruner {
       final MutableBlockchain blockchain,
       final KeyValueStorage markStorage,
       final MetricsSystem metricsSystem) {
-    this(worldStateStorage, blockchain, markStorage, metricsSystem, 1000);
+    this(worldStateStorage, blockchain, markStorage, metricsSystem, DEFAULT_OPS_PER_TRANSACTION);
   }
 
   public MarkSweepPruner(
