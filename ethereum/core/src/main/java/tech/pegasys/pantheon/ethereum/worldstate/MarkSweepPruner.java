@@ -176,7 +176,7 @@ public class MarkSweepPruner {
         .visitAll(storageNode -> markNode(storageNode.getHash()));
   }
 
-  private void markNode(final Bytes32 hash) {
+  void markNode(final Bytes32 hash) {
     markedNodesCounter.inc();
     markLock.lock();
     try {

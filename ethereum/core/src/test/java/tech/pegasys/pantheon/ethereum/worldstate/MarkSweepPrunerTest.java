@@ -12,33 +12,38 @@
  */
 package tech.pegasys.pantheon.ethereum.worldstate;
 
-import static junit.framework.TestCase.assertTrue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
 
-import tech.pegasys.pantheon.ethereum.chain.DefaultBlockchain;
 import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
+import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator;
 import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator.BlockOptions;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
+import tech.pegasys.pantheon.ethereum.core.TransactionReceipt;
+import tech.pegasys.pantheon.ethereum.core.WorldState;
+import tech.pegasys.pantheon.ethereum.rlp.RLP;
 import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStateKeyValueStorage;
 import tech.pegasys.pantheon.ethereum.storage.keyvalue.WorldStatePreimageKeyValueStorage;
+import tech.pegasys.pantheon.ethereum.trie.MerklePatriciaTrie;
+import tech.pegasys.pantheon.ethereum.trie.StoredMerklePatriciaTrie;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.services.kvstore.InMemoryKeyValueStorage;
-import tech.pegasys.pantheon.services.kvstore.KeyValueStorage;
+import tech.pegasys.pantheon.util.bytes.Bytes32;
 import tech.pegasys.pantheon.util.bytes.BytesValue;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.junit.Test;
 import org.mockito.InOrder;
@@ -47,118 +52,203 @@ public class MarkSweepPrunerTest {
 
   private final BlockDataGenerator gen = new BlockDataGenerator();
   private final NoOpMetricsSystem metricsSystem = new NoOpMetricsSystem();
+  private final Map<BytesValue, BytesValue> hashValueStore = spy(new HashMap<>());
+  private final InMemoryKeyValueStorage stateStorage =
+      spy(new InMemoryKeyValueStorage(hashValueStore));
+  private final WorldStateStorage worldStateStorage = new WorldStateKeyValueStorage(stateStorage);
+  private final WorldStateArchive worldStateArchive =
+      new WorldStateArchive(
+          worldStateStorage, new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()));
+  private final InMemoryKeyValueStorage markStorage = new InMemoryKeyValueStorage();
+  private final Block genesisBlock = gen.genesisBlock();
+  private final MutableBlockchain blockchain = createInMemoryBlockchain(genesisBlock);
 
   @Test
   public void shouldMarkAllNodesInCurrentWorldState() {
-
-    // Setup "remote" state
-    final InMemoryKeyValueStorage markStorage = new InMemoryKeyValueStorage();
-    final InMemoryKeyValueStorage stateStorage = new InMemoryKeyValueStorage();
-    final WorldStateStorage worldStateStorage = new WorldStateKeyValueStorage(stateStorage);
-    final WorldStateArchive worldStateArchive =
-        new WorldStateArchive(
-            worldStateStorage,
-            new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()));
-    final MutableWorldState worldState = worldStateArchive.getMutable();
-    final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
     final MarkSweepPruner pruner =
         new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem, 1);
 
     // Generate accounts and save corresponding state root
-    gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
-    final Hash stateRoot = worldState.rootHash();
-    final BlockHeader header = gen.block(BlockOptions.create().setStateRoot(stateRoot)).getHeader();
+    final int numBlocks = 15;
+    final int numAccounts = 10;
+    generateBlockchainData(numBlocks, numAccounts);
 
-    when(blockchain.getBlockHeader(1)).thenReturn(Optional.of(header));
+    final int markBlockNumber = 10;
+    final BlockHeader markBlock = blockchain.getBlockHeader(markBlockNumber).get();
+    // Collect the nodes we expect to keep
+    final Set<BytesValue> expectedNodes = collectWorldStateNodes(markBlock.getStateRoot());
+    assertThat(hashValueStore.size()).isGreaterThan(expectedNodes.size()); // Sanity check
 
-    pruner.mark(stateRoot);
-    pruner.flushPendingMarks();
+    // Mark and sweep
+    pruner.mark(markBlock.getStateRoot());
+    pruner.sweepBefore(markBlock.getNumber());
 
-    final Set<BytesValue> keysToKeep = new HashSet<>(stateStorage.keySet());
-    assertThat(markStorage.keySet()).containsExactlyInAnyOrderElementsOf(keysToKeep);
+    // Assert that the block we marked is still present and all accounts are accessible
+    assertThat(worldStateArchive.get(markBlock.getStateRoot())).isPresent();
+    final WorldState markedState = worldStateArchive.get(markBlock.getStateRoot()).get();
+    // Traverse accounts and make sure all are accessible
+    final int expectedAccounts = numAccounts * markBlockNumber;
+    final long accounts = markedState.streamAccounts(Bytes32.ZERO, expectedAccounts * 2).count();
+    assertThat(accounts).isEqualTo(expectedAccounts);
+    // Traverse storage to ensure that all storage is accessible
+    markedState
+        .streamAccounts(Bytes32.ZERO, expectedAccounts * 2)
+        .forEach(a -> a.storageEntriesFrom(Bytes32.ZERO, 1000));
 
-    // Generate some more nodes from a world state we didn't mark
-    gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 10);
-    assertThat(stateStorage.keySet()).hasSizeGreaterThan(keysToKeep.size());
+    // All other state roots should have been removed
+    for (int i = 0; i < numBlocks; i++) {
+      final BlockHeader curHeader = blockchain.getBlockHeader(i + 1L).get();
+      if (curHeader.getNumber() == markBlock.getNumber()) {
+        continue;
+      }
+      assertThat(worldStateArchive.get(curHeader.getStateRoot())).isEmpty();
+    }
 
-    final Hash unusedStateRoot = worldState.rootHash();
-    BlockHeader headerOfUnused =
-        gen.block(BlockOptions.create().setStateRoot(unusedStateRoot)).getHeader();
-    when(blockchain.getBlockHeader(0)).thenReturn(Optional.of(headerOfUnused));
-
-    // All those new nodes should be removed when we sweep
-    pruner.sweepBefore(1);
-    assertThat(stateStorage.keySet()).containsExactlyInAnyOrderElementsOf(keysToKeep);
-    assertThat(markStorage.keySet()).isEmpty();
+    // Check that storage contains only the values we expect
+    assertThat(hashValueStore.size()).isEqualTo(expectedNodes.size());
+    assertThat(hashValueStore.values()).containsExactlyInAnyOrderElementsOf(expectedNodes);
   }
 
   @Test
   public void shouldSweepStateRootFirst() {
-
-    // Setup "remote" state
-    final Map<BytesValue, BytesValue> hashValueStore = spy(new HashMap<>());
-    final KeyValueStorage stateStorage = spy(new InMemoryKeyValueStorage(hashValueStore));
-    final WorldStateStorage worldStateStorage = new WorldStateKeyValueStorage(stateStorage);
-    final MutableWorldState worldState =
-        new WorldStateArchive(
-                worldStateStorage,
-                new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()))
-            .getMutable();
-    final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
-    final MarkSweepPruner pruner =
-        new MarkSweepPruner(
-            worldStateStorage, blockchain, new InMemoryKeyValueStorage(), metricsSystem, 1);
-
-    // Generate accounts and save corresponding state root
-    gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
-    final Hash stateRoot = worldState.rootHash();
-
-    final BlockHeader header = gen.block(BlockOptions.create().setStateRoot(stateRoot)).getHeader();
-    when(blockchain.getBlockHeader(0)).thenReturn(Optional.of(header));
-
-    // Nothing is marked so we should sweep everything, but we need to make sure the state root goes
-    // first
-    pruner.sweepBefore(1);
-    InOrder inOrder = inOrder(hashValueStore, stateStorage);
-    inOrder.verify(hashValueStore).remove(stateRoot);
-    inOrder.verify(stateStorage).removeUnless(any());
-  }
-
-  @Test
-  public void shouldntRemoveStateRootIfItsMarked() {
-    // Setup "remote" state
-    final InMemoryKeyValueStorage markStorage = new InMemoryKeyValueStorage();
-    final InMemoryKeyValueStorage stateStorage = new InMemoryKeyValueStorage();
-    final WorldStateStorage worldStateStorage = new WorldStateKeyValueStorage(stateStorage);
-    final WorldStateArchive worldStateArchive =
-        new WorldStateArchive(
-            worldStateStorage,
-            new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()));
-    final MutableWorldState worldState = worldStateArchive.getMutable();
-    final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
     final MarkSweepPruner pruner =
         new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem, 1);
 
     // Generate accounts and save corresponding state root
-    gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
-    final Hash stateRoot = worldState.rootHash();
+    final int numBlocks = 15;
+    final int numAccounts = 10;
+    generateBlockchainData(numBlocks, numAccounts);
 
-    final BlockHeader header = gen.block(BlockOptions.create().setStateRoot(stateRoot)).getHeader();
-    when(blockchain.getBlockHeader(1)).thenReturn(Optional.of(header));
+    final int markBlockNumber = 10;
+    final BlockHeader markBlock = blockchain.getBlockHeader(markBlockNumber).get();
 
-    gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 10);
-    final BlockHeader preSweepHeader =
-        gen.block(BlockOptions.create().setStateRoot(stateRoot)).getHeader();
+    // Collect state roots we expect to be swept first
+    final List<Bytes32> stateRoots = new ArrayList<>();
+    for (int i = markBlockNumber - 1; i >= 0; i--) {
+      stateRoots.add(blockchain.getBlockHeader(i).get().getStateRoot());
+    }
 
-    when(blockchain.getBlockHeader(0)).thenReturn(Optional.of(preSweepHeader));
-    final Hash preSweepStateRoot = worldState.rootHash();
+    // Mark and sweep
+    pruner.mark(markBlock.getStateRoot());
+    pruner.sweepBefore(markBlock.getNumber());
 
-    pruner.mark(stateRoot);
-    pruner.mark(preSweepStateRoot);
-    pruner.flushPendingMarks();
+    // Check stateRoots are marked first
+    InOrder inOrder = inOrder(hashValueStore, stateStorage);
+    for (Bytes32 stateRoot : stateRoots) {
+      inOrder.verify(hashValueStore).remove(stateRoot);
+    }
+    inOrder.verify(stateStorage).removeUnless(any());
+  }
 
-    // All those new nodes should be removed when we sweep
-    pruner.sweepBefore(1);
-    assertTrue(stateStorage.containsKey(preSweepStateRoot));
+  @Test
+  public void shouldNotRemoveStateRootIfItsMarked() {
+    final MarkSweepPruner pruner =
+        new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem, 1);
+
+    // Generate accounts and save corresponding state root
+    final int numBlocks = 15;
+    final int numAccounts = 10;
+    generateBlockchainData(numBlocks, numAccounts);
+
+    final int markBlockNumber = 10;
+    final BlockHeader markBlock = blockchain.getBlockHeader(markBlockNumber).get();
+
+    // Collect state roots we expect to be swept first
+    final List<Bytes32> stateRoots = new ArrayList<>();
+    for (int i = markBlockNumber - 1; i >= 0; i--) {
+      stateRoots.add(blockchain.getBlockHeader(i).get().getStateRoot());
+    }
+
+    // Mark
+    pruner.mark(markBlock.getStateRoot());
+    // Mark an extra state root
+    Hash markedRoot = Hash.wrap(stateRoots.remove(stateRoots.size() / 2));
+    pruner.markNode(markedRoot);
+    // Sweep
+    pruner.sweepBefore(markBlock.getNumber());
+
+    // Check stateRoots are marked first
+    InOrder inOrder = inOrder(hashValueStore, stateStorage);
+    for (Bytes32 stateRoot : stateRoots) {
+      inOrder.verify(hashValueStore).remove(stateRoot);
+    }
+    inOrder.verify(stateStorage).removeUnless(any());
+
+    assertThat(stateStorage.containsKey(markedRoot)).isTrue();
+  }
+
+  private void generateBlockchainData(final int numBlocks, final int numAccounts) {
+    Block parentBlock = genesisBlock;
+    for (int i = 0; i < numBlocks; i++) {
+      final MutableWorldState worldState =
+          worldStateArchive.getMutable(parentBlock.getHeader().getStateRoot()).get();
+      gen.createRandomContractAccountsWithNonEmptyStorage(worldState, numAccounts);
+      final Hash stateRoot = worldState.rootHash();
+
+      final Block block =
+          gen.block(
+              BlockOptions.create()
+                  .setStateRoot(stateRoot)
+                  .setBlockNumber(parentBlock.getHeader().getNumber() + 1L)
+                  .setParentHash(parentBlock.getHash()));
+      final List<TransactionReceipt> receipts = gen.receipts(block);
+      blockchain.appendBlock(block, receipts);
+      parentBlock = block;
+    }
+  }
+
+  private Set<BytesValue> collectWorldStateNodes(final Hash stateRootHash) {
+    final Set<BytesValue> nodeData = new HashSet<>();
+
+    final List<Hash> storageRoots = new ArrayList<>();
+    final MerklePatriciaTrie<Bytes32, BytesValue> stateTrie = createStateTrie(stateRootHash);
+
+    // Collect storage roots and code
+    stateTrie
+        .entriesFrom(Bytes32.ZERO, 1000)
+        .forEach(
+            (key, val) -> {
+              final StateTrieAccountValue accountValue =
+                  StateTrieAccountValue.readFrom(RLP.input(val));
+              stateStorage.get(accountValue.getCodeHash()).ifPresent(nodeData::add);
+              storageRoots.add(accountValue.getStorageRoot());
+            });
+
+    // Collect nodes
+    collectTrieNodes(stateTrie, nodeData);
+    // Visit storage nodes
+    for (Hash storageRoot : storageRoots) {
+      final MerklePatriciaTrie<Bytes32, BytesValue> storageTrie = createStorageTrie(storageRoot);
+      collectTrieNodes(storageTrie, nodeData);
+    }
+
+    return nodeData;
+  }
+
+  private void collectTrieNodes(
+      final MerklePatriciaTrie<Bytes32, BytesValue> trie, final Set<BytesValue> collector) {
+    final Bytes32 rootHash = trie.getRootHash();
+    trie.visitAll(
+        (node) -> {
+          if (node.isReferencedByHash() || node.getHash().equals(rootHash)) {
+            collector.add(node.getRlp());
+          }
+        });
+  }
+
+  private MerklePatriciaTrie<Bytes32, BytesValue> createStateTrie(final Bytes32 rootHash) {
+    return new StoredMerklePatriciaTrie<>(
+        worldStateStorage::getAccountStateTrieNode,
+        rootHash,
+        Function.identity(),
+        Function.identity());
+  }
+
+  private MerklePatriciaTrie<Bytes32, BytesValue> createStorageTrie(final Bytes32 rootHash) {
+    return new StoredMerklePatriciaTrie<>(
+        worldStateStorage::getAccountStorageTrieNode,
+        rootHash,
+        Function.identity(),
+        Function.identity());
   }
 }
