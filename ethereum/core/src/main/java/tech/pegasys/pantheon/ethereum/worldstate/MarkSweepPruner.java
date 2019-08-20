@@ -38,7 +38,7 @@ import org.apache.logging.log4j.Logger;
 public class MarkSweepPruner {
   private static final Logger LOG = LogManager.getLogger();
   private static final BytesValue IN_USE = BytesValue.of(1);
-  private static final int MARKS_PER_TRANSACTION = 1000;
+  private static final int OPS_PER_TRANSACTION = 1000;
   private final WorldStateStorage worldStateStorage;
   private final MutableBlockchain blockchain;
   private final KeyValueStorage markStorage;
@@ -127,6 +127,9 @@ public class MarkSweepPruner {
       if (!markStorage.containsKey(candidateStateRootHash)) {
         updater.removeAccountStateTrieNode(candidateStateRootHash);
         prunedNodeCount++;
+        if (prunedNodeCount % OPS_PER_TRANSACTION == 0) {
+          updater.commit();
+        }
       }
     }
     updater.commit();
@@ -174,7 +177,7 @@ public class MarkSweepPruner {
   }
 
   private void maybeFlushPendingMarks() {
-    if (pendingMarks.size() > MARKS_PER_TRANSACTION) {
+    if (pendingMarks.size() > OPS_PER_TRANSACTION) {
       flushPendingMarks();
     }
   }
