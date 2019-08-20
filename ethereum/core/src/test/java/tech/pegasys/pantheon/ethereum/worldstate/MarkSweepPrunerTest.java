@@ -53,8 +53,7 @@ public class MarkSweepPrunerTest {
   private final BlockDataGenerator gen = new BlockDataGenerator();
   private final NoOpMetricsSystem metricsSystem = new NoOpMetricsSystem();
   private final Map<BytesValue, BytesValue> hashValueStore = spy(new HashMap<>());
-  private final InMemoryKeyValueStorage stateStorage =
-      spy(new InMemoryKeyValueStorage(hashValueStore));
+  private final InMemoryKeyValueStorage stateStorage = spy(new TestInMemoryStorage(hashValueStore));
   private final WorldStateStorage worldStateStorage = new WorldStateKeyValueStorage(stateStorage);
   private final WorldStateArchive worldStateArchive =
       new WorldStateArchive(
@@ -352,5 +351,12 @@ public class MarkSweepPrunerTest {
         rootHash,
         Function.identity(),
         Function.identity());
+  }
+
+  private static class TestInMemoryStorage extends InMemoryKeyValueStorage {
+
+    public TestInMemoryStorage(final Map<BytesValue, BytesValue> hashValueStore) {
+      super(hashValueStore);
+    }
   }
 }
