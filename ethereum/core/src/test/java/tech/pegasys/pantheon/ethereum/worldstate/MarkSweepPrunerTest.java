@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import tech.pegasys.pantheon.ethereum.chain.DefaultBlockchain;
 import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
 import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator;
+import tech.pegasys.pantheon.ethereum.core.BlockDataGenerator.BlockOptions;
 import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.MutableWorldState;
@@ -60,16 +61,15 @@ public class MarkSweepPrunerTest {
             new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()));
     final MutableWorldState worldState = worldStateArchive.getMutable();
     final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
-    final BlockHeader header = mock(BlockHeader.class);
     final MarkSweepPruner pruner =
         new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem, 1);
 
     // Generate accounts and save corresponding state root
     gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
     final Hash stateRoot = worldState.rootHash();
+    final BlockHeader header = gen.block(BlockOptions.create().setStateRoot(stateRoot)).getHeader();
 
     when(blockchain.getBlockHeader(1)).thenReturn(Optional.of(header));
-    when(header.getStateRoot()).thenReturn(stateRoot);
 
     pruner.mark(stateRoot);
     pruner.flushPendingMarks();
@@ -81,10 +81,10 @@ public class MarkSweepPrunerTest {
     gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 10);
     assertThat(stateStorage.keySet()).hasSizeGreaterThan(keysToKeep.size());
 
-    final BlockHeader headerOfUnused = mock(BlockHeader.class);
-    when(blockchain.getBlockHeader(0)).thenReturn(Optional.of(headerOfUnused));
     final Hash unusedStateRoot = worldState.rootHash();
-    when(headerOfUnused.getStateRoot()).thenReturn(unusedStateRoot);
+    BlockHeader headerOfUnused =
+        gen.block(BlockOptions.create().setStateRoot(unusedStateRoot)).getHeader();
+    when(blockchain.getBlockHeader(0)).thenReturn(Optional.of(headerOfUnused));
 
     // All those new nodes should be removed when we sweep
     pruner.sweepBefore(1);
@@ -105,7 +105,6 @@ public class MarkSweepPrunerTest {
                 new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()))
             .getMutable();
     final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
-    final BlockHeader header = mock(BlockHeader.class);
     final MarkSweepPruner pruner =
         new MarkSweepPruner(
             worldStateStorage, blockchain, new InMemoryKeyValueStorage(), metricsSystem, 1);
@@ -114,8 +113,8 @@ public class MarkSweepPrunerTest {
     gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
     final Hash stateRoot = worldState.rootHash();
 
+    final BlockHeader header = gen.block(BlockOptions.create().setStateRoot(stateRoot)).getHeader();
     when(blockchain.getBlockHeader(0)).thenReturn(Optional.of(header));
-    when(header.getStateRoot()).thenReturn(stateRoot);
 
     // Nothing is marked so we should sweep everything, but we need to make sure the state root goes
     // first
@@ -137,7 +136,6 @@ public class MarkSweepPrunerTest {
             new WorldStatePreimageKeyValueStorage(new InMemoryKeyValueStorage()));
     final MutableWorldState worldState = worldStateArchive.getMutable();
     final MutableBlockchain blockchain = mock(DefaultBlockchain.class);
-    final BlockHeader header = mock(BlockHeader.class);
     final MarkSweepPruner pruner =
         new MarkSweepPruner(worldStateStorage, blockchain, markStorage, metricsSystem, 1);
 
@@ -145,15 +143,15 @@ public class MarkSweepPrunerTest {
     gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 20);
     final Hash stateRoot = worldState.rootHash();
 
+    final BlockHeader header = gen.block(BlockOptions.create().setStateRoot(stateRoot)).getHeader();
     when(blockchain.getBlockHeader(1)).thenReturn(Optional.of(header));
-    when(header.getStateRoot()).thenReturn(stateRoot);
 
     gen.createRandomContractAccountsWithNonEmptyStorage(worldState, 10);
-    final BlockHeader preSweepHeader = mock(BlockHeader.class);
+    final BlockHeader preSweepHeader =
+        gen.block(BlockOptions.create().setStateRoot(stateRoot)).getHeader();
 
     when(blockchain.getBlockHeader(0)).thenReturn(Optional.of(preSweepHeader));
     final Hash preSweepStateRoot = worldState.rootHash();
-    when(preSweepHeader.getStateRoot()).thenReturn(preSweepStateRoot);
 
     pruner.mark(stateRoot);
     pruner.mark(preSweepStateRoot);
