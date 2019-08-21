@@ -12,8 +12,6 @@
  */
 package tech.pegasys.pantheon.ethereum.jsonrpc;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.DebugAccountRange;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthBlockNumber;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthCall;
@@ -39,29 +37,19 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthSendRawTransac
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthUninstallFilter;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.JsonRpcMethod;
 
-import java.io.IOException;
 import java.util.Collection;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.io.Resources;
-import io.vertx.core.json.JsonObject;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-public class EthJsonRpcHttpBySpecTest extends AbstractEthJsonRpcHttpServiceTest {
-
-  private final String specFileName;
+public class EthJsonRpcHttpBySpecTest extends AbstractJsonRpcHttpBySpecTest {
 
   public EthJsonRpcHttpBySpecTest(final String specFileName) {
-    this.specFileName = specFileName;
+    super(specFileName);
   }
 
   @Override
@@ -299,30 +287,5 @@ public class EthJsonRpcHttpBySpecTest extends AbstractEthJsonRpcHttpServiceTest 
     specs.put(DebugAccountRange.class, "test-chain/debug_storageRangeAt_midBlock");
 
     return specs.values();
-  }
-
-  @Test
-  public void jsonRPCCallWithSpecFile() throws Exception {
-    jsonRPCCall(specFileName);
-  }
-
-  private void jsonRPCCall(final String name) throws IOException {
-    final String testSpecFile = name + ".json";
-    final String json =
-        Resources.toString(
-            EthJsonRpcHttpBySpecTest.class.getResource(testSpecFile), Charsets.UTF_8);
-    final JsonObject spec = new JsonObject(json);
-
-    final String rawRequestBody = spec.getJsonObject("request").toString();
-    final RequestBody requestBody = RequestBody.create(JSON, rawRequestBody);
-    final Request request = new Request.Builder().post(requestBody).url(baseUrl).build();
-
-    try (final Response resp = client.newCall(request).execute()) {
-      final int expectedStatusCode = spec.getInteger("statusCode");
-      assertThat(resp.code()).isEqualTo(expectedStatusCode);
-
-      final String expectedRespBody = spec.getJsonObject("response").encodePrettily();
-      assertThat(resp.body().string()).isEqualTo(expectedRespBody);
-    }
   }
 }

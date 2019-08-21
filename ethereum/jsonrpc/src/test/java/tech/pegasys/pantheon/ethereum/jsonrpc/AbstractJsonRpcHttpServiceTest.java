@@ -56,7 +56,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
 
-public abstract class AbstractEthJsonRpcHttpServiceTest {
+public abstract class AbstractJsonRpcHttpServiceTest {
   @ClassRule public static final TemporaryFolder folder = new TemporaryFolder();
 
   protected static BlockchainSetupUtil<Void> blockchainSetupUtil;
@@ -99,11 +99,8 @@ public abstract class AbstractEthJsonRpcHttpServiceTest {
     return emptySetupUtil;
   }
 
-  protected void startService() throws Exception {
-    startService(blockchainSetupUtil);
-  }
-
-  private void startService(final BlockchainSetupUtil<Void> blockchainSetupUtil) throws Exception {
+  protected Map<String, JsonRpcMethod> getRpcMethods(
+      final JsonRpcConfiguration config, final BlockchainSetupUtil<Void> blockchainSetupUtil) {
     final Synchronizer synchronizerMock = mock(Synchronizer.class);
     final P2PNetwork peerDiscoveryMock = mock(P2PNetwork.class);
     final TransactionPool transactionPoolMock = mock(TransactionPool.class);
@@ -131,29 +128,37 @@ public abstract class AbstractEthJsonRpcHttpServiceTest {
     supportedCapabilities.add(EthProtocol.ETH62);
     supportedCapabilities.add(EthProtocol.ETH63);
 
+    return new JsonRpcMethodsFactory()
+        .methods(
+            CLIENT_VERSION,
+            NETWORK_ID,
+            new StubGenesisConfigOptions(),
+            peerDiscoveryMock,
+            blockchainQueries,
+            synchronizerMock,
+            MainnetProtocolSchedule.create(),
+            filterManager,
+            transactionPoolMock,
+            miningCoordinatorMock,
+            new NoOpMetricsSystem(),
+            supportedCapabilities,
+            Optional.empty(),
+            Optional.empty(),
+            JSON_RPC_APIS,
+            privacyParameters,
+            config,
+            mock(WebSocketConfiguration.class),
+            mock(MetricsConfiguration.class));
+  }
+
+  protected void startService() throws Exception {
+    startService(blockchainSetupUtil);
+  }
+
+  private void startService(final BlockchainSetupUtil<Void> blockchainSetupUtil) throws Exception {
+
     final JsonRpcConfiguration config = JsonRpcConfiguration.createDefault();
-    final Map<String, JsonRpcMethod> methods =
-        new JsonRpcMethodsFactory()
-            .methods(
-                CLIENT_VERSION,
-                NETWORK_ID,
-                new StubGenesisConfigOptions(),
-                peerDiscoveryMock,
-                blockchainQueries,
-                synchronizerMock,
-                MainnetProtocolSchedule.create(),
-                filterManager,
-                transactionPoolMock,
-                miningCoordinatorMock,
-                new NoOpMetricsSystem(),
-                supportedCapabilities,
-                Optional.empty(),
-                Optional.empty(),
-                JSON_RPC_APIS,
-                privacyParameters,
-                config,
-                mock(WebSocketConfiguration.class),
-                mock(MetricsConfiguration.class));
+    final Map<String, JsonRpcMethod> methods = getRpcMethods(config, blockchainSetupUtil);
 
     config.setPort(0);
     service =

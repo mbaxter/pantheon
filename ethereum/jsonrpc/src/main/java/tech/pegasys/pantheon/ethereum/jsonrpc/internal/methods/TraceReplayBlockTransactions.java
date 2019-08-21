@@ -23,7 +23,6 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.processor.BlockTrace;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.processor.BlockTracer;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.processor.TransactionTrace;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.queries.BlockchainQueries;
-import tech.pegasys.pantheon.ethereum.jsonrpc.internal.response.JsonRpcSuccessResponse;
 import tech.pegasys.pantheon.ethereum.vm.DebugOperationTracer;
 
 import java.util.List;
@@ -58,14 +57,12 @@ public class TraceReplayBlockTransactions extends AbstractBlockParameterMethod {
   protected Object resultByBlockNumber(final JsonRpcRequest request, final long blockNumber) {
     final TraceTypeParameter traceTypeParameter =
         getParameters().required(request.getParams(), 1, TraceTypeParameter.class);
-    final Object result =
-        getBlockchainQueries()
-            .getBlockchain()
-            .getBlockByNumber(blockNumber)
-            .map((block) -> traceBlock(block, traceTypeParameter))
-            .orElse(null);
 
-    return new JsonRpcSuccessResponse(request.getId(), result);
+    return getBlockchainQueries()
+        .getBlockchain()
+        .getBlockByNumber(blockNumber)
+        .map((block) -> traceBlock(block, traceTypeParameter))
+        .orElse(null);
   }
 
   private Object traceBlock(final Block block, final TraceTypeParameter traceTypeParameter) {

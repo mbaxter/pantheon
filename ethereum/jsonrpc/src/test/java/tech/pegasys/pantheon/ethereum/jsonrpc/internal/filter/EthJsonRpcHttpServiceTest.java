@@ -18,7 +18,7 @@ import tech.pegasys.pantheon.ethereum.core.Block;
 import tech.pegasys.pantheon.ethereum.core.BlockchainSetupUtil;
 import tech.pegasys.pantheon.ethereum.core.Hash;
 import tech.pegasys.pantheon.ethereum.core.Transaction;
-import tech.pegasys.pantheon.ethereum.jsonrpc.AbstractEthJsonRpcHttpServiceTest;
+import tech.pegasys.pantheon.ethereum.jsonrpc.AbstractJsonRpcHttpServiceTest;
 
 import java.io.IOException;
 
@@ -30,7 +30,7 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import org.junit.Test;
 
-public class EthJsonRpcHttpServiceTest extends AbstractEthJsonRpcHttpServiceTest {
+public class EthJsonRpcHttpServiceTest extends AbstractJsonRpcHttpServiceTest {
 
   private Hash recordPendingTransaction(final int blockNumber, final int transactionIndex) {
     final Block block = blockchainSetupUtil.getBlock(blockNumber);

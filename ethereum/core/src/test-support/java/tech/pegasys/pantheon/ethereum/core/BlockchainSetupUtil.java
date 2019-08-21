@@ -96,6 +96,10 @@ public class BlockchainSetupUtil<C> {
     return createEthashChain(BlockTestUtil.getTestChainResources());
   }
 
+  public static BlockchainSetupUtil<Void> forMainnet() {
+    return createEthashChain(BlockTestUtil.getMainnetResources());
+  }
+
   public static BlockchainSetupUtil<Void> forOutdatedFork() {
     return createEthashChain(BlockTestUtil.getOutdatedForkResources());
   }
