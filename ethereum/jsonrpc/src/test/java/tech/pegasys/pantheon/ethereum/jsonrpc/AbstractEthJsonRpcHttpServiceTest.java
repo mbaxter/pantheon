@@ -16,17 +16,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryBlockchain;
-import static tech.pegasys.pantheon.ethereum.core.InMemoryStorageProvider.createInMemoryWorldStateArchive;
 
 import tech.pegasys.pantheon.config.StubGenesisConfigOptions;
 import tech.pegasys.pantheon.ethereum.ProtocolContext;
 import tech.pegasys.pantheon.ethereum.blockcreation.EthHashMiningCoordinator;
+import tech.pegasys.pantheon.ethereum.chain.Blockchain;
 import tech.pegasys.pantheon.ethereum.chain.GenesisState;
-import tech.pegasys.pantheon.ethereum.chain.MutableBlockchain;
 import tech.pegasys.pantheon.ethereum.core.Block;
-import tech.pegasys.pantheon.ethereum.core.BlockHeader;
 import tech.pegasys.pantheon.ethereum.core.BlockImporter;
+import tech.pegasys.pantheon.ethereum.core.BlockchainSetupUtil;
 import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Synchronizer;
 import tech.pegasys.pantheon.ethereum.core.Transaction;
@@ -41,7 +39,6 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.JsonRpcMethod;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.queries.BlockchainQueries;
 import tech.pegasys.pantheon.ethereum.jsonrpc.websocket.WebSocketConfiguration;
 import tech.pegasys.pantheon.ethereum.mainnet.HeaderValidationMode;
-import tech.pegasys.pantheon.ethereum.mainnet.MainnetBlockHeaderFunctions;
 import tech.pegasys.pantheon.ethereum.mainnet.MainnetProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSchedule;
 import tech.pegasys.pantheon.ethereum.mainnet.ProtocolSpec;
@@ -49,15 +46,10 @@ import tech.pegasys.pantheon.ethereum.mainnet.TransactionValidator.TransactionIn
 import tech.pegasys.pantheon.ethereum.mainnet.ValidationResult;
 import tech.pegasys.pantheon.ethereum.p2p.network.P2PNetwork;
 import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.Capability;
-import tech.pegasys.pantheon.ethereum.util.RawBlockIterator;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
-import tech.pegasys.pantheon.testutil.BlockTestUtil;
-import tech.pegasys.pantheon.testutil.BlockTestUtil.ChainResources;
 
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -66,8 +58,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Resources;
 import io.vertx.core.Vertx;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -80,68 +70,48 @@ public abstract class AbstractEthJsonRpcHttpServiceTest {
   @ClassRule public static final TemporaryFolder folder = new TemporaryFolder();
 
   protected static ProtocolSchedule<Void> PROTOCOL_SCHEDULE;
-
   protected static List<Block> BLOCKS;
-
   protected static Block GENESIS_BLOCK;
-
   protected static GenesisState GENESIS_CONFIG;
+  protected static Blockchain BLOCKCHAIN;
+  protected static WorldStateArchive WORLD_STATE_ARCHIVE;
+  protected static ProtocolContext<Void> PROTOCOL_CONTEXT;
 
-  protected final Vertx vertx = Vertx.vertx();
-
-  protected JsonRpcHttpService service;
-
-  protected OkHttpClient client;
-
-  protected String baseUrl;
-
-  protected final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-
-  protected final String CLIENT_VERSION = "TestClientVersion/0.1.0";
-
-  protected final int NETWORK_ID = 123;
-
+  protected static String CLIENT_VERSION = "TestClientVersion/0.1.0";
+  protected static final int NETWORK_ID = 123;
   protected static final Collection<RpcApi> JSON_RPC_APIS =
       Arrays.asList(RpcApis.ETH, RpcApis.NET, RpcApis.WEB3, RpcApis.DEBUG);
 
-  protected MutableBlockchain blockchain;
-
-  protected WorldStateArchive stateArchive;
-
+  protected final Vertx vertx = Vertx.vertx();
+  protected JsonRpcHttpService service;
+  protected OkHttpClient client;
+  protected String baseUrl;
+  protected final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
   protected FilterManager filterManager;
-
-  protected ProtocolContext<Void> context;
 
   private boolean blockchainInitialized = false;
 
-  private void setupBlockchain() throws Exception {
+  private void setupBlockchain() {
     if (blockchainInitialized) {
       return;
     }
 
     blockchainInitialized = true;
 
-    PROTOCOL_SCHEDULE = MainnetProtocolSchedule.create();
-    ChainResources chainResources = getChainResources();
+    BlockchainSetupUtil<Void> blockchainSetupUtil = getBlockchainSetupUtil();
+    blockchainSetupUtil.importAllBlocks();
 
-    BLOCKS = new ArrayList<>();
-    try (final RawBlockIterator iterator =
-        new RawBlockIterator(
-            Paths.get(chainResources.getBlocksURL().toURI()),
-            rlp -> BlockHeader.readFrom(rlp, new MainnetBlockHeaderFunctions()))) {
-      while (iterator.hasNext()) {
-        BLOCKS.add(iterator.next());
-      }
-    }
-
-    final String genesisJson = Resources.toString(chainResources.getGenesisURL(), Charsets.UTF_8);
-
+    BLOCKS = blockchainSetupUtil.getBlocks();
     GENESIS_BLOCK = BLOCKS.get(0);
-    GENESIS_CONFIG = GenesisState.fromJson(genesisJson, PROTOCOL_SCHEDULE);
+    GENESIS_CONFIG = blockchainSetupUtil.getGenesisState();
+    WORLD_STATE_ARCHIVE = blockchainSetupUtil.getWorldArchive();
+    BLOCKCHAIN = blockchainSetupUtil.getBlockchain();
+    PROTOCOL_SCHEDULE = blockchainSetupUtil.getProtocolSchedule();
+    PROTOCOL_CONTEXT = blockchainSetupUtil.getProtocolContext();
   }
 
-  protected ChainResources getChainResources() {
-    return BlockTestUtil.getTestChainResources();
+  protected BlockchainSetupUtil<Void> getBlockchainSetupUtil() {
+    return BlockchainSetupUtil.forTesting();
   }
 
   @Before
@@ -160,13 +130,9 @@ public abstract class AbstractEthJsonRpcHttpServiceTest {
     final PendingTransactions pendingTransactionsMock = mock(PendingTransactions.class);
     when(transactionPoolMock.getPendingTransactions()).thenReturn(pendingTransactionsMock);
     final PrivacyParameters privacyParameters = mock(PrivacyParameters.class);
-    stateArchive = createInMemoryWorldStateArchive();
-    GENESIS_CONFIG.writeStateTo(stateArchive.getMutable());
 
-    blockchain = createInMemoryBlockchain(GENESIS_BLOCK);
-    context = new ProtocolContext<>(blockchain, stateArchive, null);
-
-    final BlockchainQueries blockchainQueries = new BlockchainQueries(blockchain, stateArchive);
+    final BlockchainQueries blockchainQueries =
+        new BlockchainQueries(BLOCKCHAIN, WORLD_STATE_ARCHIVE);
     final FilterIdGenerator filterIdGenerator = mock(FilterIdGenerator.class);
     final FilterRepository filterRepository = new FilterRepository();
     when(filterIdGenerator.nextId()).thenReturn("0x1");
@@ -232,6 +198,6 @@ public abstract class AbstractEthJsonRpcHttpServiceTest {
     final ProtocolSpec<Void> protocolSpec =
         PROTOCOL_SCHEDULE.getByBlockNumber(block.getHeader().getNumber());
     final BlockImporter<Void> blockImporter = protocolSpec.getBlockImporter();
-    blockImporter.importBlock(context, block, HeaderValidationMode.FULL);
+    blockImporter.importBlock(PROTOCOL_CONTEXT, block, HeaderValidationMode.FULL);
   }
 }
