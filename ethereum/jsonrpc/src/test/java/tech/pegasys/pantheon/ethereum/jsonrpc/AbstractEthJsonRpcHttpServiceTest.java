@@ -54,8 +54,8 @@ import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
 import tech.pegasys.pantheon.metrics.noop.NoOpMetricsSystem;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.testutil.BlockTestUtil;
+import tech.pegasys.pantheon.testutil.BlockTestUtil.ChainResources;
 
-import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -73,7 +73,6 @@ import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
 
@@ -113,32 +112,42 @@ public abstract class AbstractEthJsonRpcHttpServiceTest {
 
   protected ProtocolContext<Void> context;
 
-  @BeforeClass
-  public static void setupConstants() throws Exception {
+  private boolean blockchainInitialized = false;
+
+  private void setupBlockchain() throws Exception {
+    if (blockchainInitialized) {
+      return;
+    }
+
+    blockchainInitialized = true;
+
     PROTOCOL_SCHEDULE = MainnetProtocolSchedule.create();
-
-    final URL blocksUrl = BlockTestUtil.getTestBlockchainUrl();
-
-    final URL genesisJsonUrl = BlockTestUtil.getTestGenesisUrl();
+    ChainResources chainResources = getChainResources();
 
     BLOCKS = new ArrayList<>();
     try (final RawBlockIterator iterator =
         new RawBlockIterator(
-            Paths.get(blocksUrl.toURI()),
+            Paths.get(chainResources.getBlocksURL().toURI()),
             rlp -> BlockHeader.readFrom(rlp, new MainnetBlockHeaderFunctions()))) {
       while (iterator.hasNext()) {
         BLOCKS.add(iterator.next());
       }
     }
 
-    final String genesisJson = Resources.toString(genesisJsonUrl, Charsets.UTF_8);
+    final String genesisJson = Resources.toString(chainResources.getGenesisURL(), Charsets.UTF_8);
 
     GENESIS_BLOCK = BLOCKS.get(0);
     GENESIS_CONFIG = GenesisState.fromJson(genesisJson, PROTOCOL_SCHEDULE);
   }
 
+  protected ChainResources getChainResources() {
+    return BlockTestUtil.getTestChainResources();
+  }
+
   @Before
   public void setupTest() throws Exception {
+    setupBlockchain();
+
     final Synchronizer synchronizerMock = mock(Synchronizer.class);
     final P2PNetwork peerDiscoveryMock = mock(P2PNetwork.class);
     final TransactionPool transactionPoolMock = mock(TransactionPool.class);
