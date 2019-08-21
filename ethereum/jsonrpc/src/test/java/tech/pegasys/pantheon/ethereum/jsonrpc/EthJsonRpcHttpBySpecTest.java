@@ -64,6 +64,12 @@ public class EthJsonRpcHttpBySpecTest extends AbstractEthJsonRpcHttpServiceTest 
     this.specFileName = specFileName;
   }
 
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+    startService();
+  }
+
   /*
    Mapping between Json-RPC method class and its spec files
 
@@ -311,19 +317,12 @@ public class EthJsonRpcHttpBySpecTest extends AbstractEthJsonRpcHttpServiceTest 
     final RequestBody requestBody = RequestBody.create(JSON, rawRequestBody);
     final Request request = new Request.Builder().post(requestBody).url(baseUrl).build();
 
-    importBlocks(1, BLOCKS.size());
     try (final Response resp = client.newCall(request).execute()) {
       final int expectedStatusCode = spec.getInteger("statusCode");
       assertThat(resp.code()).isEqualTo(expectedStatusCode);
 
       final String expectedRespBody = spec.getJsonObject("response").encodePrettily();
       assertThat(resp.body().string()).isEqualTo(expectedRespBody);
-    }
-  }
-
-  private void importBlocks(final int from, final int to) {
-    for (int i = from; i < to; ++i) {
-      importBlock(i);
     }
   }
 }
