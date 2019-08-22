@@ -94,7 +94,7 @@ public abstract class AbstractJsonRpcHttpServiceTest {
   }
 
   protected BlockchainSetupUtil<Void> startServiceWithEmptyChain() throws Exception {
-    BlockchainSetupUtil<Void> emptySetupUtil = getBlockchainSetupUtil();
+    final BlockchainSetupUtil<Void> emptySetupUtil = getBlockchainSetupUtil();
     startService(emptySetupUtil);
     return emptySetupUtil;
   }

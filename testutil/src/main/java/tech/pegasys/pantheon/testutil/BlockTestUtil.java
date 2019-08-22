@@ -134,7 +134,7 @@ public final class BlockTestUtil {
     try {
       Files.write(
           target,
-          Resources.toByteArray(BlockTestUtil.class.getResource("mainnet-data/1000.blocks")),
+          Resources.toByteArray(getMainnetResources().getBlocksURL()),
           StandardOpenOption.CREATE,
           StandardOpenOption.TRUNCATE_EXISTING);
     } catch (final IOException ex) {
