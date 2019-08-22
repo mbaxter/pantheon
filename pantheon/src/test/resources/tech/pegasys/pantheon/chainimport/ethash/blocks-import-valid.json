@@ -1,9 +1,12 @@
 {
+  "comment": "Allow top-level comments",
   "blocks": [
     {
       "number": 1,
+      "comment": "Allow explanatory comment fields",
       "transactions": [
         {
+          "comment": "Support a comment field for documentation",
           "fromPrivateKey": "8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63",
           "gasLimit": "0xFFFFF1",
           "gasPrice": "0xFF",
