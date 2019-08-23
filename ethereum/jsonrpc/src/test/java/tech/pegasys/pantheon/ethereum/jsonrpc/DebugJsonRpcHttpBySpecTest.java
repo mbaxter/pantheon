@@ -33,6 +33,6 @@ public class DebugJsonRpcHttpBySpecTest extends AbstractJsonRpcHttpBySpecTest {
 
   @Parameters(name = "{index}: {0}")
   public static Object[][] specs() {
-    return AbstractJsonRpcHttpBySpecTest.getParams("debug");
+    return AbstractJsonRpcHttpBySpecTest.findSpecFiles("debug");
   }
 }

@@ -59,7 +59,7 @@ public abstract class AbstractJsonRpcHttpBySpecTest extends AbstractJsonRpcHttpS
    * @return Parameters for this test which will contain the name of the test and the url of the
    *     spec file to run.
    */
-  public static Object[][] getParams(final String... subDirectoryPaths) {
+  public static Object[][] findSpecFiles(final String... subDirectoryPaths) {
     final List<Object[]> specFiles = new ArrayList<>();
     for (final String path : subDirectoryPaths) {
       final URL url = AbstractJsonRpcHttpBySpecTest.class.getResource(path);

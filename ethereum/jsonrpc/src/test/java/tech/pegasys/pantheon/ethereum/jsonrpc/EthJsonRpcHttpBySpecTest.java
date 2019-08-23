@@ -33,6 +33,6 @@ public class EthJsonRpcHttpBySpecTest extends AbstractJsonRpcHttpBySpecTest {
 
   @Parameters(name = "{index}: {0}")
   public static Object[][] specs() {
-    return AbstractJsonRpcHttpBySpecTest.getParams("eth");
+    return AbstractJsonRpcHttpBySpecTest.findSpecFiles("eth");
   }
 }
