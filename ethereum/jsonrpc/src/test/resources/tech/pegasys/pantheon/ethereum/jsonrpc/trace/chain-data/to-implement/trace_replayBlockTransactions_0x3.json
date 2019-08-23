@@ -1,16 +1,19 @@
 {
   "request": {
-    "id": 415,
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
     "params": [
-      "0x03",
-      ["trace","vmTrace","stateDiff"]
-    ]
+      "0x3",
+      [
+        "trace",
+        "vmTrace",
+        "stateDiff"
+      ]
+    ],
+    "id": 415
   },
   "response": {
     "jsonrpc": "2.0",
-    "id": 415,
     "result": [
       {
         "output": "0x600035ff",
@@ -24,9 +27,7 @@
             },
             "code": "=",
             "nonce": "=",
-            "storage": {
-
-            }
+            "storage": {}
           },
           "0x627306090abab3a6e1400e9345bc60c78a8bef57": {
             "balance": {
@@ -42,9 +43,7 @@
                 "to": "0x2"
               }
             },
-            "storage": {
-
-            }
+            "storage": {}
           },
           "0xf12b5dd4ead5f743c6baa640b0216200e89b60da": {
             "balance": {
@@ -56,9 +55,7 @@
             "nonce": {
               "+": "0x1"
             },
-            "storage": {
-
-            }
+            "storage": {}
           }
         },
         "trace": [
@@ -75,9 +72,7 @@
               "gasUsed": "0x338"
             },
             "subtraces": 0,
-            "traceAddress": [
-
-            ],
+            "traceAddress": [],
             "type": "create"
           }
         ],
@@ -131,9 +126,7 @@
                   "data": "0x600035ff",
                   "off": 0
                 },
-                "push": [
-
-                ],
+                "push": [],
                 "store": null,
                 "used": 16723288
               },
@@ -170,9 +163,7 @@
               "cost": 0,
               "ex": {
                 "mem": null,
-                "push": [
-
-                ],
+                "push": [],
                 "store": null,
                 "used": 16723282
               },
@@ -182,7 +173,8 @@
           ]
         }
       }
-    ]
+    ],
+    "id": 415
   },
   "statusCode": 200
 }

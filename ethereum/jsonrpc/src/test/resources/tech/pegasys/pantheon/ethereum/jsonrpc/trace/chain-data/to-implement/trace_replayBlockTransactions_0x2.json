@@ -1,16 +1,19 @@
 {
   "request": {
-    "id": 415,
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
     "params": [
-      "0x02",
-      ["trace","vmTrace","stateDiff"]
-    ]
+      "0x2",
+      [
+        "trace",
+        "vmTrace",
+        "stateDiff"
+      ]
+    ],
+    "id": 415
   },
   "response": {
     "jsonrpc": "2.0",
-    "id": 415,
     "result": [
       {
         "output": "0x",
@@ -24,9 +27,7 @@
             },
             "code": "=",
             "nonce": "=",
-            "storage": {
-
-            }
+            "storage": {}
           },
           "0x0000000000000000000000000000000000000999": {
             "balance": {
@@ -38,9 +39,7 @@
             "nonce": {
               "+": "0x0"
             },
-            "storage": {
-
-            }
+            "storage": {}
           },
           "0x627306090abab3a6e1400e9345bc60c78a8bef57": {
             "balance": {
@@ -56,9 +55,7 @@
                 "to": "0x1"
               }
             },
-            "storage": {
-
-            }
+            "storage": {}
           }
         },
         "trace": [
@@ -76,21 +73,18 @@
               "output": "0x"
             },
             "subtraces": 0,
-            "traceAddress": [
-
-            ],
+            "traceAddress": [],
             "type": "call"
           }
         ],
         "transactionHash": "0x28fa8042c7b5835f4f91fc20937f3e70dcf3585c1afe31202bb6075185f9abfe",
         "vmTrace": {
           "code": "0x",
-          "ops": [
-
-          ]
+          "ops": []
         }
       }
-    ]
+    ],
+    "id": 415
   },
   "statusCode": 200
 }

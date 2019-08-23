@@ -1,16 +1,19 @@
 {
   "request": {
-    "id": 415,
     "jsonrpc": "2.0",
     "method": "trace_replayBlockTransactions",
     "params": [
-      "0x06",
-      ["trace","vmTrace","stateDiff"]
-    ]
+      "0x6",
+      [
+        "trace",
+        "vmTrace",
+        "stateDiff"
+      ]
+    ],
+    "id": 415
   },
   "response": {
     "jsonrpc": "2.0",
-    "id": 415,
     "result": [
       {
         "output": "0x",
@@ -18,15 +21,13 @@
           "0x0000000000000000000000000000000000000000": {
             "balance": {
               "*": {
-                "from": "0x8ac723048c516d28",
-                "to": "0x8ac723048cb4abfa"
+                "from": "0x8ac723048c173900",
+                "to": "0x8ac723048c7a77d2"
               }
             },
             "code": "=",
             "nonce": "=",
-            "storage": {
-
-            }
+            "storage": {}
           },
           "0x0000000000000999000000000000000000000000": {
             "balance": {
@@ -38,9 +39,7 @@
             "nonce": {
               "+": "0x0"
             },
-            "storage": {
-
-            }
+            "storage": {}
           },
           "0x0020000000000000000000000000000000000000": {
             "balance": {
@@ -52,15 +51,13 @@
             "nonce": {
               "-": "0x0"
             },
-            "storage": {
-
-            }
+            "storage": {}
           },
           "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73": {
             "balance": {
               "*": {
-                "from": "0xefffffffffffffffffffffffffffffffffeaab690",
-                "to": "0xefffffffffffffffffffffffffffffffffe4777be"
+                "from": "0xefffffffffffffffffffffffffffffffffee4eab8",
+                "to": "0xefffffffffffffffffffffffffffffffffe81abe6"
               }
             },
             "code": "=",
@@ -70,9 +67,7 @@
                 "to": "0x3"
               }
             },
-            "storage": {
-
-            }
+            "storage": {}
           }
         },
         "trace": [
@@ -90,9 +85,7 @@
               "output": "0x"
             },
             "subtraces": 1,
-            "traceAddress": [
-
-            ],
+            "traceAddress": [],
             "type": "call"
           },
           {
@@ -143,9 +136,7 @@
               "cost": 30000,
               "ex": {
                 "mem": null,
-                "push": [
-
-                ],
+                "push": [],
                 "store": null,
                 "used": 16725988
               },
@@ -155,7 +146,8 @@
           ]
         }
       }
-    ]
+    ],
+    "id": 415
   },
   "statusCode": 200
 }
