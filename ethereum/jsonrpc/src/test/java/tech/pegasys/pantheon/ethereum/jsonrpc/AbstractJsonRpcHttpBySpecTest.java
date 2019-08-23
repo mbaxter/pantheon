@@ -70,7 +70,7 @@ public abstract class AbstractJsonRpcHttpBySpecTest extends AbstractJsonRpcHttpS
       } catch (final URISyntaxException e) {
         throw new RuntimeException("Problem converting URL to URI " + url, e);
       }
-      try (final Stream<Path> s = Files.walk(dir)) {
+      try (final Stream<Path> s = Files.walk(dir, 1)) {
         s.map(Path::toFile)
             .filter(f -> f.getPath().endsWith(".json"))
             .map(AbstractJsonRpcHttpBySpecTest::fileToParams)
