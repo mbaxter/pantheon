@@ -40,15 +40,15 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public abstract class AbstractJsonRpcHttpBySpecTest extends AbstractJsonRpcHttpServiceTest {
 
-  private final URL specFile;
+  private final URL specURL;
 
   public AbstractJsonRpcHttpBySpecTest(final String specName, final URL specURL) {
-    this.specFile = specURL;
+    this.specURL = specURL;
   }
 
   @Test
   public void jsonRPCCallWithSpecFile() throws Exception {
-    jsonRPCCall(specFile);
+    jsonRPCCall(specURL);
   }
 
   /**
