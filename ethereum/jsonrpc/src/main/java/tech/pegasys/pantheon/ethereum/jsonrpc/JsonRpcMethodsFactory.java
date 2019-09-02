@@ -16,8 +16,10 @@ import tech.pegasys.pantheon.config.GenesisConfigOptions;
 import tech.pegasys.pantheon.enclave.Enclave;
 import tech.pegasys.pantheon.ethereum.blockcreation.MiningCoordinator;
 import tech.pegasys.pantheon.ethereum.chain.Blockchain;
+import tech.pegasys.pantheon.ethereum.core.Address;
 import tech.pegasys.pantheon.ethereum.core.PrivacyParameters;
 import tech.pegasys.pantheon.ethereum.core.Synchronizer;
+import tech.pegasys.pantheon.ethereum.eth.transactions.PendingTransactions;
 import tech.pegasys.pantheon.ethereum.eth.transactions.TransactionPool;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.filter.FilterManager;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.AdminAddPeer;
@@ -48,6 +50,7 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthGetCode;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthGetFilterChanges;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthGetFilterLogs;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthGetLogs;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthGetProof;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthGetStorageAt;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthGetTransactionByBlockHashAndIndex;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.EthGetTransactionByBlockNumberAndIndex;
@@ -91,15 +94,17 @@ import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.permissioning.Per
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.permissioning.PermReloadPermissionsFromFile;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.permissioning.PermRemoveAccountsFromWhitelist;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.permissioning.PermRemoveNodesFromWhitelist;
-import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.privacy.eea.EeaGetTransactionReceipt;
-import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.privacy.eea.EeaSendRawTransaction;
-import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.privacy.priv.PrivCreatePrivacyGroup;
-import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.privacy.priv.PrivDeletePrivacyGroup;
-import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.privacy.priv.PrivFindPrivacyGroup;
-import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.privacy.priv.PrivGetPrivacyPrecompileAddress;
-import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.privacy.priv.PrivGetPrivateTransaction;
-import tech.pegasys.pantheon.ethereum.jsonrpc.internal.methods.privacy.priv.PrivGetTransactionCount;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.parameters.JsonRpcParameter;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.privacy.methods.eea.EeaGetTransactionCount;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.privacy.methods.eea.EeaGetTransactionReceipt;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.privacy.methods.eea.EeaPrivateNonceProvider;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.privacy.methods.eea.EeaSendRawTransaction;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.privacy.methods.priv.PrivCreatePrivacyGroup;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.privacy.methods.priv.PrivDeletePrivacyGroup;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.privacy.methods.priv.PrivFindPrivacyGroup;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.privacy.methods.priv.PrivGetPrivacyPrecompileAddress;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.privacy.methods.priv.PrivGetPrivateTransaction;
+import tech.pegasys.pantheon.ethereum.jsonrpc.internal.privacy.methods.priv.PrivGetTransactionCount;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.processor.BlockReplay;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.processor.BlockTracer;
 import tech.pegasys.pantheon.ethereum.jsonrpc.internal.processor.TransactionTracer;
@@ -113,11 +118,15 @@ import tech.pegasys.pantheon.ethereum.p2p.rlpx.wire.Capability;
 import tech.pegasys.pantheon.ethereum.permissioning.AccountLocalConfigPermissioningController;
 import tech.pegasys.pantheon.ethereum.permissioning.NodeLocalConfigPermissioningController;
 import tech.pegasys.pantheon.ethereum.privacy.PrivateTransactionHandler;
+import tech.pegasys.pantheon.ethereum.privacy.markertransaction.FixedKeySigningPrivateMarkerTransactionFactory;
+import tech.pegasys.pantheon.ethereum.privacy.markertransaction.PrivateMarkerTransactionFactory;
+import tech.pegasys.pantheon.ethereum.privacy.markertransaction.RandomSigningPrivateMarkerTransactionFactory;
 import tech.pegasys.pantheon.ethereum.transaction.TransactionSimulator;
 import tech.pegasys.pantheon.ethereum.worldstate.WorldStateArchive;
 import tech.pegasys.pantheon.metrics.MetricsSystem;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 
+import java.math.BigInteger;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -131,7 +140,7 @@ public class JsonRpcMethodsFactory {
 
   public Map<String, JsonRpcMethod> methods(
       final String clientVersion,
-      final int networkId,
+      final BigInteger networkId,
       final GenesisConfigOptions genesisConfigOptions,
       final P2PNetwork peerNetworkingService,
       final Blockchain blockchain,
@@ -176,7 +185,7 @@ public class JsonRpcMethodsFactory {
 
   public Map<String, JsonRpcMethod> methods(
       final String clientVersion,
-      final int networkId,
+      final BigInteger networkId,
       final GenesisConfigOptions genesisConfigOptions,
       final P2PNetwork p2pNetwork,
       final BlockchainQueries blockchainQueries,
@@ -217,6 +226,7 @@ public class JsonRpcMethodsFactory {
               parameter),
           new EthGetCode(blockchainQueries, parameter),
           new EthGetLogs(blockchainQueries, parameter),
+          new EthGetProof(blockchainQueries, parameter),
           new EthGetUncleCountByBlockHash(blockchainQueries, parameter),
           new EthGetUncleCountByBlockNumber(blockchainQueries, parameter),
           new EthGetUncleByBlockNumberAndIndex(blockchainQueries, parameter),
@@ -324,17 +334,24 @@ public class JsonRpcMethodsFactory {
           new AdminChangeLogLevel(parameter));
     }
 
-    boolean eea = rpcApis.contains(RpcApis.EEA), priv = rpcApis.contains(RpcApis.PRIV);
+    final boolean eea = rpcApis.contains(RpcApis.EEA);
+    final boolean priv = rpcApis.contains(RpcApis.PRIV);
     if (eea || priv) {
+      final PrivateMarkerTransactionFactory markerTransactionFactory =
+          createPrivateMarkerTransactionFactory(
+              privacyParameters, blockchainQueries, transactionPool.getPendingTransactions());
+
       final PrivateTransactionHandler privateTransactionHandler =
-          new PrivateTransactionHandler(privacyParameters, protocolSchedule.getChainId());
+          new PrivateTransactionHandler(
+              privacyParameters, protocolSchedule.getChainId(), markerTransactionFactory);
       final Enclave enclave = new Enclave(privacyParameters.getEnclaveUri());
       if (eea) {
         addMethods(
             enabledMethods,
             new EeaGetTransactionReceipt(blockchainQueries, enclave, parameter, privacyParameters),
-            new EeaSendRawTransaction(
-                blockchainQueries, privateTransactionHandler, transactionPool, parameter));
+            new EeaSendRawTransaction(privateTransactionHandler, transactionPool, parameter),
+            new EeaGetTransactionCount(
+                parameter, new EeaPrivateNonceProvider(enclave, privateTransactionHandler)));
       }
       if (priv) {
         addMethods(
@@ -359,5 +376,22 @@ public class JsonRpcMethodsFactory {
     for (final JsonRpcMethod rpcMethod : rpcMethods) {
       methods.put(rpcMethod.getName(), rpcMethod);
     }
+  }
+
+  private PrivateMarkerTransactionFactory createPrivateMarkerTransactionFactory(
+      final PrivacyParameters privacyParameters,
+      final BlockchainQueries blockchainQueries,
+      final PendingTransactions pendingTransactions) {
+
+    final Address privateContractAddress =
+        Address.privacyPrecompiled(privacyParameters.getPrivacyAddress());
+
+    if (privacyParameters.getSigningKeyPair().isPresent()) {
+      return new FixedKeySigningPrivateMarkerTransactionFactory(
+          privateContractAddress,
+          new LatestNonceProvider(blockchainQueries, pendingTransactions),
+          privacyParameters.getSigningKeyPair().get());
+    }
+    return new RandomSigningPrivateMarkerTransactionFactory(privateContractAddress);
   }
 }

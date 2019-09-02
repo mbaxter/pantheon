@@ -50,6 +50,7 @@ import tech.pegasys.pantheon.ethereum.p2p.peers.EnodeURL;
 import tech.pegasys.pantheon.ethereum.permissioning.LocalPermissioningConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.PermissioningConfiguration;
 import tech.pegasys.pantheon.ethereum.permissioning.SmartContractPermissioningConfiguration;
+import tech.pegasys.pantheon.ethereum.worldstate.PruningConfiguration;
 import tech.pegasys.pantheon.metrics.StandardMetricCategory;
 import tech.pegasys.pantheon.metrics.prometheus.MetricsConfiguration;
 import tech.pegasys.pantheon.nat.NatMethod;
@@ -59,6 +60,7 @@ import tech.pegasys.pantheon.util.number.Percentage;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
@@ -326,7 +328,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
 
     final EthNetworkConfig networkConfig =
         new EthNetworkConfig.Builder(EthNetworkConfig.getNetworkConfig(MAINNET))
-            .setNetworkId(42)
+            .setNetworkId(BigInteger.valueOf(42))
             .setGenesisConfig(encodeJsonGenesis(GENESIS_VALID_JSON))
             .setBootNodes(nodes)
             .build();
@@ -390,7 +392,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
   @Test
   public void nodePermissionsSmartContractMustUseOption() {
 
-    String smartContractAddress = "0x0000000000000000000000000000000000001234";
+    final String smartContractAddress = "0x0000000000000000000000000000000000001234";
 
     parseCommand(
         "--permissions-nodes-contract-enabled",
@@ -406,7 +408,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
         .permissioningConfiguration(permissioningConfigurationArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    PermissioningConfiguration config = permissioningConfigurationArgumentCaptor.getValue();
+    final PermissioningConfiguration config = permissioningConfigurationArgumentCaptor.getValue();
     assertThat(config.getSmartContractConfig().get())
         .isEqualToComparingFieldByField(smartContractPermissioningConfiguration);
 
@@ -465,7 +467,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
 
   @Test
   public void accountPermissionsSmartContractMustUseOption() {
-    String smartContractAddress = "0x0000000000000000000000000000000000001234";
+    final String smartContractAddress = "0x0000000000000000000000000000000000001234";
 
     parseCommand(
         "--permissions-accounts-contract-enabled",
@@ -479,11 +481,11 @@ public class PantheonCommandTest extends CommandTestAbstract {
 
     verify(mockRunnerBuilder)
         .permissioningConfiguration(permissioningConfigurationArgumentCaptor.capture());
-    PermissioningConfiguration permissioningConfiguration =
+    final PermissioningConfiguration permissioningConfiguration =
         permissioningConfigurationArgumentCaptor.getValue();
     assertThat(permissioningConfiguration.getSmartContractConfig()).isPresent();
 
-    SmartContractPermissioningConfiguration effectiveSmartContractConfig =
+    final SmartContractPermissioningConfiguration effectiveSmartContractConfig =
         permissioningConfiguration.getSmartContractConfig().get();
     assertThat(effectiveSmartContractConfig.isSmartContractAccountWhitelistEnabled()).isTrue();
     assertThat(effectiveSmartContractConfig.getAccountSmartContractAddress())
@@ -607,7 +609,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
         .permissioningConfiguration(permissioningConfigurationArgumentCaptor.capture());
     verify(mockRunnerBuilder).build();
 
-    PermissioningConfiguration config = permissioningConfigurationArgumentCaptor.getValue();
+    final PermissioningConfiguration config = permissioningConfigurationArgumentCaptor.getValue();
     assertThat(config.getLocalConfig().get())
         .isEqualToComparingFieldByField(localPermissioningConfiguration);
 
@@ -633,11 +635,11 @@ public class PantheonCommandTest extends CommandTestAbstract {
 
     verify(mockRunnerBuilder)
         .permissioningConfiguration(permissioningConfigurationArgumentCaptor.capture());
-    PermissioningConfiguration permissioningConfiguration =
+    final PermissioningConfiguration permissioningConfiguration =
         permissioningConfigurationArgumentCaptor.getValue();
     assertThat(permissioningConfiguration.getLocalConfig()).isPresent();
 
-    LocalPermissioningConfiguration effectiveLocalPermissioningConfig =
+    final LocalPermissioningConfiguration effectiveLocalPermissioningConfig =
         permissioningConfiguration.getLocalConfig().get();
     assertThat(effectiveLocalPermissioningConfig.isAccountWhitelistEnabled()).isTrue();
     assertThat(effectiveLocalPermissioningConfig.getAccountPermissioningConfigFilePath())
@@ -971,7 +973,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
     final GenesisConfigFile genesisConfigFile =
         GenesisConfigFile.fromConfig(EthNetworkConfig.getNetworkConfig(MAINNET).getGenesisConfig());
     assertThat(genesisConfigFile.getConfigOptions().getChainId().isPresent()).isTrue();
-    assertThat(genesisConfigFile.getConfigOptions().getChainId().get().intValueExact())
+    assertThat(genesisConfigFile.getConfigOptions().getChainId().get())
         .isEqualTo(EthNetworkConfig.getNetworkConfig(MAINNET).getNetworkId());
   }
 
@@ -1146,9 +1148,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
     };
 
     final String nodeIdsArg =
-        Arrays.asList(nodes).stream()
-            .map(BytesValue::toUnprefixedString)
-            .collect(Collectors.joining(","));
+        Arrays.stream(nodes).map(BytesValue::toUnprefixedString).collect(Collectors.joining(","));
     parseCommand("--banned-node-ids", nodeIdsArg);
 
     verify(mockRunnerBuilder).bannedNodeIds(bytesValueCollectionCollector.capture());
@@ -2298,6 +2298,46 @@ public class PantheonCommandTest extends CommandTestAbstract {
   }
 
   @Test
+  public void pruningIsEnabledWhenSpecified() throws Exception {
+    parseCommand("--pruning-enabled");
+
+    verify(mockControllerBuilder).isPruningEnabled(true);
+    verify(mockControllerBuilder).build();
+
+    assertThat(commandOutput.toString()).isEmpty();
+    assertThat(commandErrorOutput.toString()).isEmpty();
+  }
+
+  @Test
+  public void pruningOptionsRequiresServiceToBeEnabled() {
+
+    parseCommand("--pruning-blocks-retained", "4", "--pruning-block-confirmations", "1");
+
+    verifyOptionsConstraintLoggerCall(
+        "--pruning-enabled", "--pruning-blocks-retained", "--pruning-block-confirmations");
+
+    assertThat(commandOutput.toString()).isEmpty();
+    assertThat(commandErrorOutput.toString()).isEmpty();
+  }
+
+  @Test
+  public void pruningParametersAreCaptured() throws Exception {
+    parseCommand(
+        "--pruning-enabled", "--pruning-blocks-retained=15", "--pruning-block-confirmations=4");
+
+    final ArgumentCaptor<PruningConfiguration> pruningArg =
+        ArgumentCaptor.forClass(PruningConfiguration.class);
+
+    verify(mockControllerBuilder).pruningConfiguration(pruningArg.capture());
+    verify(mockControllerBuilder).build();
+
+    assertThat(commandOutput.toString()).isEmpty();
+    assertThat(commandErrorOutput.toString()).isEmpty();
+    assertThat(pruningArg.getValue().getBlocksRetained()).isEqualTo(15);
+    assertThat(pruningArg.getValue().getBlockConfirmations()).isEqualTo(4);
+  }
+
+  @Test
   public void devModeOptionMustBeUsed() throws Exception {
     parseCommand("--network", "dev");
 
@@ -2547,7 +2587,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
     assertThat(stringArgumentCaptor.getAllValues().get(0))
         .isEqualTo("{} will have no effect unless {} is defined on the command line.");
 
-    for (String option : dependentOptions) {
+    for (final String option : dependentOptions) {
       assertThat(stringArgumentCaptor.getAllValues().get(1)).contains(option);
     }
 
