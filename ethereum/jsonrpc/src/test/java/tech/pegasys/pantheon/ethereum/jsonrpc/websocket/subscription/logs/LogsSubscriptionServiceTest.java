@@ -78,7 +78,7 @@ public class LogsSubscriptionServiceTest {
   }
 
   @Test
-  public void shouldSendLogMessageWhenBlockAddedEventHasAddedTransactionsMatchingSubscription() {
+  public void singleMatchingLogEvent() {
     final BlockWithReceipts blockWithReceipts = generateBlock(2, 2, 2);
     final Block block = blockWithReceipts.getBlock();
     final List<TransactionReceipt> receipts = blockWithReceipts.getReceipts();
@@ -102,7 +102,7 @@ public class LogsSubscriptionServiceTest {
   }
 
   @Test
-  public void shouldSendLogMessageWhenBlockAddedEventHasRemovedTransactionsMatchingSubscription() {
+  public void singleMatchingLogEmittedThenRemovedInReorg() {
     // Create block that emits an event
     final BlockWithReceipts blockWithReceipts = generateBlock(2, 2, 2);
     final Block block = blockWithReceipts.getBlock();
@@ -138,7 +138,7 @@ public class LogsSubscriptionServiceTest {
   }
 
   @Test
-  public void shouldSendLogMessagesWhenLogEventMoves() {
+  public void singleMatchingLogEmittedThenMovedInReorg() {
     // Create block that emits an event
     final BlockWithReceipts blockWithReceipts = generateBlock(2, 2, 2);
     final Block block = blockWithReceipts.getBlock();
@@ -183,7 +183,7 @@ public class LogsSubscriptionServiceTest {
   }
 
   @Test
-  public void shouldSendMessageForAllLogsMatchingSubscription() {
+  public void multipleMatchingLogsEmitted() {
     final Log targetLog = gen.log();
     final Log otherLog = gen.log();
     final List<Log> logs = Arrays.asList(targetLog, otherLog);
@@ -227,7 +227,7 @@ public class LogsSubscriptionServiceTest {
   }
 
   @Test
-  public void shouldSendLogMessageToAllMatchingSubscriptions() {
+  public void multipleSubscriptionsForSingleMatchingLog() {
     final BlockWithReceipts blockWithReceipts = generateBlock(2, 2, 2);
     final Block block = blockWithReceipts.getBlock();
     final List<TransactionReceipt> receipts = blockWithReceipts.getReceipts();
@@ -257,7 +257,7 @@ public class LogsSubscriptionServiceTest {
   }
 
   @Test
-  public void shouldNotSendLogMessageWhenBlockAddedEventHasNoTransactions() {
+  public void noLogsEmitted() {
     final Address address = Address.fromHexString("0x0");
     final LogsSubscription subscription = createSubscription(address);
     registerSubscriptions(subscription);
@@ -271,7 +271,7 @@ public class LogsSubscriptionServiceTest {
   }
 
   @Test
-  public void shouldNotSendLogMessageWhenLogsDoNotMatchAnySubscription() {
+  public void noMatchingLogsEmitted() {
     final Address address = Address.fromHexString("0x0");
     final LogsSubscription subscription = createSubscription(address);
     registerSubscriptions(subscription);
