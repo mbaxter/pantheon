@@ -228,6 +228,7 @@ public class PeerDiscoveryTestHelper {
 
     public AgentBuilder bindPort(final int bindPort) {
       if (bindPort == 0) {
+        this.bindPort = OptionalInt.empty();
         // Zero means pick the next available port
         return this;
       }
