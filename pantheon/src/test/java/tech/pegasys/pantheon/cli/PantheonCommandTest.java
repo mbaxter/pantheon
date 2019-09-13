@@ -1200,8 +1200,7 @@ public class PantheonCommandTest extends CommandTestAbstract {
   public void p2pInterfaceOptionIsRespected() {
 
     final String ip = "1.2.3.4";
-    final TestPantheonCommand command = parseCommand("--p2p-interface", ip);
-    command.p2pInterfaceValidationShouldPass(true);
+    parseCommand("--p2p-interface", ip);
 
     assertThat(commandOutput.toString()).isEmpty();
     assertThat(commandErrorOutput.toString()).isEmpty();

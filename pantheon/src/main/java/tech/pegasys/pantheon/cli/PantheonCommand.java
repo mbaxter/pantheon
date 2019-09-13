@@ -925,7 +925,6 @@ public class PantheonCommand implements DefaultCommandValues, Runnable {
   protected void validateP2PInterface(final String p2pInterface) {
     final String failMessage = "The provided --p2p-interface is not available: " + p2pInterface;
     try {
-      // "192.168.1.131"
       if (!NetworkUtility.isNetworkInterfaceAvailable(p2pInterface)) {
         throw new ParameterException(commandLine, failMessage);
       }
