@@ -109,6 +109,7 @@ public class RunnerBuilder {
   private boolean p2pEnabled = true;
   private boolean discovery;
   private String p2pAdvertisedHost;
+  private String p2pListenInterface;
   private int p2pListenPort;
   private NatMethod natMethod = NatMethod.NONE;
   private int maxPeers;
@@ -158,6 +159,11 @@ public class RunnerBuilder {
 
   public RunnerBuilder p2pAdvertisedHost(final String p2pAdvertisedHost) {
     this.p2pAdvertisedHost = p2pAdvertisedHost;
+    return this;
+  }
+
+  public RunnerBuilder p2pListenInterface(final String ip) {
+    this.p2pListenInterface = ip;
     return this;
   }
 
@@ -248,6 +254,7 @@ public class RunnerBuilder {
       }
       discoveryConfiguration =
           DiscoveryConfiguration.create()
+              .setBindHost(p2pListenInterface)
               .setBindPort(p2pListenPort)
               .setAdvertisedHost(p2pAdvertisedHost)
               .setBootnodes(bootstrap);
@@ -272,6 +279,7 @@ public class RunnerBuilder {
 
     final RlpxConfiguration rlpxConfiguration =
         RlpxConfiguration.create()
+            .setBindHost(p2pListenInterface)
             .setBindPort(p2pListenPort)
             .setMaxPeers(maxPeers)
             .setSupportedProtocols(subProtocols)

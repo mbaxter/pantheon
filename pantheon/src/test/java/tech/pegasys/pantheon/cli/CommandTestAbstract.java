@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import tech.pegasys.pantheon.Runner;
@@ -82,6 +83,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 import picocli.CommandLine;
 import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.RunLast;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -184,6 +186,7 @@ public abstract class CommandTestAbstract {
     when(mockRunnerBuilder.networkingConfiguration(any())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.p2pAdvertisedHost(anyString())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.p2pListenPort(anyInt())).thenReturn(mockRunnerBuilder);
+    when(mockRunnerBuilder.p2pListenInterface(anyString())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.maxPeers(anyInt())).thenReturn(mockRunnerBuilder);
     when(mockRunnerBuilder.limitRemoteWireConnectionsEnabled(anyBoolean()))
         .thenReturn(mockRunnerBuilder);
@@ -274,6 +277,7 @@ public abstract class CommandTestAbstract {
   @CommandLine.Command
   public static class TestPantheonCommand extends PantheonCommand {
 
+    private boolean p2pInterfaceValidationShouldPass = true;
     @CommandLine.Spec CommandLine.Model.CommandSpec spec;
     private final KeyLoader keyLoader;
 
@@ -304,6 +308,19 @@ public abstract class CommandTestAbstract {
           environment,
           storageService);
       this.keyLoader = keyLoader;
+    }
+
+    @Override
+    protected void validateP2PInterface(final String p2pInterface) {
+      if (p2pInterfaceValidationShouldPass) {
+        return;
+      }
+      throw new ParameterException(
+          mock(CommandLine.class), "Invalid p2p interface: " + p2pInterface);
+    }
+
+    public void p2pInterfaceValidationShouldPass(final boolean shouldPass) {
+      p2pInterfaceValidationShouldPass = shouldPass;
     }
 
     public CommandSpec getSpec() {
